@@ -10,8 +10,6 @@ A modification for [Grok](https://grok.com), inspired by [Vencord](https://githu
 
 ### Userscript
 
-(ITS CURRENTLY BROKEN! USE EXTENSION INSTEAD)
-
 1. Install a userscript manager ([Violentmonkey](https://violentmonkey.github.io/), [Tampermonkey](https://www.tampermonkey.net/), etc.)
 2. Build Void (see [Building from Source](#building-from-source))
 3. Load `dist/Void.user.js` into your userscript manager

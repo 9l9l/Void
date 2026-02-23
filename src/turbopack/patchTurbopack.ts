@@ -26,6 +26,20 @@ const FACTORY_PROBE_ID = 0x7ffffffe;
 
 const motionSymbol = Symbol.for("motionComponentSymbol");
 
+let compileCounter = 0;
+
+function compileFactory(code: string): ModuleFactory {
+    const key = `__void_eval_${compileCounter++}`;
+    const script = document.createElement("script");
+    script.textContent = `window["${key}"]=(${code});`;
+    document.head.appendChild(script);
+    script.remove();
+    const fn = (pageWindow as any)[key];
+    delete (pageWindow as any)[key];
+    if (!fn) throw new Error("Factory compilation failed (CSP?)");
+    return fn;
+}
+
 const cacheDiscoveryListeners = new Set<() => void>();
 
 export const patches: Patch[] = [];
@@ -233,8 +247,7 @@ function patchFactory(moduleId: number, factory: ModuleFactory): PatchedModuleFa
 
                 code = newCode;
 
-                const src = IS_DEV ? `// Module ${moduleId} - Patched by ${patch.plugin}\n(${code})\n//# sourceURL=Void-Module-${moduleId}` : `(${code})`;
-                patchedFactory = (0, eval)(src);
+                patchedFactory = compileFactory(code) as PatchedModuleFactory;
                 patchedFactory[SYM_ORIGINAL] = factory;
                 patchedFactory[SYM_PATCHED] = true;
                 patchedFactory[SYM_PATCHED_CODE] = code;

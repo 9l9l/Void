@@ -9,8 +9,6 @@ const isExtension = process.argv.includes("--extension");
 const logger = new Logger("Build", "#89b4fa");
 const pkg = JSON.parse(readFileSync("package.json", "utf-8"));
 
-// userscript is currently broken
-
 const USERSCRIPT_HEADER = `// ==UserScript==
 // @name         Void
 // @namespace    https://github.com/imjustprism/Void
@@ -165,7 +163,7 @@ async function buildExtensions() {
 
             if (file.endsWith("manifest.json") || file === "manifestv2.json") {
                 const manifest = JSON.parse(content);
-                manifest.version = pkg.version;
+                manifest.version = pkg.version.replace(/-.*$/, "");
                 content = JSON.stringify(manifest, null, 4);
             }
 
