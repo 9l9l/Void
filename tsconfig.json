@@ -1,0 +1,63 @@
+{
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "jsx": "react",
+        "strict": true,
+        "isolatedModules": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "resolveJsonModule": true,
+        "declaration": false,
+        "declarationMap": false,
+        "sourceMap": false,
+        "lib": [
+            "ESNext",
+            "DOM",
+            "DOM.Iterable"
+        ],
+        "paths": {
+            "@api/*": [
+                "./src/api/*"
+            ],
+            "@components": [
+                "./src/components/index.ts"
+            ],
+            "@components/*": [
+                "./src/components/*"
+            ],
+            "@plugins/*": [
+                "./src/plugins/*"
+            ],
+            "@turbopack/*": [
+                "./src/turbopack/*"
+            ],
+            "@utils/*": [
+                "./src/utils/*"
+            ],
+            "@grok-types": [
+                "./packages/grok-types"
+            ],
+            "@grok-types/*": [
+                "./packages/grok-types/*"
+            ]
+        },
+        "baseUrl": ".",
+        "outDir": "./dist",
+        "types": [
+            "bun"
+        ]
+    },
+    "include": [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "packages/**/*.ts",
+        "packages/**/*.d.ts"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist",
+        "src/plugins/mcp/server.ts"
+    ]
+}

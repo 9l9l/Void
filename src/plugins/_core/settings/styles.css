@@ -1,0 +1,15 @@
+.void-settings-version,
+.void-settings-version * {
+    user-select: text;
+    font-size: 0.625rem !important;
+    line-height: 1rem !important;
+}
+
+.void-settings-version-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.void-settings-version-link:hover {
+    text-decoration: underline;
+}

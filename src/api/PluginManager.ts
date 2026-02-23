@@ -1,0 +1,253 @@
+/*
+ * Void, a modification for grok.com
+ * Copyright (c) 2026 Void contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+import * as allStores from "@turbopack/common/stores";
+import { patches } from "@turbopack/patchTurbopack";
+import { disableStyle, enableStyle } from "@utils/css";
+import { Logger } from "@utils/Logger";
+import { canonicalizeFind, canonicalizeReplacement } from "@utils/patches";
+import { type Patch, type Plugin, StartAt } from "@utils/types";
+
+import { addChatBarButton, removeChatBarButton } from "./ChatBarButtons";
+import { addContextMenuItem, type ContextMenuLocation, removeContextMenuItem } from "./ContextMenus";
+import { subscribe as subscribeEvent } from "./Events";
+import { Settings } from "./Settings";
+
+const logger = new Logger("PluginManager", "#a6d189");
+
+export const plugins: Record<string, Plugin> = {};
+const pluginUnsubscribers = new Map<string, Array<() => void>>();
+let initialized = false;
+
+const storeRegistry: Record<string, Record<string, unknown>> = allStores as never;
+
+export function isPluginEnabled(pluginName: string): boolean {
+    const plugin = plugins[pluginName];
+    if (!plugin) return false;
+    if (plugin.required) return true;
+    if (plugin.isDependency) return true;
+    return Settings.plugins[pluginName]?.enabled ?? plugin.enabledByDefault ?? false;
+}
+
+export function addPatch(newPatch: Omit<Patch, "plugin">, pluginName: string) {
+    const patch = newPatch as Patch;
+    patch.plugin = pluginName;
+
+    if (patch.predicate && !patch.predicate()) return;
+
+    canonicalizeFind(patch);
+
+    if (!Array.isArray(patch.replacement)) {
+        patch.replacement = [patch.replacement];
+    }
+
+    const pluginPath = `Void.plugins[${JSON.stringify(pluginName)}]`;
+    for (const replacement of patch.replacement) {
+        canonicalizeReplacement(replacement, pluginPath);
+    }
+
+    patch.replacement = patch.replacement.filter(({ predicate }) => !predicate || predicate());
+
+    patches.push(patch);
+}
+
+function startDependenciesRecursive(plugin: Plugin): boolean {
+    if (!plugin.dependencies) return true;
+
+    for (const depName of plugin.dependencies) {
+        const dep = plugins[depName];
+        if (!dep) {
+            logger.warn(`Missing dependency ${depName} for ${plugin.name}`);
+            return false;
+        }
+
+        if (dep.started) continue;
+
+        dep.isDependency = true;
+        Settings.plugins[depName] = { ...Settings.plugins[depName], enabled: true };
+
+        if (!startDependenciesRecursive(dep)) return false;
+        if (!startPlugin(dep)) return false;
+    }
+
+    return true;
+}
+
+function resolveStoreHook(storeName: string): { subscribe: Function } | null {
+    const storeModule = storeRegistry[storeName];
+    if (!storeModule) return null;
+
+    const hookName = `use${storeName}`;
+    const hook = storeModule[hookName] as { subscribe?: Function } | undefined;
+    if (hook && typeof hook.subscribe === "function") return hook as { subscribe: Function };
+
+    for (const key in storeModule) {
+        const val = storeModule[key] as { subscribe?: Function } | undefined;
+        if (val && typeof val.subscribe === "function") return val as { subscribe: Function };
+    }
+
+    return null;
+}
+
+export function startPlugin(plugin: Plugin): boolean {
+    if (plugin.started) return true;
+
+    try {
+        if (!startDependenciesRecursive(plugin)) {
+            logger.error(`Failed to start dependencies for ${plugin.name}`);
+            return false;
+        }
+
+        if (plugin.managedStyle) enableStyle(plugin.managedStyle);
+
+        logger.info(`Starting plugin ${plugin.name}`);
+        plugin.start?.();
+
+        if (plugin.chatBarButton) {
+            addChatBarButton(plugin.name, plugin.chatBarButton);
+        }
+
+        if (plugin.contextMenuItems) {
+            for (const [location, def] of Object.entries(plugin.contextMenuItems)) {
+                addContextMenuItem(location as ContextMenuLocation, plugin.name, def as any);
+            }
+        }
+
+        const unsubs: Array<() => void> = [];
+
+        if (plugin.events) {
+            for (const [event, handler] of Object.entries(plugin.events)) {
+                unsubs.push(subscribeEvent(event, handler));
+            }
+        }
+
+        if (plugin.storeSubscriptions?.length) {
+            for (const sub of plugin.storeSubscriptions) {
+                unsubs.push(sub.store.subscribe(sub.callback, sub.selector));
+            }
+        }
+
+        if (plugin.zustand) {
+            for (const [storeName, sub] of Object.entries(plugin.zustand)) {
+                const store = resolveStoreHook(storeName);
+                if (!store) {
+                    logger.warn(`Store "${storeName}" not found for plugin ${plugin.name}`);
+                    continue;
+                }
+
+                const wrappedHandler = (current: unknown, prev: unknown) => {
+                    try {
+                        sub.handler(current, prev);
+                    } catch (e) {
+                        logger.error(`Zustand handler error in ${plugin.name} for ${storeName}:`, e);
+                    }
+                };
+
+                const unsub = sub.selector ? store.subscribe(sub.selector, wrappedHandler) : store.subscribe(wrappedHandler);
+                unsubs.push(unsub as () => void);
+            }
+        }
+
+        if (unsubs.length) pluginUnsubscribers.set(plugin.name, unsubs);
+
+        plugin.started = true;
+        return true;
+    } catch (e) {
+        logger.error(`Failed to start plugin ${plugin.name}:`, e);
+        return false;
+    }
+}
+
+export function stopPlugin(plugin: Plugin): boolean {
+    if (!plugin.started) return true;
+
+    try {
+        const unsubs = pluginUnsubscribers.get(plugin.name);
+        if (unsubs) {
+            for (const unsub of unsubs) unsub();
+            pluginUnsubscribers.delete(plugin.name);
+        }
+
+        removeChatBarButton(plugin.name);
+
+        if (plugin.contextMenuItems) {
+            for (const location of Object.keys(plugin.contextMenuItems)) {
+                removeContextMenuItem(location as ContextMenuLocation, plugin.name);
+            }
+        }
+
+        if (plugin.managedStyle) disableStyle(plugin.managedStyle);
+
+        plugin.stop?.();
+        plugin.started = false;
+        return true;
+    } catch (e) {
+        logger.error(`Failed to stop plugin ${plugin.name}:`, e);
+        return false;
+    }
+}
+
+export function startAllPlugins(target: StartAt) {
+    for (const name in plugins) {
+        const plugin = plugins[name];
+        if (!isPluginEnabled(name)) continue;
+        if ((plugin.startAt ?? StartAt.Init) !== target) continue;
+        startPlugin(plugin);
+    }
+}
+
+export function registerPlugin(plugin: Plugin) {
+    if (plugins[plugin.name]) return;
+
+    plugins[plugin.name] = plugin;
+    plugin.started = false;
+
+    if (plugin.settings) {
+        plugin.settings.pluginName = plugin.name;
+    }
+}
+
+export function initPluginManager() {
+    if (initialized) return;
+    initialized = true;
+
+    const neededApis = new Set<string>();
+
+    for (const name in plugins) {
+        if (!isPluginEnabled(name)) continue;
+        const plugin = plugins[name];
+
+        plugin.dependencies?.forEach(d => {
+            const dep = plugins[d];
+            if (!dep) {
+                logger.warn(`Plugin ${name} has unresolved dependency ${d}`);
+                return;
+            }
+            Settings.plugins[d] = { ...Settings.plugins[d], enabled: true };
+            dep.isDependency = true;
+        });
+
+        if (plugin.chatBarButton) neededApis.add("ChatBarButtonAPI");
+        if (plugin.contextMenuItems) neededApis.add("ContextMenuAPI");
+    }
+
+    for (const api of neededApis) {
+        const dep = plugins[api];
+        if (!dep) continue;
+        Settings.plugins[api] = { ...Settings.plugins[api], enabled: true };
+        dep.isDependency = true;
+    }
+
+    for (const name in plugins) {
+        if (!isPluginEnabled(name)) continue;
+        const { patches: pluginPatches } = plugins[name];
+        if (pluginPatches) {
+            for (const patch of pluginPatches) addPatch(patch, name);
+        }
+    }
+
+    logger.info(`${Object.keys(plugins).length} plugins, ${patches.length} patches`);
+}

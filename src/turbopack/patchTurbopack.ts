@@ -1,0 +1,494 @@
+/*
+ * Void, a modification for grok.com
+ * Copyright (c) 2026 Void contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+import { Logger } from "@utils/Logger";
+import type { Patch, PatchReplacement } from "@utils/types";
+
+import { matchesAllPatterns, matchesPattern } from "./match";
+import type { ModuleFactory, PatchedModuleFactory, TurbopackHelpers, TurbopackModule } from "./types";
+import { SYM_ORIGINAL, SYM_PATCHED, SYM_PATCHED_BY, SYM_PATCHED_CODE } from "./types";
+
+interface TurbopackPushable {
+    push: (...args: unknown[]) => unknown;
+    [key: string]: unknown;
+}
+
+type PageWindow = Window & typeof globalThis & { TURBOPACK: TurbopackPushable | unknown[] | undefined };
+
+const logger = new Logger("TurbopackPatcher", "#e78284");
+const pageWindow = (typeof unsafeWindow !== "undefined" ? unsafeWindow : window) as PageWindow;
+
+// Probe ID — well above real module ID range (~553-999501)
+const FACTORY_PROBE_ID = 0x7ffffffe;
+
+const motionSymbol = Symbol.for("motionComponentSymbol");
+
+const cacheDiscoveryListeners = new Set<() => void>();
+
+export const patches: Patch[] = [];
+const moduleCache = new Map<number, any>();
+const waitForSubscriptions = new Map<(mod: any) => boolean, (mod: any, id: number) => void>();
+
+let originalPush: ((...args: unknown[]) => unknown) | null = null;
+let runtimeModuleCache: Record<number, TurbopackModule> | null = null;
+let runtimeFactoryRegistry: Map<number, ModuleFactory> | null = null;
+let turbopackHelpers: TurbopackHelpers | null = null;
+
+export let _resolveReady: () => void;
+export const onceReady = new Promise<void>(r => (_resolveReady = r));
+
+const patchTimings: Array<[plugin: string, moduleId: number, match: PatchReplacement["match"], totalTime: number]> = [];
+
+interface PatchResult {
+    plugin: string;
+    find: string;
+    moduleId: number;
+    replacements: Array<{
+        match: string;
+        status: "applied" | "noEffect" | "error";
+    }>;
+}
+
+export const patchResults: PatchResult[] = [];
+
+export const patchStats = {
+    applied: 0,
+    noEffect: 0,
+    errors: 0,
+    patchedModules: new Set<number>(),
+};
+
+export function getModuleCache(): Map<number, any> {
+    return moduleCache;
+}
+export function getRuntimeModuleCache(): Record<number, TurbopackModule> | null {
+    return runtimeModuleCache;
+}
+let lazySynced = false;
+export function syncLazyModules(): void {
+    if (lazySynced || !runtimeModuleCache) return;
+    lazySynced = true;
+    for (const id in runtimeModuleCache) {
+        const mod = runtimeModuleCache[id];
+        if (mod?.exports == null) continue;
+        const numId = Number(id);
+        if (!moduleCache.has(numId)) notifyModuleLoaded(mod.exports, numId);
+    }
+}
+export function getRuntimeFactoryRegistry(): Map<number, ModuleFactory> | null {
+    return runtimeFactoryRegistry;
+}
+export function getTurbopackHelpers(): TurbopackHelpers | null {
+    return turbopackHelpers;
+}
+
+export function onCacheDiscovery(cb: () => void): () => void {
+    if (runtimeModuleCache) {
+        cb();
+        return () => {};
+    }
+    cacheDiscoveryListeners.add(cb);
+    return () => cacheDiscoveryListeners.delete(cb);
+}
+
+export function addWaitForSubscription(filter: (mod: any) => boolean, cb: (mod: any, id: number) => void) {
+    waitForSubscriptions.set(filter, cb);
+}
+
+export function removeWaitForSubscription(filter: (mod: any) => boolean) {
+    waitForSubscriptions.delete(filter);
+}
+
+const moduleLoadListeners = new Set<() => void>();
+
+export function onModuleLoad(cb: () => void): () => void {
+    moduleLoadListeners.add(cb);
+    return () => moduleLoadListeners.delete(cb);
+}
+
+const badExports = new WeakSet();
+
+export function shouldIgnoreValue(value: unknown): boolean {
+    if (value == null) return true;
+    const t = typeof value;
+    if (t !== "object" && t !== "function") return true;
+    if (value === window || value === document || value === document.documentElement) return true;
+    try {
+        if ((value as Record<symbol | string, unknown>)[Symbol.toStringTag] === "DOMTokenList") return true;
+        if ((value as Record<symbol, unknown>)[motionSymbol]) return true;
+    } catch {
+        return true;
+    }
+    return (
+        value instanceof HTMLElement ||
+        value instanceof ArrayBuffer ||
+        value instanceof MessagePort ||
+        value instanceof Map ||
+        value instanceof Set ||
+        ArrayBuffer.isView(value) ||
+        (typeof WebSocket !== "undefined" && value instanceof WebSocket)
+    );
+}
+
+export function blacklistBadModules(): void {
+    for (const [, exports] of moduleCache) {
+        if (shouldIgnoreValue(exports)) {
+            if (exports != null && (typeof exports === "object" || typeof exports === "function")) badExports.add(exports);
+            continue;
+        }
+        if (typeof exports !== "object") continue;
+        for (const key in exports) {
+            try {
+                const v = exports[key];
+                if (shouldIgnoreValue(v) && v != null && (typeof v === "object" || typeof v === "function")) badExports.add(v);
+            } catch {}
+        }
+    }
+}
+
+export function isBlacklisted(value: any): boolean {
+    if (value == null) return false;
+    const t = typeof value;
+    if (t !== "object" && t !== "function") return false;
+    if (badExports.has(value)) return true;
+    return shouldIgnoreValue(value);
+}
+
+function notifyModuleLoaded(exports: any, id: number) {
+    if (exports == null) return;
+    if (moduleCache.get(id) === exports) return;
+    moduleCache.set(id, exports);
+
+    if (waitForSubscriptions.size) {
+        for (const [filter, callback] of waitForSubscriptions) {
+            try {
+                if (filter(exports)) {
+                    waitForSubscriptions.delete(filter);
+                    callback(exports, id);
+                }
+            } catch (e) {
+                logger.error("WaitFor listener error:", e);
+            }
+        }
+    }
+
+    for (const cb of moduleLoadListeners) {
+        try {
+            cb();
+        } catch {}
+    }
+}
+
+function patchFactory(moduleId: number, factory: ModuleFactory): PatchedModuleFactory {
+    if (!patches.length) return factory as PatchedModuleFactory;
+
+    const originalCode = String(factory);
+    let code = originalCode;
+    let patchedFactory: PatchedModuleFactory = factory as PatchedModuleFactory;
+    const patchedBy = new Set<string>();
+
+    for (let i = 0; i < patches.length; i++) {
+        const patch = patches[i];
+        if (patch.predicate && !patch.predicate()) continue;
+        const findMatches = Array.isArray(patch.find) ? matchesAllPatterns(originalCode, patch.find) : matchesPattern(originalCode, patch.find);
+        if (!findMatches) continue;
+
+        const replacements = Array.isArray(patch.replacement) ? patch.replacement : [patch.replacement];
+        const previousCode = code;
+        const previousFactory = patchedFactory;
+        let allSucceeded = true;
+        const result: PatchResult = {
+            plugin: patch.plugin,
+            find: String(patch.find),
+            moduleId,
+            replacements: [],
+        };
+
+        for (const replacement of replacements) {
+            if (replacement.predicate && !replacement.predicate()) continue;
+            const lastCode = code;
+            const lastFactory = patchedFactory;
+
+            try {
+                const { match } = replacement;
+                const start = performance.now();
+                const newCode = code.replace(match, replacement.replace as string);
+                const elapsed = performance.now() - start;
+
+                if (IS_DEV) patchTimings.push([patch.plugin, moduleId, match, elapsed]);
+
+                if (newCode === code) {
+                    patchStats.noEffect++;
+                    result.replacements.push({ match: String(match), status: "noEffect" });
+                    if (!patch.noWarn && !replacement.noWarn) logger.error(`Patch by ${patch.plugin} had no effect: ${String(match)}`);
+                    if (patch.group) {
+                        allSucceeded = false;
+                        break;
+                    }
+                    continue;
+                }
+
+                code = newCode;
+
+                const src = IS_DEV ? `// Module ${moduleId} - Patched by ${patch.plugin}\n(${code})\n//# sourceURL=Void-Module-${moduleId}` : `(${code})`;
+                patchedFactory = (0, eval)(src);
+                patchedFactory[SYM_ORIGINAL] = factory;
+                patchedFactory[SYM_PATCHED] = true;
+                patchedFactory[SYM_PATCHED_CODE] = code;
+
+                patchedBy.add(patch.plugin);
+                patchedFactory[SYM_PATCHED_BY] = [...patchedBy];
+                patchStats.applied++;
+                patchStats.patchedModules.add(moduleId);
+                result.replacements.push({ match: String(match), status: "applied" });
+            } catch (err) {
+                patchStats.errors++;
+                result.replacements.push({ match: String(replacement.match), status: "error" });
+                logger.error(`Error in patch by ${patch.plugin} on module ${moduleId}:`, err);
+                code = lastCode;
+                patchedFactory = lastFactory;
+
+                if (patch.group) {
+                    code = previousCode;
+                    patchedFactory = previousFactory;
+                    patchedBy.delete(patch.plugin);
+                    break;
+                }
+            }
+        }
+
+        patchResults.push(result);
+
+        if (patch.group && !allSucceeded) {
+            code = previousCode;
+            patchedFactory = previousFactory;
+            patchedBy.delete(patch.plugin);
+            if (!patch.noWarn) logger.warn(`Group patch by ${patch.plugin} failed, reverting`);
+            continue;
+        }
+
+        if (!patch.all) patches.splice(i--, 1);
+    }
+
+    return patchedFactory;
+}
+
+function wrapFactory(moduleId: number, factory: ModuleFactory): ModuleFactory {
+    const patched = patchFactory(moduleId, factory);
+    const original = (patched as PatchedModuleFactory)[SYM_ORIGINAL] ?? factory;
+
+    const wrapped: PatchedModuleFactory = function (this: unknown, helpers: TurbopackHelpers, mod?: TurbopackModule, exports?: Record<string, unknown>) {
+        if (!turbopackHelpers) turbopackHelpers = helpers;
+        if (!runtimeModuleCache && helpers.c) {
+            runtimeModuleCache = helpers.c;
+            scanExistingModules(runtimeModuleCache);
+            for (const cb of cacheDiscoveryListeners) {
+                try {
+                    cb();
+                } catch {}
+            }
+            cacheDiscoveryListeners.clear();
+        }
+        if (!runtimeFactoryRegistry && helpers.M) runtimeFactoryRegistry = helpers.M;
+
+        try {
+            patched.call(this, helpers, mod, exports);
+        } catch (err) {
+            if (patched === factory) throw err;
+            logger.error(`Patched module ${mod?.id ?? moduleId} errored, using original:`, err);
+            try {
+                original.call(this, helpers, mod, exports);
+            } catch (origErr) {
+                logger.error(`Original module ${mod?.id ?? moduleId} also errored:`, origErr);
+                throw origErr;
+            }
+        }
+
+        try {
+            const actualId = mod?.id ?? moduleId;
+            if (mod?.exports != null) notifyModuleLoaded(mod.exports, actualId);
+        } catch {}
+    };
+
+    wrapped.toString = () => String(factory);
+    wrapped[SYM_ORIGINAL] = original;
+    wrapped[SYM_PATCHED] = (patched as PatchedModuleFactory)[SYM_PATCHED];
+    wrapped[SYM_PATCHED_BY] = (patched as PatchedModuleFactory)[SYM_PATCHED_BY];
+    wrapped[SYM_PATCHED_CODE] = (patched as PatchedModuleFactory)[SYM_PATCHED_CODE];
+
+    return wrapped;
+}
+
+function handleChunkPush(...args: unknown[]) {
+    const entry = args[0];
+    if (!Array.isArray(entry)) return originalPush!.apply(null, args);
+
+    let patchedEntry: unknown[] | null = null;
+    const wrappedInChunk = new Map<ModuleFactory, ModuleFactory>();
+
+    for (let i = 1; i < entry.length; i++) {
+        if (typeof entry[i] !== "function") continue;
+
+        const prev = entry[i - 1];
+        if (typeof prev !== "number") continue;
+
+        if (!patchedEntry) patchedEntry = [...entry];
+        const factory = entry[i] as ModuleFactory;
+        const existing = wrappedInChunk.get(factory);
+        if (existing) {
+            patchedEntry[i] = existing;
+        } else {
+            const wrapped = wrapFactory(prev, factory);
+            wrappedInChunk.set(factory, wrapped);
+            patchedEntry[i] = wrapped;
+        }
+    }
+    return originalPush!.call(null, patchedEntry ?? entry);
+}
+
+export function patchReport() {
+    return {
+        stats: { ...patchStats, patchedModules: [...patchStats.patchedModules] },
+        results: patchResults,
+        orphaned: patches.filter(p => !p.all).map(p => ({ plugin: p.plugin, find: String(p.find) })),
+    };
+}
+
+export function reportOrphanedPatches(): void {
+    const orphaned = patches.filter(p => !p.all);
+    if (orphaned.length)
+        logger.warn(
+            `${orphaned.length} patch(es) found no module:`,
+            orphaned.map(p => `${p.plugin}: ${String(p.find)}`),
+        );
+
+    if (IS_DEV) {
+        for (const result of patchResults) {
+            for (const rep of result.replacements) {
+                if (rep.status === "noEffect") logger.error(`[no effect] ${result.plugin} on ${result.moduleId}: ${rep.match}`);
+                else if (rep.status === "error") logger.error(`[error] ${result.plugin} on ${result.moduleId}: ${rep.match}`);
+            }
+        }
+
+        const slow = patchTimings.filter(([, , , t]) => t > 5);
+        for (const [plugin, moduleId, match, time] of slow) logger.warn(`Slow patch: ${plugin} on ${moduleId} took ${time.toFixed(2)}ms (${String(match)})`);
+    }
+}
+
+function scanExistingModules(cache: Record<number, TurbopackModule>) {
+    let count = 0;
+    for (const id in cache) {
+        const mod = cache[id];
+        if (mod?.exports == null) continue;
+        const numId = Number(id);
+        if (moduleCache.get(numId) !== mod.exports) {
+            moduleCache.set(numId, mod.exports);
+            count++;
+        }
+    }
+
+    // Notify load listeners once after bulk scan so the stability
+    // detector knows modules exist and resets its settle timer.
+    if (count > 0) {
+        for (const cb of moduleLoadListeners) {
+            try {
+                cb();
+            } catch {}
+        }
+    }
+    if (IS_DEV) logger.debug(`Scanned ${count} existing modules`);
+}
+
+export function rescanRuntimeModules(): void {
+    if (!runtimeModuleCache) return;
+    let count = 0;
+    for (const id in runtimeModuleCache) {
+        const mod = runtimeModuleCache[id];
+        if (mod?.exports == null) continue;
+        const numId = Number(id);
+        if (moduleCache.get(numId) !== mod.exports) {
+            notifyModuleLoaded(mod.exports, numId);
+            count++;
+        }
+    }
+    if (count > 0) logger.info(`Rescan found ${count} new/updated modules`);
+}
+
+function captureFactoryRegistry(): Map<number, ModuleFactory> | null {
+    const origMapSet = Map.prototype.set;
+    let captured: Map<number, unknown> | null = null;
+
+    Map.prototype.set = function (key: unknown, value: unknown) {
+        if (!captured && typeof key === "number" && typeof value === "function") {
+            captured = this;
+        }
+        return origMapSet.call(this, key, value);
+    };
+
+    originalPush!(["void-factory-probe", FACTORY_PROBE_ID, () => {}]);
+
+    Map.prototype.set = origMapSet;
+
+    (captured as Map<number, unknown> | null)?.delete(FACTORY_PROBE_ID);
+    return captured as Map<number, ModuleFactory> | null;
+}
+
+export function patchTurbopack(): void {
+    const existingTp = pageWindow.TURBOPACK;
+
+    if (existingTp && !Array.isArray(existingTp) && typeof existingTp.push === "function") {
+        originalPush = existingTp.push.bind(existingTp);
+        existingTp.push = (...args: unknown[]) => handleChunkPush(...args);
+
+        runtimeFactoryRegistry = captureFactoryRegistry();
+        if (runtimeFactoryRegistry) {
+            for (const [id, factory] of runtimeFactoryRegistry) {
+                runtimeFactoryRegistry.set(id, wrapFactory(id, factory));
+            }
+        }
+
+        return;
+    }
+
+    const queuedChunks: unknown[][] = [];
+    if (Array.isArray(existingTp)) queuedChunks.push(...(existingTp as unknown[][]));
+
+    let currentTurbopack: TurbopackPushable | unknown[] = existingTp ?? [];
+
+    Object.defineProperty(pageWindow, "TURBOPACK", {
+        configurable: true,
+        get() {
+            return currentTurbopack;
+        },
+        set(newValue: unknown) {
+            if (newValue && !Array.isArray(newValue) && typeof (newValue as TurbopackPushable).push === "function") {
+                const tp = newValue as TurbopackPushable;
+                originalPush = tp.push.bind(tp);
+                tp.push = (...args: unknown[]) => handleChunkPush(...args);
+                currentTurbopack = tp;
+
+                for (const chunk of queuedChunks) {
+                    try {
+                        handleChunkPush(chunk);
+                    } catch (e) {
+                        logger.error("Failed to process queued chunk:", e);
+                    }
+                }
+                queuedChunks.length = 0;
+            } else {
+                currentTurbopack = newValue as TurbopackPushable | unknown[];
+            }
+        },
+    });
+
+    if (Array.isArray(currentTurbopack)) {
+        const origPush = currentTurbopack.push.bind(currentTurbopack);
+        (currentTurbopack as unknown[]).push = (...args: unknown[]) => {
+            queuedChunks.push(...(args as unknown[][]));
+            return origPush(...args);
+        };
+    }
+}

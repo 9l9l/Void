@@ -1,0 +1,206 @@
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync } from "fs";
+import { basename, dirname, resolve } from "path";
+
+import { Logger } from "./src/utils/Logger";
+
+const isDev = process.argv.includes("--dev");
+const isWatch = process.argv.includes("--watch");
+const isExtension = process.argv.includes("--extension");
+const logger = new Logger("Build", "#89b4fa");
+const pkg = JSON.parse(readFileSync("package.json", "utf-8"));
+
+// userscript is currently broken
+
+const USERSCRIPT_HEADER = `// ==UserScript==
+// @name         Void
+// @namespace    https://github.com/imjustprism/Void
+// @version      ${pkg.version}.${Date.now()}
+// @description  A modification for grok.com
+// @author       Void Contributors
+// @match        *://grok.com/*
+// @run-at       document-start
+// @grant        unsafeWindow
+// @grant        GM_xmlhttpRequest
+// @grant        GM_getValue
+// @grant        GM_setValue
+// @grant        GM_deleteValue
+// @grant        GM_listValues
+// @downloadURL  https://raw.githubusercontent.com/imjustprism/Void/main/dist/Void.user.js
+// @updateURL    https://raw.githubusercontent.com/imjustprism/Void/main/dist/Void.user.js
+// ==/UserScript==
+`;
+
+const pluginDir = resolve("src/plugins");
+
+function scanPluginDir(baseDir: string, imports: string[], exports: string[], counter: { i: number }) {
+    if (!existsSync(baseDir)) return;
+    const entries = readdirSync(baseDir, { withFileTypes: true });
+
+    for (const entry of entries) {
+        if (!entry.isDirectory() || entry.name.startsWith("_") || entry.name.startsWith(".")) continue;
+        if (!isDev && entry.name.endsWith(".dev")) continue;
+
+        const pluginDir = `${baseDir}/${entry.name}`;
+        if (!existsSync(`${pluginDir}/index.ts`) && !existsSync(`${pluginDir}/index.tsx`)) continue;
+
+        const varName = `p${counter.i++}`;
+        imports.push(`import ${varName} from "${resolve(baseDir, entry.name).replaceAll("\\", "/")}";`);
+        exports.push(`[${varName}.name]: ${varName}`);
+    }
+}
+
+function generatePluginModule(): string {
+    const imports: string[] = [];
+    const exports: string[] = [];
+    const counter = { i: 0 };
+
+    scanPluginDir(resolve(pluginDir, "_core"), imports, exports, counter);
+    scanPluginDir(resolve(pluginDir, "_api"), imports, exports, counter);
+    scanPluginDir(pluginDir, imports, exports, counter);
+
+    logger.info(`Found ${counter.i} plugins`);
+
+    if (!imports.length) return "export default {} as Record<string, unknown>;\n";
+    return `${imports.join("\n")}\n\nexport default { ${exports.join(", ")} } as Record<string, unknown>;\n`;
+}
+
+function pluginsPlugin(): import("bun").BunPlugin {
+    return {
+        name: "virtual-plugins",
+        setup(build) {
+            build.onResolve({ filter: /^~plugins$/ }, () => ({
+                path: "~plugins",
+                namespace: "virtual",
+            }));
+            build.onLoad({ filter: /^~plugins$/, namespace: "virtual" }, () => ({
+                contents: generatePluginModule(),
+                loader: "ts",
+            }));
+        },
+    };
+}
+
+function cssPlugin(): import("bun").BunPlugin {
+    return {
+        name: "void-css",
+        setup(build) {
+            build.onResolve({ filter: /\.css$/ }, args => ({
+                path: resolve(args.resolveDir, args.path),
+                namespace: "void-css",
+            }));
+            build.onLoad({ filter: /.*/, namespace: "void-css" }, async args => {
+                const css = await Bun.file(args.path).text();
+                const file = basename(args.path, ".css");
+                const dir = basename(dirname(args.path));
+                const name = file === "styles" ? dir : file;
+                return {
+                    contents: `import{registerStyle}from"${resolve("src/utils/css.ts").replaceAll("\\", "/")}";registerStyle(${JSON.stringify(name)},${JSON.stringify(css)});`,
+                    loader: "js",
+                };
+            });
+        },
+    };
+}
+
+async function buildCore(outfile: string, isExt: boolean) {
+    const result = await Bun.build({
+        entrypoints: ["src/index.ts"],
+        outdir: "dist",
+        target: "browser",
+        format: "iife",
+        minify: !isDev,
+        sourcemap: isDev ? "inline" : "none",
+        define: {
+            IS_DEV: JSON.stringify(isDev),
+            IS_EXTENSION: JSON.stringify(isExt),
+            VERSION: JSON.stringify(pkg.version),
+            GIT_HASH: JSON.stringify(Bun.spawnSync(["git", "rev-parse", "--short", "HEAD"]).stdout.toString().trim()),
+        },
+        naming: outfile,
+        plugins: [pluginsPlugin(), cssPlugin()],
+    });
+
+    if (!result.success) {
+        logger.error("Build failed:");
+        for (const log of result.logs) logger.error(log);
+        process.exit(1);
+    }
+
+    return result.outputs[0];
+}
+
+async function buildUserscript() {
+    const output = await buildCore("Void.user.js", false);
+    const code = await output.text();
+    await Bun.write("dist/Void.user.js", USERSCRIPT_HEADER + "\n" + code);
+    logger.info(`Built dist/Void.user.js (${((USERSCRIPT_HEADER.length + code.length) / 1024).toFixed(1)} KB)`);
+}
+
+async function buildExtensions() {
+    const output = await buildCore("Void.js", true);
+    const size = (output.size / 1024).toFixed(1);
+    logger.info(`Built dist/Void.js (${size} KB)`);
+
+    const targets = [
+        {
+            name: "chrome-unpacked",
+            files: ["manifest.json", "content.js", "modifyResponseHeaders.json"],
+        },
+        {
+            name: "firefox-unpacked",
+            files: ["manifestv2.json", "content.js", "background.js"],
+        },
+    ];
+
+    for (const target of targets) {
+        const outDir = resolve("dist", target.name);
+        rmSync(outDir, { recursive: true, force: true });
+        mkdirSync(resolve(outDir, "dist"), { recursive: true });
+
+        cpSync("dist/Void.js", resolve(outDir, "dist/Void.js"));
+
+        for (const file of target.files) {
+            const destName = file === "manifestv2.json" ? "manifest.json" : file;
+            let content = readFileSync(resolve("browser", file), "utf-8");
+
+            if (file.endsWith("manifest.json") || file === "manifestv2.json") {
+                const manifest = JSON.parse(content);
+                manifest.version = pkg.version;
+                content = JSON.stringify(manifest, null, 4);
+            }
+
+            await Bun.write(resolve(outDir, destName), content);
+        }
+
+        logger.info(`Packaged dist/${target.name}/`);
+    }
+}
+
+async function build() {
+    mkdirSync("dist", { recursive: true });
+
+    if (isExtension) {
+        await buildExtensions();
+    } else {
+        await buildUserscript();
+    }
+}
+
+if (isWatch) {
+    logger.info("Watching for changes...");
+    const { watch } = await import("fs");
+    let building = false;
+
+    const doBuild = async () => {
+        if (building) return;
+        building = true;
+        try { await build(); }
+        catch (e) { logger.error(e); }
+        building = false;
+    };
+
+    await doBuild();
+    watch("src", { recursive: true }, () => doBuild());
+} else {
+    await build();
+}

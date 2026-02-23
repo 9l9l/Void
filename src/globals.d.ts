@@ -1,0 +1,29 @@
+/*
+ * Void, a modification for grok.com
+ * Copyright (c) 2026 Void contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+declare const IS_DEV: boolean;
+declare const IS_EXTENSION: boolean;
+declare const VERSION: string;
+declare const GIT_HASH: string;
+
+declare const unsafeWindow: typeof globalThis;
+
+declare function GM_getValue<T = unknown>(key: string, defaultValue?: T): T;
+declare function GM_setValue(key: string, value: unknown): void;
+declare function GM_deleteValue(key: string): void;
+declare function GM_listValues(): string[];
+declare function GM_setClipboard(text: string): void;
+
+declare namespace globalThis {
+    var TURBOPACK: unknown;
+}
+
+declare module "*.css" {}
+
+declare module "~plugins" {
+    const plugins: Record<string, import("./utils/types").Plugin>;
+    export default plugins;
+}

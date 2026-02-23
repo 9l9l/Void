@@ -1,0 +1,343 @@
+# Void Development Guidelines
+
+## Critical Rules
+
+- **NEVER** edit existing license headers. New files use 2026.
+- **NEVER** add comments unless explicitly asked. Keep existing comments, they contain important context.
+- **NEVER** git checkout files without explicit permission.
+- Push back when the user idea is wrong or not correct.
+- Always use void-mcp MCP tools to check Grok's live code instead of guessing.
+- After `bun run build`, **ask the user to reload the Grok page** and **restart the MCP server** (`bun run mcp`) before using MCP tools to test changes.
+- Always verify components/functions arent deprecated before using.
+- Fix with smallest possible change. No refactoring unless explicitly asked.
+- Write natural human text in errors, descriptions, messages. No dashes or robotic formatting.
+- Descriptions: capital first letter, end with period.
+
+## Code Rules
+
+- **File structure order:** imports → `Logger` → turbopack finders (`findByPropsLazy`, `findExportedComponentLazy`, etc.) → interfaces/types → const globals → functions/components → `definePlugin`/`export default`.
+- **DELETE** dead code, dont comment it. Git preserves history.
+- No hardcoded values, magic numbers, string literals that should be constants.
+- KISS over clever, flat over nested, explicit over implicit. Less code is always better. No premature abstractions.
+- **No single-use intermediate variables.** If a value is only used once, inline it at the usage site. Don't `const x = foo(); return x;` — just `return foo()`. Exception: when the variable is needed for a guard/early return before usage.
+- Guard clause and return early, never nest 3+ levels deep.
+- Use `Map`/`Set` over object lookups, `.some`/`.find` over `.filter[0]`, no spread in loops, `Promise.all` for parallel async.
+- Single responsibility per function/module, compose small pieces.
+- Handle edge cases at boundaries, fail fast with clear errors.
+- Use `Logger` from `@utils/Logger`. **NEVER** raw `console.log/warn/error`.
+- Import `classNameFactory` from `@utils/css`. **ALWAYS** use `cl()` for class names, never hardcode strings like `"void-plugin-name-class"`.
+- `classNameFactory` prefix **MUST** end with `-` (e.g. `classNameFactory("void-foo-")`). Then call `cl("bar")` → `"void-foo-bar"`. **NEVER** `cl("-bar")` or `cl("")`. Use `cl("root")` for the root element.
+- When combining multiple class names use `classes()` from `@utils/css`, not template strings like `` `${a} ${b}` ``.
+- Use utilities from `@utils/`, `@api/`, `@components/`, `@turbopack/common/`.
+
+## TypeScript
+
+- **Prefer:** optional chaining (`?.`), nullish coalescing (`??`), `const`, arrow functions, `satisfies` over `as`
+- **Use:** destructuring, template literals, object shorthand, array methods, `readonly` where immutable
+- **Style:** trust inference for locals, annotate exports/params, inline single-use variables
+- Use generics for reusable code, constrain with `extends`, default type params where sensible.
+- Prefer const objects with `as const` over enums.
+- Use type predicates and assertion functions, narrow aggressively.
+- **Typing:** proper type > `any` > `unknown`. Use `any` for turbopack finders/module exports, Proxy handlers, recursive settings proxies, generic callback passthrough, untyped external modules. Use `unknown` for user input boundaries, error params, JSON parse results you will validate.
+
+## React
+
+- Wrap complex components with `ErrorBoundary.wrap(Component, { noop: true })`.
+- Return `null` for conditional rendering, not `undefined`.
+- Always return cleanup functions in `useEffect`.
+- Stable unique keys, never array index.
+- `useMemo`/`useCallback` only when measurably needed, not by default.
+
+## Settings Tabs
+
+### Layout
+
+The settings dialog wraps each tab panel in a `Wrapper` div with `flex-1 w-full h-full pl-4 pr-4 pb-10 overflow-scroll`. The Wrapper handles all sizing, padding, and scrolling. Tab components must:
+
+- **NEVER** set `width`, `height`, `overflow`, or `flex: 1` on the root element. The Wrapper already does this.
+- **NEVER** create inner scroll containers. The Wrapper scrolls the entire panel.
+- Root element should be a bare `<Flex flexDirection="column" gap="...">` with no style prop.
+- Use `style={{ padding: "0 0.75rem" }}` on individual sections to align with Wrapper padding.
+
+### Headers
+
+Every settings tab must have a consistent header with title and description:
+
+```tsx
+<Flex flexDirection="column" gap="0" style={{ padding: "0 0.75rem" }}>
+    <Text size="sm" weight="medium">Tab Name</Text>
+    <Text size="xs" color="secondary">Short description of what this tab does.</Text>
+</Flex>
+```
+
+- Gap: `0` (matches native `SettingsTitle`/`SettingsDescription` — no gap, natural block flow).
+- Padding: `0 0.75rem` to align with content below.
+- Title: `Text size="sm" weight="medium"`.
+- Description: `Text size="xs" color="secondary"`.
+
+### Consistency
+
+Before adding any UI element to a settings tab, verify it matches Grok's native settings appearance. Use MCP tools to inspect the live DOM structure and class names of native tabs. Do not invent custom layouts that look different from Grok's own settings panels.
+
+## Project Structure
+
+### APIs (`src/api/`)
+
+API modules contain logic, types, and state management (registries, stores, pub/sub). No patches, no UI rendering into Grok.
+
+- `ChatBarButtons.tsx` — button registry (Map + useSyncExternalStore)
+- `Modals.tsx` — modal stack, `openModal`, `confirm`
+- `Settings.ts` — settings persistence, `definePluginSettings`
+- `PluginManager.ts` — plugin lifecycle
+- `Events.ts` — pub/sub
+- `Notifications.ts` — toast wrapper
+
+### Core Plugins (`src/plugins/_core/`, `src/plugins/_api/`)
+
+Plugins that patch Grok to inject API functionality. Each `_api` plugin patches a specific Grok component to render the corresponding API (e.g. `_api/chatBarButtons` patches the chat bar to render `VoidChatBarButtons` from `@api/ChatBarButtons`).
+
+**Pattern:** API in `src/api/` (logic + types) → Core plugin in `src/plugins/_api/` or `_core/` (patches to inject it).
+
+### Components (`src/components/`)
+
+Custom Void components only. No turbopack finders here.
+
+- Layout: `Flex`, `Grid`
+- Text: `Text`, `Paragraph`
+- Feedback: `ErrorCard`, `ErrorBoundary`
+- Display: `ChatBarButton`, `Chip`
+- CSS co-located: `ChatBarButton.css`, `ErrorCard.css`
+- Icons: `src/components/icons/` for custom SVGs not available in Grok
+
+### Grok Native Components (`src/turbopack/common/components.ts`)
+
+All Grok native component wrappers live here. Uses `LazyComponent` + `findExportedComponent` with proper typing via `ComponentType<Props>`.
+
+**Adding a new Grok component:**
+1. Type it in `packages/grok-types/components.d.ts`
+2. Add `LazyComponent` wrapper in `src/turbopack/common/components.ts`
+3. Re-export from `src/components/index.ts` barrel
+
+### Grok Types (`packages/grok-types/`)
+
+TypeScript type definitions for Grok's runtime (stores, components, enums, common data types). Never contains runtime code. Lives outside `src/` as a standalone type package.
+
+## CSS
+
+- **ALWAYS** use components first: `Flex`/`Grid` for layout, `Text`/`Paragraph` for text. Use Tailwind classes via `className` for everything else (e.g. `truncate`, `min-w-0`, `overflow-hidden`).
+- **NEVER** use `React.CSSProperties` objects, inline `style={{}}` props, or `CSSProperties` typed consts in `.tsx` files. If you need `display: flex` use `Flex`. If you need `overflow: hidden` use `className="overflow-hidden"`. If Tailwind/components truly cant handle it (pseudo-selectors, animations, complex hover states), use a `styles.css` file with `classNameFactory`/`cl()`.
+- CSS files in plugins: always name `styles.css`.
+- `registerStyle(name, css)` for runtime CSS injection.
+
+## Forbidden
+
+- Empty catch blocks (except in turbopack module iteration).
+- **NEVER** use `settings.use()` with arrays. Mutate then reassign.
+- **NEVER** nest ternaries — use early returns or variables.
+- **NEVER** mutate function parameters — clone or return new.
+
+## Anti-Patterns
+
+- `value !== null && value !== undefined` ⟹ `value != null`
+- `array && array.length > 0` ⟹ `array.length`
+- `settings?.store?.value` ⟹ `settings.store.value`
+- `value || defaultValue` ⟹ `value ?? defaultValue`
+- `arr.filter(x => x.id === id)[0]` ⟹ `arr.find(x => x.id === id)`
+- `Object.keys(obj).length === 0` ⟹ `!Object.keys(obj).length`
+- `new Promise((res) => { fetch().then(res) })` ⟹ `fetch()`
+- `if (x) { return true } else { return false }` ⟹ `return x`
+- `arr.forEach(x => newArr.push(transform(x)))` ⟹ `arr.map(transform)`
+- `[...arr1, ...arr2]` in loops ⟹ `arr1.concat(arr2)` or `push(...arr2)`
+
+## Patching
+
+### Philosophy
+
+Patches should read like Equicord patches: short, simple, one string anchor + minimal regex glue. The `find` targets the module; the `match` just needs to be unique **within that module**. Dont overthink it.
+
+### Core
+
+- **ALWAYS** use MCP patch test before finalizing. **NEVER** guess module structure.
+- Minimum code touched. Stability over cleverness. One patch per concern.
+- Keep simplifying until you find the cleanest regex. Remove any character that doesnt change the result.
+- Every `match` regex **MUST** contain at least one stable string literal anchor (component name, i18n key, prop name, function name). Pure `\i` chains with no literals are too generic.
+
+### Tokens
+
+- `\i` — matches any JS identifier: `(?:[A-Za-z_$][\w$]*)`. Use instead of hardcoded minified vars.
+- `\e{Name}` — matches an export entry: `["']Name["'],\(\)=>\i`. For targeting `e.s([...])` exports.
+- `#{i18n::KEY}` — expands to `"KEY"` in find, `"KEY"` with dots escaped in match regex.
+- `$self` — replaced with `Void.plugins["PluginName"]`. Call plugin methods from patched code.
+- `$&` — standard RegExp: keeps the entire matched string. Use for append/prepend patterns.
+- `$1`, `$2` — standard RegExp capture group references.
+
+### Find
+
+- Find string **MUST** match exactly 1 module (or shared factory group). Use MCP patch analyze to verify.
+- Prefer i18n keys (`"user-dropdown.upgrade"`), exported names (`"UpsellCard",()=>`), feature flags, CSS class strings over minified code. These are the most stable anchors.
+- For shared factories (same source, multiple IDs): use `all: true` so the patch applies to all IDs.
+
+### Match
+
+- Match only what you need to change. `find` already narrowed to the right module.
+- **Shortest regex wins.** Strip all `\i` noise that doesnt help uniqueness. If removing a `\i` still gives a single match in the module, remove it.
+- Use lookahead `(?=...)` or lookbehind `(?<=...)` to anchor to nearby stable strings without including them in the match/replace. This keeps replace strings trivial.
+- `$&` keeps original, append/prepend to it.
+- `.{0,N}` not `.+?` or `.*?`
+- Only use capture groups if reusing in replace.
+- `\i` is glue between anchors, not the anchor itself. Good: `DatabaseIcon,.{0,80}tab:"data"`. Bad: `\i\|\|\i\|\|\i\?null:`.
+
+### Patch Options
+
+- `all: true` — dont consume patch after first match. Required for shared factories.
+- `group: true` — atomic: if any replacement fails, rollback all. Use when replacements depend on each other.
+- `predicate: () => boolean` — skip patch/replacement at registration time.
+- `noWarn: true` — suppress "no effect" warnings (patch or replacement level).
+
+### NEVER
+
+- **Hardcoded minified vars:** `e,t,n,r,i,o,s,l,c,u,$_,xx,eD,eH,eW`
+- **Unbounded gaps:** `.+?` or `.*?` — use `.{0,N}`.
+- **Pure `\i` patterns:** `/\i\|\|\i\|\|\i/`, `/\i\.\i/` alone — always pair with a string literal.
+- **Overlong regexes:** if match is longer than ~80 chars, you are matching too much. Simplify.
+
+### Examples
+
+**Append (anchor: `DatabaseIcon` + `tab:"data"`):**
+```
+find: "pressed_cmd_settings"
+match: /(\i\.jsx)\)\((\i),\{icon:\i\.DatabaseIcon,.{0,80}tab:"data"\}\)/
+replace: "$&,...$self.renderTabs($1,$2)"
+```
+
+**Prepend (anchor: `"data"===` + `{children:`):**
+```
+find: "pressed_cmd_settings"
+match: /"data"===(\i)&&\i\.user&&\(0,(\i\.jsx)\)\((\i),\{children:/
+replace: "...$self.renderPanels($2,$1,$3),$&"
+```
+
+**Strip condition (anchor: `void 0!==` + `?!!`):**
+```
+find: 'ENABLE_SCREEN_SHARING:"enable_screen_sharing"'
+match: /(\i),\i&&(void 0!==\i\[\i\]\?!!)/
+replace: "$1,$2"
+```
+
+**Nullify component (anchor: `"UpsellCard"` literal):**
+```
+find: '"UpsellCard",()=>'
+match: /"UpsellCard",\(\)=>\i/
+replace: '"UpsellCard",()=>()=>null'
+```
+
+**Lookahead anchor (anchor: `DropdownMenuItem` without capturing):**
+```
+find: '"user-dropdown.upgrade","Upgrade plan"'
+match: /\i\|\|\i\|\|\i(?=\?null:\(0,\i\.jsxs\)\(\i\.DropdownMenuItem)/
+replace: "true"
+```
+
+**Lookbehind anchor (anchor: `useCheckSubscriptionOffer` without capturing):**
+```
+find: "group/model-mode-select-upsell"
+match: /(?<=useCheckSubscriptionOffer\)\(\);)if\(!\i\|\|\i&&\i\)return null;/
+replace: "return null;"
+```
+
+## Finding
+
+### Core
+
+- **ALWAYS** verify finders match exactly 1 module using MCP `findAll` or `evaluateCode`.
+- Use 2+ props to disambiguate. Single-prop finders are fragile.
+- **NEVER** use `findByPropsLazy("z")` or single-char/common prop names.
+- Use exports from `@turbopack/common/*` instead of per-file `findByPropsLazy` calls.
+
+### findByPropsLazy
+
+- Use unique, descriptive prop names that only exist on the target module.
+- If multiple modules export the same prop, add a second prop unique to the target.
+- **Good:** `findByPropsLazy("useLocalStorage", "useCleanupLocalStorage")`
+- **Bad:** `findByPropsLazy("useLocalStorage")` — matches 2 modules.
+
+### findByCodeLazy
+
+- Searches function `toString()`, NOT factory source — only works for function exports.
+- **Good:** `findLazy(filters.byCode("createClientQuery", "mutationFn"))`
+- **Bad:** `findByCodeLazy("useMobileSize")` — matches 130 factories.
+
+### findExportedComponent
+
+- For React components exported by name. Use `LazyComponent("Name", () => findExportedComponent("Name"))`.
+- Safe for unique names like `"DialogFooter"`, `"CogIcon"`, `"Avatar"`.
+
+### Stores
+
+- **ALWAYS** import typed stores from `@turbopack/common/stores` (e.g. `ResponseStore`, `ConversationStore`, `SessionStore`). **NEVER** create per-plugin `findByPropsLazy("useXxxStore")` calls with manual type annotations — the typed stores already exist and provide full type inference.
+- Access store state directly: `ResponseStore.useResponseStore.getState().loadInitialResponses(...)`, not via intermediate destructured variables.
+- If a store isnt in `@turbopack/common/stores` yet, add it there with proper typing first, then import it.
+- Add a second export if store name isnt unique: `"useSettingsStore", "TOOL_NAMES"`.
+
+### Store Typing
+
+When typing a new Grok store:
+1. Create state + module interfaces in `packages/grok-types/stores/XxxStore.ts`.
+2. JSDoc comment every field and method — these are type definitions, not code.
+3. String literal unions (enums) go in `packages/grok-types/enums/`, not inline in store types. Import and re-export.
+4. Export from `packages/grok-types/stores/index.ts` barrel.
+5. Add typed finder in `src/turbopack/common/stores.ts` with the module interface.
+
+## Plugin Interop
+
+- `isPluginEnabled(name)` from `@api/PluginManager` takes a string.
+- Use `definePluginSettings` from `@api/Settings`, not inline settings object.
+
+## Reference
+
+### Components (`@components/`)
+
+**Layout:** `Flex`, `Grid`
+**Text:** `Text`, `Paragraph`
+**Form:** `Button`, `ButtonWithTooltip`, `Switch`, `Input`, `Textarea`, `Select`, `SelectTrigger`, `SelectContent`, `SelectItem`, `SelectValue`, `Label`
+**Feedback:** `ErrorCard`, `ErrorBoundary`
+**Overlay:** `Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogFooter`, `DialogClose`, `DialogTrigger`, `Popover`, `PopoverContent`, `PopoverTrigger`, `Tooltip`, `TooltipContent`, `TooltipTrigger`, `TooltipProvider`, `DropdownMenu`, `DropdownMenuContent`, `DropdownMenuItem`, `DropdownMenuTrigger`
+**Display:** `Card`, `CardHeader`, `CardTitle`, `CardContent`, `Separator`, `ChatBarButton`, `Chip`
+**Motion:** `MotionDiv`, `MotionSpan`, `MotionButton`
+**Settings:** `SettingsRow`, `SettingsTitle`, `SettingsDescription`
+
+### Utilities
+
+- **@utils/css** — `classNameFactory`, `classes`, `registerStyle`, `enableStyle`, `disableStyle`
+- **@utils/misc** — `sleep`, `debounce`, `onlyOnce`, `copyToClipboard`, `mergeDefaults`, `isObject`, `isTruthy`, `isNonNullish`, `formatCountdown`, `formatDuration`
+- **@utils/react** — `useForceUpdater`, `usePrevious`
+- **@utils/lazy** — `proxyLazy`, `makeLazy`
+- **@utils/Logger** — `Logger`
+
+### Settings
+
+`definePluginSettings` from `@api/Settings`, `definePlugin` from `@utils/types`
+
+### Turbopack Common
+
+- **react** — `React`, `useState`, `useEffect`, `useLayoutEffect`, `useMemo`, `useRef`, `useReducer`, `useCallback`, `useContext`, `createElement`, `Fragment`, `LazyComponent`, `waitForComponent`, `waitForComponentByName` from `@turbopack/common/react`
+- **stores** — `SessionStore`, `SettingsStore`, `SettingsDialogStore`, `FeatureStore`, `ConversationStore`, `ResponseStore`, `RoutingStore`, `ModelsStore`, `ChatPageStore`, `TabsManagerStore` from `@turbopack/common/stores`
+- **utils** — `Router`, `GrokRouter`, `Transport`, `QueryClient`, `CreateClientQuery`, `ApiClients`, `StoreUtils`, `ZustandMiddleware`, `Zustand`, `LocalStorage`, `I18n`, `FeatureFlags`, `Environment`, `Os`, `BrowserUtils`, `Toaster`, `ClipboardUtils`, `ThemeUtils`, `CommandMenu`, `Mobile`, `Hotkeys`, `KeyboardShortcuts`, `ErrorUtils`, `DateTime`, `FormatUtils`, `DateHooks`, `ClassNames`, `CVA`, `UrlUtils`, `ImageUtils`, `WorkspaceActions`, `DebouncedValue`, `PreviousValue`, `IntersectionObserver`, `DeepCompare`, `ReasoningModeUtils` from `@turbopack/common/utils`
+- **components** — All Grok native component wrappers (Button, Card, Dialog, Select, Switch, Tooltip, etc.) from `@turbopack/common/components`. Also: `SidebarComponents`, `DrawerComponents`, `Avatar`, `Presence`, `Icon`, `AnimatePresence`
+
+### Lazy Finders (`@turbopack/turbopack`)
+
+`find`, `findAll`, `findLazy`, `findByProps`, `findByPropsLazy`, `findByCode`, `findByCodeLazy`, `findComponentByCode`, `findComponentByCodeLazy`, `findExportedComponent`, `findExportedComponentLazy`, `findStore`, `findStoreLazy`, `findCssClasses`, `findCssClassesLazy`, `findBulk`, `findModuleFactory`, `findModuleId`, `mapMangledModule`, `mapMangledModuleLazy`
+
+### Never Hardcode
+
+- `console.log/warn/error` ⟹ `Logger` from `@utils/Logger`
+- `` `${a} ${b}` `` for class names ⟹ `classes(a, b)` from `@utils/css`
+- Per-file `findByPropsLazy` for common modules ⟹ import from `@turbopack/common/*`
+- Per-file `findByPropsLazy("useXxxStore")` with `{ useXxxStore: any }` ⟹ typed import from `@turbopack/common/stores`
+- Inline `setTimeout` debounce ⟹ `debounce` from `@utils/misc`
+- Manual null/truthy guards ⟹ `isTruthy`, `isNonNullish` from `@utils/misc`
+- Manual `navigator.clipboard` ⟹ `copyToClipboard` from `@utils/misc`
+- Bare `<div>` for layout ⟹ `Flex` or `Grid` from `@components/`
+- Bare `<p>`/`<span>` for text ⟹ `Paragraph` or `Text` from `@components/`
+- `style={{}}` / `React.CSSProperties` ⟹ Tailwind `className` or `styles.css` with `cl()`

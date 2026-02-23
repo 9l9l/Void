@@ -1,0 +1,431 @@
+/*
+ * Void, a modification for grok.com
+ * Copyright (c) 2026 Void contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+import { Logger } from "@utils/Logger";
+import { makeLazy, proxyLazy } from "@utils/lazy";
+import { LazyComponent } from "@utils/lazyReact";
+
+import { matchesAllPatterns } from "./match";
+import { addWaitForSubscription, getModuleCache, getRuntimeFactoryRegistry, getTurbopackHelpers, isBlacklisted, removeWaitForSubscription, syncLazyModules } from "./patchTurbopack";
+import type { FilterFn, ModuleFactory } from "./types";
+
+export { matchesAllPatterns, matchesPattern } from "./match";
+
+const logger = new Logger("TurbopackFinder", "#a6d189");
+const fnSourceCache = new WeakMap<Function, string>();
+
+function getFnSource(fn: Function): string {
+    let src = fnSourceCache.get(fn);
+    if (src === undefined) {
+        src = String(fn);
+        fnSourceCache.set(fn, src);
+    }
+    return src;
+}
+
+function toZustandHookName(name: string): string {
+    if (name.startsWith("use")) return name;
+    return name.endsWith("Store") ? `use${name}` : `use${name}Store`;
+}
+
+export const filters = {
+    byProps: (...props: string[]): FilterFn => {
+        return props.length === 1 ? m => m[props[0]] != null : m => props.every(p => m[p] != null);
+    },
+
+    byCode: (...code: (string | RegExp)[]): FilterFn => {
+        return m => {
+            if (typeof m !== "function") return false;
+            return matchesAllPatterns(getFnSource(m), code);
+        };
+    },
+
+    byDisplayName: (name: string): FilterFn => {
+        return m => m?.displayName === name || m?.render?.displayName === name;
+    },
+
+    byStoreName: (name: string): FilterFn => {
+        const hookName = toZustandHookName(name);
+        return m => {
+            if (typeof m !== "object" || m === null) return false;
+            const hook = m[hookName];
+            return typeof hook === "function" && typeof hook.getState === "function";
+        };
+    },
+
+    componentByCode: (...code: (string | RegExp)[]): FilterFn => {
+        const byCode = filters.byCode(...code);
+        return m => {
+            if (byCode(m)) return true;
+            if (!m?.$$typeof) return false;
+            if (m.type) return byCode(m.type);
+            if (m.render) return byCode(m.render);
+            return false;
+        };
+    },
+
+    byClassName: (...classes: string[]): FilterFn => {
+        return m => {
+            if (typeof m !== "object" || m === null) return false;
+            return classes.every(c => typeof m[c] === "string");
+        };
+    },
+};
+
+function searchCache(filter: FilterFn, collectAll: true, topLevelOnly?: boolean): any[];
+function searchCache(filter: FilterFn, collectAll?: false, topLevelOnly?: boolean): any;
+function searchCache(filter: FilterFn, collectAll = false, topLevelOnly = false): any {
+    const result = scanModuleCache(filter, collectAll, topLevelOnly);
+    if (!collectAll && result) return result;
+    if (collectAll && (result as any[]).length) return result;
+
+    // Shared factory modules may not be in the Void cache yet — sync and retry
+    const prevSize = getModuleCache().size;
+    syncLazyModules();
+    if (getModuleCache().size === prevSize) return result;
+    return scanModuleCache(filter, collectAll, topLevelOnly);
+}
+
+function scanModuleCache(filter: FilterFn, collectAll: boolean, topLevelOnly: boolean): any {
+    const results: any[] = [];
+    const seen: Set<unknown> | null = collectAll ? new Set() : null;
+    const cache = getModuleCache();
+
+    for (const [, exports] of cache) {
+        if (exports == null || isBlacklisted(exports)) continue;
+
+        try {
+            if (filter(exports)) {
+                if (!collectAll) return exports;
+                if (!seen!.has(exports)) {
+                    seen!.add(exports);
+                    results.push(exports);
+                }
+                continue;
+            }
+        } catch {}
+
+        if (!topLevelOnly && typeof exports === "object") {
+            for (const key in exports) {
+                try {
+                    const nested = exports[key];
+                    if (nested == null || isBlacklisted(nested)) continue;
+                    if (filter(nested)) {
+                        if (!collectAll) return nested;
+                        if (!seen!.has(nested)) {
+                            seen!.add(nested);
+                            results.push(nested);
+                        }
+                    }
+                } catch {}
+            }
+        }
+    }
+
+    return collectAll ? results : null;
+}
+
+export function find(filter: FilterFn): any {
+    return searchCache(filter);
+}
+
+export function findAll(filter: FilterFn): any[] {
+    return searchCache(filter, true);
+}
+
+export function findLazy(filter: FilterFn): any {
+    const cached = searchCache(filter);
+    if (cached) return cached;
+    return proxyLazy(() => searchCache(filter));
+}
+
+export function findByProps(...props: string[]): any {
+    return find(filters.byProps(...props));
+}
+
+export function findByPropsLazy(...props: string[]): any {
+    return proxyLazy(() => findByProps(...props));
+}
+
+export function findByCode(...code: (string | RegExp)[]): any {
+    return find(filters.byCode(...code));
+}
+
+export function findByCodeLazy(...code: (string | RegExp)[]): any {
+    return proxyLazy(() => findByCode(...code));
+}
+
+export function findComponentByCode(...code: (string | RegExp)[]): any {
+    return find(filters.componentByCode(...code));
+}
+
+export function findComponentByCodeLazy(...code: (string | RegExp)[]): any {
+    return LazyComponent("findComponentByCode", () => findComponentByCode(...code));
+}
+
+export function findExportedComponent(...props: string[]): any {
+    const cache = getModuleCache();
+    for (const [, exports] of cache) {
+        if (exports == null || typeof exports !== "object" || isBlacklisted(exports)) continue;
+        for (const prop of props) {
+            try {
+                const comp = exports[prop];
+                if (comp == null || isBlacklisted(comp)) continue;
+                if (typeof comp === "function" || comp?.$$typeof) return comp;
+            } catch {}
+        }
+    }
+    return null;
+}
+
+export function findExportedComponentLazy(...props: string[]): any {
+    return LazyComponent(props[0], () => findExportedComponent(...props));
+}
+
+export function findStore(name: string): any {
+    const hookName = toZustandHookName(name);
+    const mod = find(filters.byStoreName(name));
+    return mod?.[hookName] ?? mod;
+}
+
+export function findStoreLazy(name: string): any {
+    return proxyLazy(() => findStore(name));
+}
+
+export function findCssClasses(...classes: string[]): Record<string, string> {
+    return find(filters.byClassName(...classes));
+}
+
+export function findCssClassesLazy(...classes: string[]): Record<string, string> {
+    return proxyLazy(() => findCssClasses(...classes));
+}
+
+export function findBulk(...filterFns: FilterFn[]): any[] {
+    const { length } = filterFns;
+    if (length < 2) {
+        logger.warn("findBulk called with fewer than 2 filters, use find instead.");
+        return length === 1 ? [find(filterFns[0])] : [];
+    }
+
+    const activeFilters: Array<FilterFn | undefined> = [...filterFns];
+    const results = new Array(length).fill(null);
+    let found = 0;
+    const cache = getModuleCache();
+
+    outer: for (const [, exports] of cache) {
+        if (exports == null || isBlacklisted(exports)) continue;
+        for (let j = 0; j < length; j++) {
+            const filter = activeFilters[j];
+            if (!filter) continue;
+
+            try {
+                if (filter(exports)) {
+                    results[j] = exports;
+                    activeFilters[j] = undefined;
+                    if (++found === length) break outer;
+                    break;
+                }
+            } catch {}
+
+            if (typeof exports !== "object") continue;
+            for (const key in exports) {
+                try {
+                    const nested = exports[key];
+                    if (nested == null || isBlacklisted(nested)) continue;
+                    if (filter(nested)) {
+                        results[j] = nested;
+                        activeFilters[j] = undefined;
+                        if (++found === length) break outer;
+                        continue outer;
+                    }
+                } catch {}
+            }
+        }
+    }
+
+    if (found !== length) logger.warn(`findBulk: got ${length} filters but only found ${found} modules.`);
+    return results;
+}
+
+export function findModuleFactory(...code: (string | RegExp)[]): [id: number, factory: ModuleFactory] | null {
+    const registry = getRuntimeFactoryRegistry();
+    if (!registry) return null;
+    for (const [id, factory] of registry) {
+        if (matchesAllPatterns(getFnSource(factory), code)) return [id, factory];
+    }
+    return null;
+}
+
+export function findModuleId(...code: (string | RegExp)[]): number | null {
+    return findModuleFactory(...code)?.[0] ?? null;
+}
+
+export function mapMangledModule<S extends string>(code: (string | RegExp)[], mappers: Record<S, FilterFn>): Record<S, any> {
+    const result = {} as Record<S, any>;
+    const id = findModuleId(...code);
+    if (id == null) return result;
+
+    const mod = requireModule(id);
+    if (mod == null) return result;
+
+    const mapperEntries = Object.entries<FilterFn>(mappers);
+    let found = 0;
+
+    outer: for (const key in mod) {
+        try {
+            const member = mod[key];
+            for (let i = 0; i < mapperEntries.length; i++) {
+                const [name, filter] = mapperEntries[i];
+                if (name in result) continue;
+                if (filter(member)) {
+                    result[name as S] = member;
+                    if (++found === mapperEntries.length) break outer;
+                    break;
+                }
+            }
+        } catch {}
+    }
+    return result;
+}
+
+export function mapMangledModuleLazy<S extends string>(code: (string | RegExp)[], mappers: Record<S, FilterFn>): Record<S, any> {
+    return proxyLazy(() => mapMangledModule(code, mappers));
+}
+
+const IDENT = "[A-Za-z_$][\\w$]*";
+export const DefaultChunkLoadRegex = new RegExp(`Promise\\.all\\(\\[([^\\]]+)\\]\\.map\\(${IDENT}=>${IDENT}\\.l\\(${IDENT}\\)\\)\\)\\.then\\(\\(\\)=>${IDENT}\\((\\d+)\\)\\)`);
+export const ChunkPathRegex = /"(static\/chunks\/[^"]+)"/g;
+
+export async function extractAndLoadChunks(code: (string | RegExp)[], matcher = DefaultChunkLoadRegex): Promise<boolean> {
+    const factory = findModuleFactory(...code);
+    if (!factory) {
+        logger.warn("extractAndLoadChunks: no module factory found for:", code);
+        return false;
+    }
+
+    const match = getFnSource(factory[1]).match(matcher);
+    if (!match) {
+        logger.warn("extractAndLoadChunks: no chunk loading pattern found in factory for:", code);
+        return false;
+    }
+
+    const [, rawChunkPaths, entryPointId] = match;
+    if (entryPointId == null) {
+        logger.warn("extractAndLoadChunks: matcher did not capture entry point ID for:", code);
+        return false;
+    }
+
+    const helpers = getTurbopackHelpers();
+    if (!helpers) {
+        logger.warn("extractAndLoadChunks: Turbopack helpers not available.");
+        return false;
+    }
+
+    if (rawChunkPaths) {
+        const chunkPaths = Array.from(rawChunkPaths.matchAll(ChunkPathRegex), m => m[1]);
+        if (chunkPaths.length) {
+            try {
+                await Promise.all(chunkPaths.map(path => helpers.l(path)));
+            } catch (e) {
+                logger.warn("extractAndLoadChunks: chunk loading failed:", e);
+                return false;
+            }
+        }
+    }
+
+    const entryPoint = Number(entryPointId);
+    try {
+        requireModule(entryPoint);
+    } catch (e) {
+        logger.warn("extractAndLoadChunks: entry point module failed:", e);
+        return false;
+    }
+    return true;
+}
+
+export function extractAndLoadChunksLazy(code: (string | RegExp)[], matcher = DefaultChunkLoadRegex): () => Promise<boolean> {
+    return makeLazy(() => extractAndLoadChunks(code, matcher));
+}
+
+export function search(...code: (string | RegExp)[]): Record<number, ModuleFactory> {
+    const results: Record<number, ModuleFactory> = {};
+    const registry = getRuntimeFactoryRegistry();
+    if (!registry) return results;
+    for (const [id, factory] of registry) {
+        if (matchesAllPatterns(getFnSource(factory), code)) results[id] = factory;
+    }
+    return results;
+}
+
+export function requireModule(moduleId: number): any {
+    const cached = getModuleCache().get(moduleId);
+    if (cached) return cached;
+
+    const helpers = getTurbopackHelpers();
+    if (!helpers) return null;
+
+    try {
+        return helpers.i(moduleId);
+    } catch {
+        return null;
+    }
+}
+
+export function importModule(moduleId: number): Promise<any> {
+    const helpers = getTurbopackHelpers();
+    if (!helpers) return Promise.reject(new Error("Turbopack helpers not available"));
+    return helpers.A(moduleId);
+}
+
+function findMatchInExports(exports: any, filter: FilterFn): any {
+    if (isBlacklisted(exports)) return null;
+    try {
+        if (filter(exports)) return exports;
+        if (typeof exports === "object" && exports !== null) {
+            for (const key in exports) {
+                try {
+                    const nested = exports[key];
+                    if (nested != null && !isBlacklisted(nested) && filter(nested)) return nested;
+                } catch {}
+            }
+        }
+    } catch {}
+    return null;
+}
+
+export function waitFor(filter: FilterFn, callback: (mod: any, id: number) => void, timeout = 0) {
+    const cached = searchCache(filter);
+    if (cached) {
+        callback(cached, -1);
+        return () => {};
+    }
+
+    const wrappedFilter = (exports: any) => findMatchInExports(exports, filter) != null;
+
+    const wrappedCallback = (exports: any, id: number) => {
+        try {
+            const match = findMatchInExports(exports, filter);
+            if (match) callback(match, id);
+        } catch (e) {
+            logger.error("waitFor callback error:", e);
+        }
+    };
+
+    addWaitForSubscription(wrappedFilter, wrappedCallback);
+
+    const cancel = () => removeWaitForSubscription(wrappedFilter);
+
+    if (timeout > 0) {
+        setTimeout(() => {
+            if (getModuleCache().size > 0 && !searchCache(filter)) {
+                logger.warn(`waitFor timed out after ${timeout}ms:`, filter);
+                cancel();
+            }
+        }, timeout);
+    }
+
+    return cancel;
+}

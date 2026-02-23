@@ -1,0 +1,201 @@
+/*
+ * Void, a modification for grok.com
+ * Copyright (c) 2026 Void contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+import { definePluginSettings } from "@api/Settings";
+import { Logger } from "@utils/Logger";
+import definePlugin, { OptionType } from "@utils/types";
+
+import { toolHandlers } from "./tools";
+import { MCP as MCP_CONSTANTS } from "./tools/constants";
+
+const settings = definePluginSettings({
+    logToolCalls: {
+        type: OptionType.BOOLEAN,
+        description: "Log tool call names and timing to the browser console.",
+        default: true,
+    },
+});
+
+const logger = new Logger("MCP", "#ca9ee6");
+
+const MCP_URL = "ws://localhost:7890";
+const MAX_RECONNECT_DELAY = 60_000;
+const MAX_RESULT_SIZE = 80_000;
+const INITIAL_RECONNECT_DELAY = 3000;
+const { SLOW_THRESHOLD } = MCP_CONSTANTS;
+
+interface WsMessage {
+    id: string | number;
+    tool: string;
+    arguments?: Record<string, unknown>;
+}
+
+interface WsResponse {
+    id: string | number;
+    result?: unknown;
+    error?: string;
+}
+
+let ws: WebSocket | null = null;
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let reconnectDelay = INITIAL_RECONNECT_DELAY;
+let wasConnected = false;
+
+function truncateResult(result: unknown): unknown {
+    if (Array.isArray(result)) {
+        const half = Math.max(5, Math.floor(result.length / 2));
+        return [...result.slice(0, half), { _truncated: true, total: result.length, showing: half, hint: "Use narrower query, limit, or pagination to see more" }];
+    }
+    if (result != null && typeof result === "object") {
+        const out: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(result as Record<string, unknown>)) {
+            if (Array.isArray(v) && JSON.stringify(v).length > 20000) {
+                const half = Math.max(3, Math.floor(v.length / 2));
+                out[k] = [...v.slice(0, half), { _truncated: true, total: v.length, showing: half }];
+            } else {
+                out[k] = v;
+            }
+        }
+        out._warning = "Result auto-truncated. Use narrower queries, filters, or pagination.";
+        return out;
+    }
+    return result;
+}
+
+function send(data: WsResponse) {
+    try {
+        let json = JSON.stringify(data);
+        if (json.length > MAX_RESULT_SIZE && data.result != null) {
+            data.result = truncateResult(data.result);
+            json = JSON.stringify(data);
+            if (json.length > MAX_RESULT_SIZE) {
+                ws?.send(JSON.stringify({ id: data.id, error: `Result too large (${json.length} chars) even after auto-truncation. Use narrower queries or pagination.` }));
+                return;
+            }
+        }
+        ws?.send(json);
+    } catch (err: unknown) {
+        try {
+            ws?.send(JSON.stringify({ id: data.id, error: `Serialization failed: ${err instanceof Error ? err.message : String(err)}` }));
+        } catch (sendErr: unknown) {
+            logger.error("WebSocket send failed", sendErr);
+        }
+    }
+}
+
+function connect() {
+    if (ws?.readyState === WebSocket.OPEN || ws?.readyState === WebSocket.CONNECTING) return;
+
+    try {
+        ws = new WebSocket(MCP_URL);
+    } catch {
+        scheduleReconnect();
+        return;
+    }
+
+    ws.onopen = () => {
+        logger.info("Connected to MCP server");
+        reconnectDelay = INITIAL_RECONNECT_DELAY;
+        wasConnected = true;
+    };
+
+    ws.onmessage = (event: MessageEvent) => {
+        let msg: WsMessage;
+        try {
+            msg = JSON.parse(event.data as string);
+        } catch (err: unknown) {
+            logger.error("Failed to parse WebSocket message", err);
+            return;
+        }
+
+        const { id, tool, arguments: args } = msg;
+        if (!id || !tool) return;
+
+        const handler = toolHandlers[tool];
+        if (!handler) {
+            logger.error(`Unknown tool: ${tool}`);
+            send({ id, error: `Unknown tool: ${tool}` });
+            return;
+        }
+
+        const start = performance.now();
+        const logCall = (failed = false) => {
+            if (!settings.store.logToolCalls && !failed) return;
+            const ms = (performance.now() - start).toFixed(2);
+            if (failed) logger.error(`${tool} ${ms} ms (failed)`);
+            else if (performance.now() - start > SLOW_THRESHOLD) logger.warn(`${tool} ${ms} ms (slow)`);
+            else logger.info(`${tool} ${ms} ms`);
+        };
+        try {
+            const result = handler(args ?? {});
+            if (result != null && typeof (result as Promise<unknown>).then === "function") {
+                (result as Promise<unknown>).then(
+                    val => {
+                        logCall();
+                        send({ id, result: val });
+                    },
+                    (err: unknown) => {
+                        logCall(true);
+                        send({ id, error: err instanceof Error ? err.message : String(err) });
+                    },
+                );
+            } else {
+                logCall();
+                send({ id, result });
+            }
+        } catch (err: unknown) {
+            logCall(true);
+            send({ id, error: err instanceof Error ? err.message : String(err) });
+        }
+    };
+
+    ws.onclose = () => {
+        if (wasConnected) logger.warn("Disconnected from MCP server");
+        ws = null;
+        wasConnected = false;
+        scheduleReconnect();
+    };
+
+    ws.onerror = () => {
+        ws?.close();
+    };
+}
+
+function scheduleReconnect() {
+    if (reconnectTimer) return;
+    reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        connect();
+    }, reconnectDelay);
+    reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY);
+}
+
+function disconnect() {
+    if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+    }
+    if (ws) {
+        ws.onclose = null;
+        ws.close();
+        ws = null;
+    }
+}
+
+export default definePlugin({
+    name: "MCP",
+    description: "Connects AI coding agents to Grok via WebSocket for live inspection.",
+    authors: ["Prism"],
+    dev: true,
+    settings,
+    start() {
+        connect();
+    },
+
+    stop() {
+        disconnect();
+    },
+});

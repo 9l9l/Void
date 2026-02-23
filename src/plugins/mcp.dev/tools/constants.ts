@@ -1,0 +1,94 @@
+/*
+ * Void, a modification for grok.com
+ * Copyright (c) 2026 Void contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+export const SERIALIZE = {
+    DEFAULT_DEPTH: 2,
+    MAX_ARRAY: 10,
+    MAX_KEYS: 20,
+} as const;
+
+export const SEARCH = {
+    MAX_TOTAL: 30_000,
+    DEFAULT_MAX: 10,
+    DEFAULT_CONTEXT: 60,
+    MAX_CONTEXT: 200,
+} as const;
+
+export const MODULE = {
+    DEFAULT_SOURCE_LIMIT: 8000,
+    MAX_SOURCE_LIMIT: 50_000,
+    EXPORT_VALUE_SLICE: 50,
+    EXPORT_KEYS_PREVIEW: 5,
+    MAX_EXPORT_KEYS: 50,
+    DIFF_SLICE: 4000,
+    FIND_ALL_LIMIT: 15,
+    WHERE_USED_LIMIT: 50,
+    SUGGEST_MIN_LEN: 6,
+    SUGGEST_MAX_CANDIDATES: 30,
+    SUGGEST_CONTEXT_PAD: 15,
+    FUNCTION_AT_MAX: 20_000,
+    FUNCTION_AT_HEADER_MAX: 200,
+} as const;
+
+export const PATCH = {
+    FIND_SLICE: 120,
+    ANALYZE_IDS_LIMIT: 20,
+    ANALYZE_CONTEXT_PAD: 60,
+    ANALYZE_CONTEXT_SIZE: 200,
+    NOT_UNIQUE_IDS_LIMIT: 10,
+    MATCH_SLICE: 300,
+    GROUP_SLICE: 100,
+    CONTEXT_PAD: 80,
+    HINT_LITERAL_SLICE: 30,
+    MAX_CAPTURE_WARN: 5,
+    CONTEXT_DEFAULT_WINDOW: 1500,
+    CONTEXT_MAX_WINDOW: 5000,
+    CONTEXT_MAX_ANCHORS: 30,
+} as const;
+
+export const REACT = {
+    MAX_DEPTH: 30,
+    DEFAULT_DEPTH: 10,
+    MAX_LIMIT: 30,
+    DEFAULT_LIMIT: 15,
+    MAX_BREADTH: 15,
+    DEFAULT_BREADTH: 8,
+    MAX_TREE_DEPTH: 4,
+    MAX_PROCESS: 5_000,
+    MAX_NAMED: 150,
+    MAX_HOOKS: 20,
+    MAX_STATE_VALUES: 15,
+    PROP_KEYS_PREVIEW: 8,
+    FIBER_PROP_KEYS: 10,
+    TEXT_SLICE: 60,
+} as const;
+
+export const STORE = {
+    DEFAULT_DURATION: 10_000,
+    MIN_DURATION: 1000,
+    MAX_DURATION: 60_000,
+    DEFAULT_CAPTURES: 50,
+    MAX_CAPTURES: 200,
+} as const;
+
+export const INTERCEPT = {
+    DEFAULT_DURATION: 30_000,
+    MIN_DURATION: 5000,
+    MAX_DURATION: 120_000,
+    DEFAULT_CAPTURES: 50,
+    MAX_CAPTURES: 200,
+} as const;
+
+export const MCP = {
+    SLOW_THRESHOLD: 1000,
+    MAX_BATCH_SIZE: 20,
+} as const;
+
+export const EVAL = {
+    MAX_CODE_LENGTH: 10_000,
+    SERIALIZE_DEPTH: 3,
+    STACK_LINES: 3,
+} as const;

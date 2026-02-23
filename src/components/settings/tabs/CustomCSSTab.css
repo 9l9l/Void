@@ -1,0 +1,31 @@
+.void-css-block {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 200px;
+    margin: 0 0.75rem;
+    border: 1px solid var(--border-l1);
+    border-radius: 0.75rem;
+    overflow: hidden;
+}
+
+.void-css-header {
+    display: flex;
+    align-items: center;
+    height: 2.5rem;
+    padding: 0 1rem;
+    background: black;
+    border-radius: 0.75rem 0.75rem 0 0;
+}
+
+.void-css-header span {
+    font-family: var(--font-ibm-plex-mono), monospace;
+    font-size: 0.75rem;
+    color: hsl(var(--fg-secondary));
+    user-select: none;
+}
+
+.void-css-editor {
+    flex: 1;
+    background: hsl(var(--surface-inset));
+}

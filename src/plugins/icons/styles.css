@@ -1,0 +1,27 @@
+.void-icon-card-root {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.625rem 0.25rem;
+    border-radius: 6px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: hsl(var(--fg-secondary));
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.void-icon-card-root:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+    color: hsl(var(--fg-primary));
+}
+
+.void-icon-card-label {
+    font-size: 0.625rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
+    text-align: center;
+}

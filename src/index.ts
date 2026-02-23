@@ -1,0 +1,17 @@
+/*
+ * Void, a modification for grok.com
+ * Copyright (c) 2026 Void contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+import * as Void from "./Void";
+
+const target = typeof unsafeWindow !== "undefined" ? unsafeWindow : window;
+
+Object.defineProperty(target, "Void", {
+    value: Void,
+    writable: false,
+    configurable: false,
+});
+
+Void.init();

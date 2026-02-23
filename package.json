@@ -1,0 +1,41 @@
+{
+    "name": "void",
+    "version": "0.1.0-alpha.1",
+    "description": "A modification for grok.com",
+    "homepage": "https://github.com/imjustprism/Void#readme",
+    "bugs": {
+        "url": "https://github.com/imjustprism/Void/issues"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/imjustprism/Void.git"
+    },
+    "license": "GPL-3.0-or-later",
+    "author": "Prism",
+    "type": "module",
+    "scripts": {
+        "build": "bun run build.ts",
+        "build:dev": "bun run build.ts --dev",
+        "build:ext": "bun run build.ts --extension",
+        "build:ext:dev": "bun run build.ts --extension --dev",
+        "watch": "bun run build.ts --watch",
+        "lint": "biome check",
+        "lint:fix": "biome check --fix",
+        "lint:headers": "eslint",
+        "lint:headers:fix": "eslint --fix",
+        "tsc": "tsc --noEmit",
+        "mcp": "bun run src/plugins/mcp.dev/server.ts"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "latest",
+        "@types/bun": "latest",
+        "@types/react": "latest",
+        "eslint": "latest",
+        "eslint-plugin-simple-header": "latest",
+        "typescript": "latest",
+        "typescript-eslint": "latest"
+    },
+    "engines": {
+        "bun": ">=1.1"
+    }
+}
