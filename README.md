@@ -32,10 +32,6 @@ bun run build
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=imjustprism/Void&type=Date)](https://star-history.com/#imjustprism/Void&Date)
-
 ## Disclaimer
 
 Grok is a trademark of xAI Corp. and is solely mentioned for the sake of descriptivity. Mention of it does not imply any affiliation with or endorsement by xAI Corp.
