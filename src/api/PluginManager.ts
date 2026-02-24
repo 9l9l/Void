@@ -103,7 +103,7 @@ export function startPlugin(plugin: Plugin): boolean {
 
         if (plugin.managedStyle) enableStyle(plugin.managedStyle);
 
-        logger.info(`Starting plugin ${plugin.name}`);
+        if (!plugin.hidden) logger.info(`Starting plugin ${plugin.name}`);
         plugin.start?.();
 
         if (plugin.chatBarButton) {
@@ -249,6 +249,7 @@ export function initPluginManager() {
         }
     }
 
-    const enabled = Object.keys(plugins).filter(isPluginEnabled).length;
-    logger.info(`${enabled}/${Object.keys(plugins).length} plugins enabled, ${patches.length} patches`);
+    const visible = Object.values(plugins).filter(p => !p.hidden);
+    const enabled = visible.filter(p => isPluginEnabled(p.name)).length;
+    logger.info(`${enabled}/${visible.length} plugins enabled, ${patches.length} patches`);
 }
