@@ -4,13 +4,13 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import "./CustomCSSTab.css";
+
 import { Settings } from "@api/Settings";
 import { Flex, Switch, Text } from "@components";
 import { React, useEffect, useRef, useState } from "@turbopack/common/react";
 import { findByPropsLazy, findLazy } from "@turbopack/turbopack";
 import { classNameFactory } from "@utils/css";
-
-import "./CustomCSSTab.css";
 
 const cl = classNameFactory("void-css-");
 const STYLE_ID = "void-custom-css";

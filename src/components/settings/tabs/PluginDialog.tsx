@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import "./PluginDialog.css";
+
 import { Button, Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, Flex, Separator, Text } from "@components";
 import { React } from "@turbopack/common/react";
 import { findExportedComponentLazy } from "@turbopack/turbopack";
@@ -12,8 +14,6 @@ import type { Plugin } from "@utils/types";
 
 import SettingField from "../SettingField";
 import { isVisibleSetting } from "../utils";
-
-import "./PluginDialog.css";
 
 const cl = classNameFactory("void-plugin-dialog-");
 const Cross2Icon = findExportedComponentLazy("Cross2Icon");

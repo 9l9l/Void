@@ -4,12 +4,12 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import "./ChatBarButton.css";
+
 import { MotionButton, Tooltip, TooltipContent, TooltipTrigger } from "@components";
 import { React } from "@turbopack/common/react";
 import { classNameFactory } from "@utils/css";
 import type { CSSProperties, ReactNode } from "react";
-
-import "./ChatBarButton.css";
 
 const cl = classNameFactory("void-chatbar-btn-");
 

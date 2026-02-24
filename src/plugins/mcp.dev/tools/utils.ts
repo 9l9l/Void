@@ -5,8 +5,7 @@
  */
 
 import { getModuleCache, getRuntimeFactoryRegistry, patchStats } from "@turbopack/patchTurbopack";
-import type { PatchedModuleFactory } from "@turbopack/types";
-import { SYM_PATCHED_BY, SYM_PATCHED_CODE } from "@turbopack/types";
+import { type PatchedModuleFactory,SYM_PATCHED_BY, SYM_PATCHED_CODE } from "@turbopack/types";
 
 import { SERIALIZE } from "./constants";
 

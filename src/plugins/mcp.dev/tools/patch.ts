@@ -6,8 +6,7 @@
 
 import { getRuntimeFactoryRegistry, patches, patchResults, patchStats } from "@turbopack/patchTurbopack";
 import { search } from "@turbopack/turbopack";
-import type { PatchedModuleFactory } from "@turbopack/types";
-import { SYM_PATCHED_BY } from "@turbopack/types";
+import { type PatchedModuleFactory,SYM_PATCHED_BY } from "@turbopack/types";
 import { canonicalizeMatch } from "@utils/patches";
 
 import { PATCH } from "./constants";
@@ -26,7 +25,7 @@ function lintMatchRegex(matchStr: string, replaceStr?: string): LintWarning[] {
     if (/\.\+\?/.test(matchStr)) warnings.push({ severity: "error", message: "Unbounded .+? gap", fix: "Use .{0,N}" });
     if (/\.\*\?/.test(matchStr)) warnings.push({ severity: "error", message: "Unbounded .*? gap", fix: "Use .{0,N}" });
 
-    const varRe = /(?:^|[^\\])(?:\b)([etrnioslcu])(?=[.,()\[\]{}=!<>?:])/g;
+    const varRe = /(?:^|[^\\])(?:\b)([etrnioslcu])(?=[.,()[\]{}=!<>?:])/g;
     const foundVars = new Set<string>();
     let vm;
     while ((vm = varRe.exec(matchStr)) !== null) {

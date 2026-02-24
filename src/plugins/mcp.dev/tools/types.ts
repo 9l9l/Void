@@ -114,5 +114,4 @@ export interface BatchArgs {
 
 export type ToolArgs = ModuleArgs | SearchArgs | EvalArgs | PatchArgs | PluginArgs | ReactArgs | StoreArgs | GrokArgs | InterceptArgs | BatchArgs;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Tool dispatch sends untyped JSON from WS; each handler narrows internally.
 export type ToolHandler = (args: any) => unknown;

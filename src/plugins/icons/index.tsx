@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import "./styles.css";
+
 import { ErrorBoundary, Flex, Grid, Input, Paragraph, Text } from "@components";
 import { React, useCallback, useMemo, useState } from "@turbopack/common/react";
 import { ClipboardUtils } from "@turbopack/common/utils";
@@ -13,8 +15,6 @@ import { classNameFactory } from "@utils/css";
 import { useIntersection, useModuleLoadEffect } from "@utils/react";
 import definePlugin from "@utils/types";
 import type { ComponentType } from "react";
-
-import "./styles.css";
 
 const cl = classNameFactory("void-icon-card-");
 
@@ -38,7 +38,7 @@ let cached: IconEntry[] = [];
 let lastSize = 0;
 
 function collectIcons(): IconEntry[] {
-    const size = getModuleCache().size;
+    const { size } = getModuleCache();
     if (cached.length && size === lastSize) return cached;
     lastSize = size;
 

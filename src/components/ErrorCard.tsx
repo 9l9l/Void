@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import "./ErrorCard.css";
+
 import { React } from "@turbopack/common/react";
 import { classes, classNameFactory } from "@utils/css";
 import type { HTMLAttributes, ReactNode } from "react";
-
-import "./ErrorCard.css";
 
 const cl = classNameFactory("void-error-card-");
 

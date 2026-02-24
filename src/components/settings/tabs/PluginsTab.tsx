@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import "./PluginsTab.css";
+
 import { isPluginEnabled, plugins } from "@api/PluginManager";
 import {
     Button,
@@ -29,8 +31,6 @@ import { classNameFactory } from "@utils/css";
 
 import PluginCard from "../PluginCard";
 import PluginDialog from "./PluginDialog";
-
-import "./PluginsTab.css";
 
 const cl = classNameFactory("void-plugins-");
 

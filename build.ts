@@ -5,7 +5,7 @@ import { Logger } from "./src/utils/Logger";
 
 const isDev = process.argv.includes("--dev");
 const isWatch = process.argv.includes("--watch");
-const isExtension = process.argv.includes("--extension");
+
 const logger = new Logger("Build", "#89b4fa");
 const pkg = JSON.parse(readFileSync("package.json", "utf-8"));
 
@@ -112,7 +112,14 @@ async function buildCore(outfile: string, isExt: boolean) {
             IS_DEV: JSON.stringify(isDev),
             IS_EXTENSION: JSON.stringify(isExt),
             VERSION: JSON.stringify(pkg.version),
-            GIT_HASH: JSON.stringify(Bun.spawnSync(["git", "rev-parse", "--short", "HEAD"]).stdout.toString().trim()),
+            GIT_HASH: JSON.stringify((() => {
+                try {
+                    const result = Bun.spawnSync(["git", "rev-parse", "--short", "HEAD"]);
+                    return result.success ? result.stdout.toString().trim() : "unknown";
+                } catch {
+                    return "unknown";
+                }
+            })()),
         },
         naming: outfile,
         plugins: [pluginsPlugin(), cssPlugin()],
@@ -176,12 +183,8 @@ async function buildExtensions() {
 
 async function build() {
     mkdirSync("dist", { recursive: true });
-
-    if (isExtension) {
-        await buildExtensions();
-    } else {
-        await buildUserscript();
-    }
+    await buildUserscript();
+    await buildExtensions();
 }
 
 if (isWatch) {

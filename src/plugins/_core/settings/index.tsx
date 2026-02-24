@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import "./styles.css";
+
 import { isPluginEnabled } from "@api/PluginManager";
 import { definePluginSettings } from "@api/Settings";
 import { Flex, Text } from "@components";
@@ -17,8 +19,6 @@ import { findExportedComponentLazy } from "@turbopack/turbopack";
 import { classes, classNameFactory, registerStyle } from "@utils/css";
 import definePlugin, { OptionType } from "@utils/types";
 import type { ComponentType, ReactNode } from "react";
-
-import "./styles.css";
 
 const cl = classNameFactory("void-settings-");
 

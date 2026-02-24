@@ -8,8 +8,7 @@ import { Logger } from "@utils/Logger";
 import type { Patch, PatchReplacement } from "@utils/types";
 
 import { matchesAllPatterns, matchesPattern } from "./match";
-import type { ModuleFactory, PatchedModuleFactory, TurbopackHelpers, TurbopackModule } from "./types";
-import { SYM_ORIGINAL, SYM_PATCHED, SYM_PATCHED_BY, SYM_PATCHED_CODE } from "./types";
+import { type ModuleFactory, type PatchedModuleFactory, SYM_ORIGINAL, SYM_PATCHED, SYM_PATCHED_BY, SYM_PATCHED_CODE, type TurbopackHelpers, type TurbopackModule } from "./types";
 
 interface TurbopackPushable {
     push: (...args: unknown[]) => unknown;
@@ -148,18 +147,27 @@ export function shouldIgnoreValue(value: unknown): boolean {
 }
 
 export function blacklistBadModules(): void {
-    for (const [, exports] of moduleCache) {
-        if (shouldIgnoreValue(exports)) {
-            if (exports != null && (typeof exports === "object" || typeof exports === "function")) badExports.add(exports);
-            continue;
+    const origWarn = console.warn;
+    console.warn = (...args: unknown[]) => {
+        if (typeof args[0] === "string" && args[0].includes("has been renamed to")) return;
+        origWarn.apply(console, args);
+    };
+    try {
+        for (const [, exports] of moduleCache) {
+            if (shouldIgnoreValue(exports)) {
+                if (exports != null && (typeof exports === "object" || typeof exports === "function")) badExports.add(exports);
+                continue;
+            }
+            if (typeof exports !== "object") continue;
+            for (const key in exports) {
+                try {
+                    const v = exports[key];
+                    if (shouldIgnoreValue(v) && v != null && (typeof v === "object" || typeof v === "function")) badExports.add(v);
+                } catch {}
+            }
         }
-        if (typeof exports !== "object") continue;
-        for (const key in exports) {
-            try {
-                const v = exports[key];
-                if (shouldIgnoreValue(v) && v != null && (typeof v === "object" || typeof v === "function")) badExports.add(v);
-            } catch {}
-        }
+    } finally {
+        console.warn = origWarn;
     }
 }
 
@@ -337,7 +345,7 @@ function wrapFactory(moduleId: number, factory: ModuleFactory): ModuleFactory {
 
 function handleChunkPush(...args: unknown[]) {
     const entry = args[0];
-    if (!Array.isArray(entry)) return originalPush!.apply(null, args);
+    if (!Array.isArray(entry)) return originalPush!(...args);
 
     let patchedEntry: unknown[] | null = null;
     const wrappedInChunk = new Map<ModuleFactory, ModuleFactory>();

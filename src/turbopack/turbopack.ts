@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import { Logger } from "@utils/Logger";
 import { makeLazy, proxyLazy } from "@utils/lazy";
 import { LazyComponent } from "@utils/lazyReact";
+import { Logger } from "@utils/Logger";
 
 import { matchesAllPatterns } from "./match";
 import { addWaitForSubscription, getModuleCache, getRuntimeFactoryRegistry, getTurbopackHelpers, isBlacklisted, removeWaitForSubscription, syncLazyModules } from "./patchTurbopack";
@@ -15,6 +15,26 @@ import type { FilterFn, ModuleFactory } from "./types";
 export { matchesAllPatterns, matchesPattern } from "./match";
 
 const logger = new Logger("TurbopackFinder", "#a6d189");
+
+// Suppress console.warn during module iteration — Tailwind's deprecated
+// color getters (lightBlue, warmGray, etc.) fire warnings when accessed.
+let warnsSuppressed = false;
+function silenceWarns<T>(fn: () => T): T {
+    if (warnsSuppressed) return fn();
+    warnsSuppressed = true;
+    const orig = console.warn;
+    console.warn = (...args: unknown[]) => {
+        if (typeof args[0] === "string" && args[0].includes("has been renamed to")) return;
+        orig.apply(console, args);
+    };
+    try {
+        return fn();
+    } finally {
+        console.warn = orig;
+        warnsSuppressed = false;
+    }
+}
+
 const fnSourceCache = new WeakMap<Function, string>();
 
 function getFnSource(fn: Function): string {
@@ -78,7 +98,7 @@ export const filters = {
 function searchCache(filter: FilterFn, collectAll: true, topLevelOnly?: boolean): any[];
 function searchCache(filter: FilterFn, collectAll?: false, topLevelOnly?: boolean): any;
 function searchCache(filter: FilterFn, collectAll = false, topLevelOnly = false): any {
-    const result = scanModuleCache(filter, collectAll, topLevelOnly);
+    const result = silenceWarns(() => scanModuleCache(filter, collectAll, topLevelOnly));
     if (!collectAll && result) return result;
     if (collectAll && (result as any[]).length) return result;
 
@@ -210,44 +230,46 @@ export function findBulk(...filterFns: FilterFn[]): any[] {
         return length === 1 ? [find(filterFns[0])] : [];
     }
 
-    const activeFilters: Array<FilterFn | undefined> = [...filterFns];
-    const results = new Array(length).fill(null);
-    let found = 0;
-    const cache = getModuleCache();
+    return silenceWarns(() => {
+        const activeFilters: Array<FilterFn | undefined> = [...filterFns];
+        const results = new Array(length).fill(null);
+        let found = 0;
+        const cache = getModuleCache();
 
-    outer: for (const [, exports] of cache) {
-        if (exports == null || isBlacklisted(exports)) continue;
-        for (let j = 0; j < length; j++) {
-            const filter = activeFilters[j];
-            if (!filter) continue;
+        outer: for (const [, exports] of cache) {
+            if (exports == null || isBlacklisted(exports)) continue;
+            for (let j = 0; j < length; j++) {
+                const filter = activeFilters[j];
+                if (!filter) continue;
 
-            try {
-                if (filter(exports)) {
-                    results[j] = exports;
-                    activeFilters[j] = undefined;
-                    if (++found === length) break outer;
-                    break;
-                }
-            } catch {}
-
-            if (typeof exports !== "object") continue;
-            for (const key in exports) {
                 try {
-                    const nested = exports[key];
-                    if (nested == null || isBlacklisted(nested)) continue;
-                    if (filter(nested)) {
-                        results[j] = nested;
+                    if (filter(exports)) {
+                        results[j] = exports;
                         activeFilters[j] = undefined;
                         if (++found === length) break outer;
-                        continue outer;
+                        break;
                     }
                 } catch {}
+
+                if (typeof exports !== "object") continue;
+                for (const key in exports) {
+                    try {
+                        const nested = exports[key];
+                        if (nested == null || isBlacklisted(nested)) continue;
+                        if (filter(nested)) {
+                            results[j] = nested;
+                            activeFilters[j] = undefined;
+                            if (++found === length) break outer;
+                            continue outer;
+                        }
+                    } catch {}
+                }
             }
         }
-    }
 
-    if (found !== length) logger.warn(`findBulk: got ${length} filters but only found ${found} modules.`);
-    return results;
+        if (found !== length) logger.warn(`findBulk: got ${length} filters but only found ${found} modules.`);
+        return results;
+    });
 }
 
 export function findModuleFactory(...code: (string | RegExp)[]): [id: number, factory: ModuleFactory] | null {
@@ -271,24 +293,26 @@ export function mapMangledModule<S extends string>(code: (string | RegExp)[], ma
     const mod = requireModule(id);
     if (mod == null) return result;
 
-    const mapperEntries = Object.entries<FilterFn>(mappers);
-    let found = 0;
+    return silenceWarns(() => {
+        const mapperEntries = Object.entries<FilterFn>(mappers);
+        let found = 0;
 
-    outer: for (const key in mod) {
-        try {
-            const member = mod[key];
-            for (let i = 0; i < mapperEntries.length; i++) {
-                const [name, filter] = mapperEntries[i];
-                if (name in result) continue;
-                if (filter(member)) {
-                    result[name as S] = member;
-                    if (++found === mapperEntries.length) break outer;
-                    break;
+        outer: for (const key in mod) {
+            try {
+                const member = mod[key];
+                for (let i = 0; i < mapperEntries.length; i++) {
+                    const [name, filter] = mapperEntries[i];
+                    if (name in result) continue;
+                    if (filter(member)) {
+                        result[name as S] = member;
+                        if (++found === mapperEntries.length) break outer;
+                        break;
+                    }
                 }
-            }
-        } catch {}
-    }
-    return result;
+            } catch {}
+        }
+        return result;
+    });
 }
 
 export function mapMangledModuleLazy<S extends string>(code: (string | RegExp)[], mappers: Record<S, FilterFn>): Record<S, any> {
@@ -381,19 +405,21 @@ export function importModule(moduleId: number): Promise<any> {
 }
 
 function findMatchInExports(exports: any, filter: FilterFn): any {
-    if (isBlacklisted(exports)) return null;
-    try {
-        if (filter(exports)) return exports;
-        if (typeof exports === "object" && exports !== null) {
-            for (const key in exports) {
-                try {
-                    const nested = exports[key];
-                    if (nested != null && !isBlacklisted(nested) && filter(nested)) return nested;
-                } catch {}
+    return silenceWarns(() => {
+        if (isBlacklisted(exports)) return null;
+        try {
+            if (filter(exports)) return exports;
+            if (typeof exports === "object" && exports !== null) {
+                for (const key in exports) {
+                    try {
+                        const nested = exports[key];
+                        if (nested != null && !isBlacklisted(nested) && filter(nested)) return nested;
+                    } catch {}
+                }
             }
-        }
-    } catch {}
-    return null;
+        } catch {}
+        return null;
+    });
 }
 
 export function waitFor(filter: FilterFn, callback: (mod: any, id: number) => void, timeout = 0) {

@@ -4,14 +4,14 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import "./styles.css";
+
 import { Button, Card, Flex, Input, Paragraph, SettingsDescription, SettingsRow, SettingsTitle, Switch, Text } from "@components";
 import { ErrorBoundary } from "@components/ErrorBoundary";
 import { React, useCallback, useMemo, useState } from "@turbopack/common/react";
 import { FeatureStore } from "@turbopack/common/stores";
 import { classNameFactory } from "@utils/css";
 import definePlugin from "@utils/types";
-
-import "./styles.css";
 
 const cl = classNameFactory("void-experiments-");
 

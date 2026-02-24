@@ -21,8 +21,7 @@ import {
     importModule,
     requireModule,
 } from "@turbopack/turbopack";
-import type { FilterFn, PatchedModuleFactory } from "@turbopack/types";
-import { SYM_ORIGINAL, SYM_PATCHED_BY, SYM_PATCHED_CODE } from "@turbopack/types";
+import { type FilterFn, type PatchedModuleFactory,SYM_ORIGINAL, SYM_PATCHED_BY, SYM_PATCHED_CODE } from "@turbopack/types";
 import { isObject } from "@utils/misc";
 
 import { MODULE } from "./constants";
