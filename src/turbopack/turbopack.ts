@@ -16,8 +16,6 @@ export { matchesAllPatterns, matchesPattern } from "./match";
 
 const logger = new Logger("TurbopackFinder", "#a6d189");
 
-// Suppress console.warn during module iteration — Tailwind's deprecated
-// color getters (lightBlue, warmGray, etc.) fire warnings when accessed.
 let warnsSuppressed = false;
 function silenceWarns<T>(fn: () => T): T {
     if (warnsSuppressed) return fn();
@@ -104,7 +102,6 @@ function searchCache(filter: FilterFn, collectAll = false, topLevelOnly = false)
         if (!collectAll && result) return result;
         if (collectAll && (result as any[]).length) return result;
 
-        // Shared factory modules may not be in the Void cache yet — sync and retry
         const prevSize = getModuleCache().size;
         syncLazyModules();
         if (getModuleCache().size === prevSize) return result;

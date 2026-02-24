@@ -20,7 +20,6 @@ type PageWindow = Window & typeof globalThis & { TURBOPACK: TurbopackPushable | 
 const logger = new Logger("TurbopackPatcher", "#e78284");
 const pageWindow = (typeof unsafeWindow !== "undefined" ? unsafeWindow : window) as PageWindow;
 
-// Probe ID — well above real module ID range (~553-999501)
 const FACTORY_PROBE_ID = 0x7ffffffe;
 
 const motionSymbol = Symbol.for("motionComponentSymbol");
@@ -412,8 +411,6 @@ function scanExistingModules(cache: Record<number, TurbopackModule>) {
         }
     }
 
-    // Notify load listeners once after bulk scan so the stability
-    // detector knows modules exist and resets its settle timer.
     if (count > 0) {
         for (const cb of moduleLoadListeners) {
             try {
@@ -459,13 +456,6 @@ function captureFactoryRegistry(): Map<number, ModuleFactory> | null {
 }
 
 function captureModuleCache(factoryRegistry: Map<number, ModuleFactory>): void {
-    // When TURBOPACK is already initialized (e.g. Chrome extension where
-    // the content script runs after the runtime), factories are registered
-    // but not executed — so helpers.c (runtime module cache) was never
-    // captured. Register a probe factory and push a manifest chunk that
-    // tells the runtime to instantiate it. The runtime's registerChunk is
-    // async, so the probe executes on the next microtask — but by the time
-    // waitForModulesStable() fires, it will have run.
     const PROBE_ID = FACTORY_PROBE_ID - 1;
     factoryRegistry.set(PROBE_ID, ((helpers: TurbopackHelpers) => {
         if (!turbopackHelpers) turbopackHelpers = helpers;
@@ -484,7 +474,6 @@ function captureModuleCache(factoryRegistry: Map<number, ModuleFactory>): void {
 
     originalPush!(["void-cache-probe", { otherChunks: [], runtimeModuleIds: [PROBE_ID] }]);
 
-    // Cleanup on next microtask (after the probe executes)
     Promise.resolve().then(() => factoryRegistry.delete(PROBE_ID));
 }
 

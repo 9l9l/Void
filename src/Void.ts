@@ -55,15 +55,10 @@ function waitForModulesStable() {
     const unsubLoad = onModuleLoad(bump);
     const unsubCache = onCacheDiscovery(bump);
 
-    // Only start the settle countdown once modules actually exist.
-    // This prevents firing "0 modules" when the runtime hasn't
-    // started executing factories yet.
     if (getModuleCache().size > 0) {
         bump();
     }
 
-    // Safety net: if nothing loads within 8s, fire anyway so
-    // plugins aren't stuck waiting forever.
     fallbackTimer = setTimeout(fire, FALLBACK_MS);
 }
 

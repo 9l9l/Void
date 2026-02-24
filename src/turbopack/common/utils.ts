@@ -43,10 +43,8 @@ export const DateTime = findByPropsLazy("DateTime");
 export const FormatUtils = findByPropsLazy("formatNumber");
 export const DateHooks = findByPropsLazy("useDate", "useTime");
 
-// grok cn() — resolves tailwind class conflicts, unlike our classes() which just joins
 export const ClassNames = findByPropsLazy("cn", "middleTruncate");
 
-// grok cva/cx — class variance authority for component variant patterns
 export const CVA = findByPropsLazy("cva", "cx");
 
 export const UrlUtils = findByPropsLazy("cleanUrl", "getGoogleFaviconUrl");
