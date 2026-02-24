@@ -43,7 +43,7 @@ export default definePlugin({
         {
             find: "AvatarDropdownMenu,{}),",
             replacement: {
-                match: /\(0,\i\.jsx\)\(\i\.AvatarDropdownMenu,\{\}\)/,
+                match: /AvatarDropdownMenu,\{\}\)/,
                 replace: "$&,$self.renderUserInfo()",
             },
         },
