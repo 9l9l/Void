@@ -125,3 +125,15 @@ export const ReasoningModeUtils: {
     reasoningModeToRequestKind: (mode: ReasoningMode) => RequestKind;
     reasoningModeToDeepsearchPreset: (mode: ReasoningMode) => string | undefined;
 } = findByPropsLazy("reasoningModeToRequestKind", "reasoningModeToDeepsearchPreset");
+
+export const ReactQuery = findByPropsLazy("useQuery", "useQueryClient");
+export const ReactQueryInfinite = findByPropsLazy("useInfiniteQuery");
+export const ReactQueryMutation = findByPropsLazy("useMutation");
+
+export const RateLimits = findByPropsLazy("useRateLimits");
+
+export const SubscriptionDetails = findByPropsLazy("useCheckSubscriptionOffer", "useSubscriptions", "useStripe");
+
+export const FeatureControls = findByPropsLazy("useFeatureControls", "useOrganizationControls");
+
+export const RequestErrorToast = findByPropsLazy("useRequestErrorToast", "useRequestErrorToastFn");

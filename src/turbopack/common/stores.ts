@@ -12,11 +12,13 @@ import type {
     FeatureStoreModule,
     FileStoreModule,
     ModelsStoreModule,
+    NotificationsStoreModule,
     ResponseStoreModule,
     RoutingStoreModule,
     SessionStoreModule,
     SettingsDialogStoreModule,
     SettingsStoreModule,
+    SubscriptionsStoreModule,
     TabsManagerStoreModule,
 } from "@grok-types/stores";
 
@@ -39,4 +41,6 @@ export const RoutingStore: RoutingStoreModule = findByPropsLazy("useRoutingStore
 export const ModelsStore: ModelsStoreModule = findByPropsLazy("useModelsStore");
 export const ChatPageStore: ChatPageStoreModule = findByPropsLazy("useChatPageStore", "getLatestThreadMessageId");
 export const TabsManagerStore: TabsManagerStoreModule = findByPropsLazy("useTabsManagerStore");
+export const SubscriptionsStore: SubscriptionsStoreModule = findByPropsLazy("useSubscriptionsStore");
+export const NotificationsStore: NotificationsStoreModule = findByPropsLazy("useNotificationsStore", "useNotificationsStoreInit");
 export const SubscriptionUtils: SubscriptionUtilsModule = findByPropsLazy("getSubscriptionTierName", "SubscriptionTier");
