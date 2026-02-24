@@ -16,7 +16,7 @@ export default definePlugin({
             find: '"user-dropdown.upgrade","Upgrade plan"',
             all: true,
             replacement: {
-                match: /\i\|\|\i\|\|\i(?=\?null:\(0,\i\.jsxs\)\(\i\.DropdownMenuItem)/,
+                match: /\i(?:\|\|\i)+(?=\?null:.{0,160}"user-dropdown\.upgrade")/,
                 replace: "true",
             },
         },
@@ -39,8 +39,8 @@ export default definePlugin({
         {
             find: "group/model-mode-select-upsell",
             replacement: {
-                match: /useCheckSubscriptionOffer\)\(\);if\(!\i\|\|\i&&\i\)return null;/,
-                replace: "useCheckSubscriptionOffer)();return null;",
+                match: /(?<=useCheckSubscriptionOffer\)\(\);).{0,30}return null;/,
+                replace: "return null;",
             },
         },
     ],
