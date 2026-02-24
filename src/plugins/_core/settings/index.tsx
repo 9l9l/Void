@@ -5,6 +5,7 @@
  */
 
 import { isPluginEnabled } from "@api/PluginManager";
+import { definePluginSettings } from "@api/Settings";
 import { Flex, Text } from "@components";
 import { TestTubeIcon } from "@components/icons/TestTubeIcon";
 import { UnplugIcon } from "@components/icons/UnplugIcon";
@@ -14,12 +15,20 @@ import { Tab as IconsTab } from "@plugins/icons";
 import { createElement, React } from "@turbopack/common/react";
 import { findExportedComponentLazy } from "@turbopack/turbopack";
 import { classes, classNameFactory, registerStyle } from "@utils/css";
-import definePlugin from "@utils/types";
+import definePlugin, { OptionType } from "@utils/types";
 import type { ComponentType, ReactNode } from "react";
 
 import "./styles.css";
 
 const cl = classNameFactory("void-settings-");
+
+const settings = definePluginSettings({
+    hideUserId: {
+        type: OptionType.BOOLEAN,
+        description: "Hide your user ID from the account settings page.",
+        default: true,
+    },
+});
 
 interface SettingsTab {
     id: string;
@@ -98,6 +107,11 @@ export default definePlugin({
     description: "Adds Void settings UI.",
     authors: ["Prism"],
     required: true,
+    settings,
+
+    _hideUserId() {
+        return settings.store.hideUserId;
+    },
 
     renderTabs(jsx: typeof createElement, TabButton: ComponentType<TabButtonProps>) {
         return [...getVisibleTabs().map(t => jsx(TabButton, { key: t.id, icon: t.icon, text: t.name, tab: t.id })), <VersionInfo key="void-version" />];
@@ -126,6 +140,10 @@ export default definePlugin({
                 {
                     match: /"data"===(\i)&&\i\.user&&\(0,(\i\.jsx)\)\((\i),\{children:/,
                     replace: "...$self.renderPanels($2,$1,$3),$&",
+                },
+                {
+                    match: /\i\.user&&\(0,\i\.jsx\)\("div",.{0,120}:\i\.userId\}\)/,
+                    replace: "!$self._hideUserId()&&$&",
                 },
             ],
         },
