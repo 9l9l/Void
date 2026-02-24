@@ -149,7 +149,8 @@ export function shouldIgnoreValue(value: unknown): boolean {
 export function blacklistBadModules(): void {
     const origWarn = console.warn;
     console.warn = (...args: unknown[]) => {
-        if (typeof args[0] === "string" && args[0].includes("has been renamed to")) return;
+        if (args.some(a => typeof a === "string" && (a.includes("has been renamed to") || a.includes("silence this warning")))) return;
+        if (args.length === 1 && args[0] === "") return;
         origWarn.apply(console, args);
     };
     try {

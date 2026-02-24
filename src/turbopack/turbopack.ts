@@ -24,7 +24,8 @@ function silenceWarns<T>(fn: () => T): T {
     warnsSuppressed = true;
     const orig = console.warn;
     console.warn = (...args: unknown[]) => {
-        if (typeof args[0] === "string" && args[0].includes("has been renamed to")) return;
+        if (args.some(a => typeof a === "string" && (a.includes("has been renamed to") || a.includes("silence this warning")))) return;
+        if (args.length === 1 && args[0] === "") return;
         orig.apply(console, args);
     };
     try {
@@ -98,15 +99,17 @@ export const filters = {
 function searchCache(filter: FilterFn, collectAll: true, topLevelOnly?: boolean): any[];
 function searchCache(filter: FilterFn, collectAll?: false, topLevelOnly?: boolean): any;
 function searchCache(filter: FilterFn, collectAll = false, topLevelOnly = false): any {
-    const result = silenceWarns(() => scanModuleCache(filter, collectAll, topLevelOnly));
-    if (!collectAll && result) return result;
-    if (collectAll && (result as any[]).length) return result;
+    return silenceWarns(() => {
+        const result = scanModuleCache(filter, collectAll, topLevelOnly);
+        if (!collectAll && result) return result;
+        if (collectAll && (result as any[]).length) return result;
 
-    // Shared factory modules may not be in the Void cache yet — sync and retry
-    const prevSize = getModuleCache().size;
-    syncLazyModules();
-    if (getModuleCache().size === prevSize) return result;
-    return scanModuleCache(filter, collectAll, topLevelOnly);
+        // Shared factory modules may not be in the Void cache yet — sync and retry
+        const prevSize = getModuleCache().size;
+        syncLazyModules();
+        if (getModuleCache().size === prevSize) return result;
+        return scanModuleCache(filter, collectAll, topLevelOnly);
+    });
 }
 
 function scanModuleCache(filter: FilterFn, collectAll: boolean, topLevelOnly: boolean): any {

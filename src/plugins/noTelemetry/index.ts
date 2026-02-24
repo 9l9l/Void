@@ -23,8 +23,8 @@ export default definePlugin({
         {
             find: '"after-init"),(0,',
             replacement: {
-                match: /function \i\(\)\{(?=if\(Object\.prototype\.hasOwnProperty)/,
-                replace: "$&return;",
+                match: /function \i\(\)\{if\(Object\.prototype\.hasOwnProperty[\s\S]{0,450}setHasMixpanelInitialized\)\(!0\)\}\}\)\}/,
+                replace: "function p(){}",
             },
         },
         {
@@ -32,12 +32,12 @@ export default definePlugin({
             all: true,
             replacement: [
                 {
-                    match: /"sendBatchLogEvent",\i=>\{/,
-                    replace: '"sendBatchLogEvent",e=>{return;',
+                    match: /"sendBatchLogEvent",\i=>\{\i\(this\.address\+.{0,40},\i\)\}/,
+                    replace: '"sendBatchLogEvent",()=>{}',
                 },
                 {
-                    match: /"sendBatchLogExperimentExposure",\i=>\{/,
-                    replace: '"sendBatchLogExperimentExposure",e=>{return;',
+                    match: /"sendBatchLogExperimentExposure",\i=>\{\i\(this\.address\+.{0,50},\i\)\}/,
+                    replace: '"sendBatchLogExperimentExposure",()=>{}',
                 },
                 {
                     match: /"\/api\/log_metric",\i\)/,
