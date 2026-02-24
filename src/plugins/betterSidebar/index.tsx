@@ -9,7 +9,7 @@ import { Text } from "@components/Text";
 import type { SessionTierId, SubscriptionTier } from "@grok-types/enums";
 import { SidebarComponents } from "@turbopack/common/components";
 import { React } from "@turbopack/common/react";
-import { SessionStore, SubscriptionUtils } from "@turbopack/common/stores";
+import { SessionStore, SubscriptionsStore } from "@turbopack/common/stores";
 import definePlugin from "@utils/types";
 
 const TIER_DISPLAY: Record<SubscriptionTier, string> = {
@@ -35,7 +35,7 @@ function getPlanName(bestSubscription?: SubscriptionTier, sessionTierId?: Sessio
 function UserInfo() {
     const { open } = SidebarComponents.useSidebar();
     const { user } = SessionStore.useSession();
-    const { bestSubscription } = SubscriptionUtils.useSubscriptions();
+    const bestSubscription = SubscriptionsStore.useSubscriptionsStore(s => s.bestSubscription);
 
     if (!open || !user) return null;
 
