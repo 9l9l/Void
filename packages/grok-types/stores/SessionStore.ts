@@ -6,6 +6,7 @@
 
 import type { ComponentType, ReactNode } from "react";
 
+import type { GrokSubscription } from "../common/Subscription";
 import type { GrokUser } from "../common/User";
 import type { ZustandStore } from "../zustand";
 
@@ -23,8 +24,8 @@ export interface SessionStoreState {
     team: any;
     /** ISO 3166-1 alpha-2 country code detected from the user's IP (e.g. "US", "HU"). */
     countryCode: string;
-    /** Active subscription details. Undefined before the session is loaded. */
-    subscriptions: any;
+    /** Raw subscription objects from the session API. Undefined before loaded. */
+    subscriptions: GrokSubscription[] | undefined;
     /** Anonymous user identity for unauthenticated access. */
     anonUser: any;
 

@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import type { ModelConfigModelMode, PromptingBackend } from "../enums/models";
+
 /**
  * A Grok model definition as returned by the models API.
  *
@@ -28,8 +30,8 @@ export interface GrokModel {
     tags: string[];
     /** Badge text shown next to the model name. Empty or whitespace if no badge. */
     badgeText: string;
-    /** Internal mode enum string (e.g. "MODEL_MODE_EXPERT", "MODEL_MODE_FAST", "MODEL_MODE_GROK_420"). */
-    modelMode: string;
+    /** Internal mode enum from the API (e.g. "MODEL_MODE_EXPERT", "MODEL_MODE_FAST"). */
+    modelMode: ModelConfigModelMode;
     /** Backend routing identifier (e.g. "GIX", "CHAT"). */
-    promptingBackend: string;
+    promptingBackend: PromptingBackend;
 }

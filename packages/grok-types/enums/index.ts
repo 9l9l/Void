@@ -9,5 +9,6 @@ export * from "./feature";
 export * from "./models";
 export * from "./routing";
 export * from "./settings";
+export * from "./subscription";
 export * from "./tools";
 export * from "./voice";

@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import type { ResolvedSubscriptionInfo } from "@grok-types/common";
+import type { SubscriptionTier, SubscriptionTierName } from "@grok-types/enums";
 import type {
     ChatPageStoreModule,
     ConversationStoreModule,
@@ -20,17 +22,9 @@ import type {
 import { findByPropsLazy } from "../turbopack";
 
 export interface SubscriptionUtilsModule {
-    getSubscriptionTierName: (tier: string) => string;
-    useSubscriptions: () => {
-        isPending: boolean;
-        isSuperGrokUser: boolean;
-        isSuperGrokProUser: boolean;
-        isEnterpriseUser: boolean;
-        hasSubscriptions: boolean;
-        bestSubscription?: string;
-        activeSubscriptions: { tier?: string; status?: string }[];
-    };
-    SubscriptionTier: Record<string, string>;
+    getSubscriptionTierName: (tier: SubscriptionTier) => SubscriptionTierName;
+    useSubscriptions: () => ResolvedSubscriptionInfo;
+    SubscriptionTier: Record<string, SubscriptionTier>;
 }
 
 export const SessionStore: SessionStoreModule = findByPropsLazy("useSession", "SessionStoreProvider");
