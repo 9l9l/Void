@@ -21,7 +21,15 @@ import { findByPropsLazy } from "../turbopack";
 
 export interface SubscriptionUtilsModule {
     getSubscriptionTierName: (tier: string) => string;
-    useSubscriptions: () => { hasSubscriptions: boolean; bestSubscription?: { tier?: string } };
+    useSubscriptions: () => {
+        isPending: boolean;
+        isSuperGrokUser: boolean;
+        isSuperGrokProUser: boolean;
+        isEnterpriseUser: boolean;
+        hasSubscriptions: boolean;
+        bestSubscription?: string;
+        activeSubscriptions: { tier?: string; status?: string }[];
+    };
     SubscriptionTier: Record<string, string>;
 }
 

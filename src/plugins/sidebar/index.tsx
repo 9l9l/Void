@@ -11,10 +11,31 @@ import { React } from "@turbopack/common/react";
 import { SessionStore, SubscriptionUtils } from "@turbopack/common/stores";
 import definePlugin from "@utils/types";
 
+const TIER_DISPLAY: Record<string, string> = {
+    SUBSCRIPTION_TIER_INVALID: "Free",
+    SUBSCRIPTION_TIER_X_BASIC: "Basic",
+    SUBSCRIPTION_TIER_X_PREMIUM: "Premium",
+    SUBSCRIPTION_TIER_X_PREMIUM_PLUS: "Premium+",
+    SUBSCRIPTION_TIER_GROK_PRO: "SuperGrok",
+    SUBSCRIPTION_TIER_SUPER_GROK_PRO: "SuperGrok Pro",
+};
+
+const SESSION_TIER_DISPLAY: Record<string, string> = {
+    "0": "Free",
+    "1": "Premium",
+    "2": "SuperGrok",
+    "3": "SuperGrok Pro",
+};
+
+function getPlanName(bestSubscription?: string, sessionTierId?: string) {
+    if (bestSubscription) return TIER_DISPLAY[bestSubscription] ?? bestSubscription;
+    return SESSION_TIER_DISPLAY[sessionTierId ?? "0"] ?? "Free";
+}
+
 function UserInfo() {
     const { open } = SidebarComponents.useSidebar();
     const { user } = SessionStore.useSession();
-    const sub = SubscriptionUtils.useSubscriptions().bestSubscription;
+    const { bestSubscription } = SubscriptionUtils.useSubscriptions();
 
     if (!open || !user) return null;
 
@@ -24,7 +45,7 @@ function UserInfo() {
                 {user.givenName || user.email?.split("@")[0] || "User"}
             </Text>
             <Text as="span" size="xs" color="secondary" className="truncate">
-                {sub?.tier ? SubscriptionUtils.getSubscriptionTierName(sub.tier) : "Free"}
+                {getPlanName(bestSubscription, user.sessionTierId)}
             </Text>
         </Flex>
     );
