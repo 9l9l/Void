@@ -26,7 +26,7 @@ import {
     SelectValue,
     Text,
 } from "@components";
-import { React, useCallback, useMemo, useState } from "@turbopack/common/react";
+import { React, useCallback, useMemo, useRef, useState } from "@turbopack/common/react";
 import { classNameFactory } from "@utils/css";
 
 import PluginCard from "../PluginCard";
@@ -51,6 +51,8 @@ export default function PluginsTab() {
     const [filter, setFilter] = useState<Filter>("all");
     const [dialogName, setDialogName] = useState<string | null>(null);
     const [showReload, setShowReload] = useState(false);
+    const [needsReload, setNeedsReload] = useState(false);
+    const dismissed = useRef(false);
 
     const { userPlugins, requiredPlugins } = useMemo(() => {
         const user: string[] = [];
@@ -71,7 +73,15 @@ export default function PluginsTab() {
     const dialogPlugin = dialogName ? plugins[dialogName] : null;
     const hasResults = filteredUser.length > 0 || filteredRequired.length > 0;
 
-    const onReload = useCallback(() => setShowReload(true), []);
+    const onReload = useCallback(() => {
+        setNeedsReload(true);
+        if (!dismissed.current) setShowReload(true);
+    }, []);
+
+    const onDismiss = useCallback(() => {
+        dismissed.current = true;
+        setShowReload(false);
+    }, []);
 
     return (
         <Flex flexDirection="column" gap="1.5rem">
@@ -83,6 +93,16 @@ export default function PluginsTab() {
                     Enable or disable plugins to customize your Grok experience. Some plugins require a page reload.
                 </Text>
             </Flex>
+            {needsReload && !showReload && (
+                <Flex alignItems="center" className={cl("reload-banner")} style={{ margin: "0 0.75rem" }}>
+                    <Text size="xs" style={{ color: "inherit", flex: 1 }}>
+                        Plugin changes require a page reload to take effect.
+                    </Text>
+                    <Button variant="outline" size="sm" onClick={() => location.reload()}>
+                        Reload
+                    </Button>
+                </Flex>
+            )}
             <Flex alignItems="center" gap="0.75rem" style={{ padding: "0 0.75rem" }}>
                 <Input
                     type="text"
@@ -125,7 +145,7 @@ export default function PluginsTab() {
             <Dialog
                 open={showReload}
                 onOpenChange={(v: boolean) => {
-                    if (!v) setShowReload(false);
+                    if (!v) onDismiss();
                 }}
             >
                 <DialogContent className={cl("reload-content")}>
@@ -134,7 +154,7 @@ export default function PluginsTab() {
                         <DialogDescription>This plugin modifies Grok's code and requires a page reload to apply changes.</DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button variant="secondary" onClick={() => setShowReload(false)}>
+                        <Button variant="secondary" onClick={onDismiss}>
                             Later
                         </Button>
                         <Button variant="primary" onClick={() => location.reload()}>
