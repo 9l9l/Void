@@ -22,10 +22,17 @@ export default definePlugin({
     patches: [
         {
             find: '"drop-container"',
-            replacement: {
-                match: /(\i\.jsx)\)\(("div",\{ref:\i,className:"flex w-full h-full","data-testid":"drop-container",children:)(\(0,\i\.jsx\)\(\i,\{backend:\i,options:\{rootElement:\i\.current\},context:globalThis\.window,children:\(0,\i\.jsx\)\(\i,\{className:\i,children:\i\}\)\}\))\}\)/,
-                replace: "$1s)($2[$self._stars(),$3]})",
-            },
+            group: true,
+            replacement: [
+                {
+                    match: /\(0,(\i)\.jsx\)(\("div",.{0,80}"drop-container")/,
+                    replace: "(0,$1.jsxs)$2",
+                },
+                {
+                    match: /"drop-container",children:(\(0,\i\.jsx\)\(\i,\{backend:\i,.{0,120}children:\i\}\)\}\))\}\)/,
+                    replace: '"drop-container",children:[$self._stars(),$1]})',
+                },
+            ],
         },
     ],
 });
