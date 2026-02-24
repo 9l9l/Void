@@ -449,6 +449,36 @@ function captureFactoryRegistry(): Map<number, ModuleFactory> | null {
     return captured as Map<number, ModuleFactory> | null;
 }
 
+function captureModuleCache(factoryRegistry: Map<number, ModuleFactory>): void {
+    // When TURBOPACK is already initialized (e.g. Chrome extension where
+    // the content script runs after the runtime), factories are registered
+    // but not executed — so helpers.c (runtime module cache) was never
+    // captured. Register a probe factory and push a manifest chunk that
+    // tells the runtime to instantiate it. The runtime's registerChunk is
+    // async, so the probe executes on the next microtask — but by the time
+    // waitForModulesStable() fires, it will have run.
+    const PROBE_ID = FACTORY_PROBE_ID - 1;
+    factoryRegistry.set(PROBE_ID, ((helpers: TurbopackHelpers) => {
+        if (!turbopackHelpers) turbopackHelpers = helpers;
+        if (!runtimeModuleCache && helpers.c) {
+            runtimeModuleCache = helpers.c;
+            scanExistingModules(runtimeModuleCache);
+            for (const cb of cacheDiscoveryListeners) {
+                try {
+                    cb();
+                } catch {}
+            }
+            cacheDiscoveryListeners.clear();
+        }
+        if (!runtimeFactoryRegistry && helpers.M) runtimeFactoryRegistry = helpers.M;
+    }) as ModuleFactory);
+
+    originalPush!(["void-cache-probe", { otherChunks: [], runtimeModuleIds: [PROBE_ID] }]);
+
+    // Cleanup on next microtask (after the probe executes)
+    Promise.resolve().then(() => factoryRegistry.delete(PROBE_ID));
+}
+
 export function patchTurbopack(): void {
     const existingTp = pageWindow.TURBOPACK;
 
@@ -461,6 +491,10 @@ export function patchTurbopack(): void {
             for (const [id, factory] of runtimeFactoryRegistry) {
                 runtimeFactoryRegistry.set(id, wrapFactory(id, factory));
             }
+        }
+
+        if (!runtimeModuleCache && runtimeFactoryRegistry) {
+            captureModuleCache(runtimeFactoryRegistry);
         }
 
         return;
