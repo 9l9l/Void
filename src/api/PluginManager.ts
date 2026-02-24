@@ -249,5 +249,6 @@ export function initPluginManager() {
         }
     }
 
-    logger.info(`${Object.keys(plugins).length} plugins, ${patches.length} patches`);
+    const enabled = Object.keys(plugins).filter(isPluginEnabled).length;
+    logger.info(`${enabled}/${Object.keys(plugins).length} plugins enabled, ${patches.length} patches`);
 }
