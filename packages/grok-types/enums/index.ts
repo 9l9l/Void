@@ -1,6 +1,7 @@
 export * from "./conversation";
 export * from "./feature";
 export * from "./files";
+export * from "./media";
 export * from "./models";
 export * from "./routing";
 export * from "./settings";

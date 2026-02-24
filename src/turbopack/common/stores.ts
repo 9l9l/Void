@@ -11,6 +11,7 @@ import type {
     ConversationStoreModule,
     FeatureStoreModule,
     FileStoreModule,
+    MediaStoreModule,
     ModelsStoreModule,
     NotificationsStoreModule,
     ResponseStoreModule,
@@ -43,4 +44,5 @@ export const ChatPageStore: ChatPageStoreModule = findByPropsLazy("useChatPageSt
 export const TabsManagerStore: TabsManagerStoreModule = findByPropsLazy("useTabsManagerStore");
 export const SubscriptionsStore: SubscriptionsStoreModule = findByPropsLazy("useSubscriptionsStore");
 export const NotificationsStore: NotificationsStoreModule = findByPropsLazy("useNotificationsStore", "useNotificationsStoreInit");
+export const MediaStore: MediaStoreModule = findByPropsLazy("useMediaStore", "useImagineModeStore");
 export const SubscriptionUtils: SubscriptionUtilsModule = findByPropsLazy("getSubscriptionTierName", "SubscriptionTier");
