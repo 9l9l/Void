@@ -61,7 +61,7 @@ function Dot() {
 
 function VersionLink({ href, children }: { href: string; children: ReactNode }) {
     return (
-        <a href={href} target="_blank" rel="noreferrer" className={cl("version-link")}>
+        <a href={href} target="_blank" rel="noreferrer" className={classes(cl("version-link"), "pointer-events-auto")}>
             <Text as="span" color="secondary">
                 {children}
             </Text>
@@ -71,7 +71,7 @@ function VersionLink({ href, children }: { href: string; children: ReactNode }) 
 
 function VersionInfo() {
     return (
-        <Flex flexDirection="column" gap="0" className={classes(cl("version"), "absolute bottom-0 left-0 right-0 p-3 opacity-30 text-secondary")}>
+        <Flex flexDirection="column" gap="0" className={classes(cl("version"), "absolute bottom-0 left-0 right-0 p-3 opacity-30 text-secondary pointer-events-none")}>
             <Flex alignItems="center" gap="0.25rem">
                 <VersionLink href={REPO_URL}>Void</VersionLink>
                 <Dot />
