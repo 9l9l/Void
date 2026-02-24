@@ -4,11 +4,13 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import { getModuleCache, getRuntimeFactoryRegistry } from "@turbopack/patchTurbopack";
+import { getModuleCache, getRuntimeFactoryRegistry, patchStats } from "@turbopack/patchTurbopack";
 import type { PatchedModuleFactory } from "@turbopack/types";
 import { SYM_PATCHED_BY, SYM_PATCHED_CODE } from "@turbopack/types";
 
 import { SERIALIZE } from "./constants";
+
+// ── Serialization ──
 
 export function serialize(value: unknown, depth: number = SERIALIZE.DEFAULT_DEPTH): unknown {
     if (value == null) return value;
@@ -61,6 +63,40 @@ function serializeInner(value: unknown, depth: number, seen: WeakSet<object>): u
     }
 }
 
+// ── Factory source cache (shared across search, patch, module) ──
+
+let factorySourceCache: Map<number, string> | null = null;
+let factorySourceCacheGen = 0;
+
+export function getFactorySourceCache(): Map<number, string> {
+    const registry = getRuntimeFactoryRegistry();
+    if (!registry) return new Map();
+    const gen = registry.size;
+    if (factorySourceCache && factorySourceCacheGen === gen) return factorySourceCache;
+    factorySourceCache = new Map();
+    for (const [id, factory] of registry) factorySourceCache.set(id, String(factory));
+    factorySourceCacheGen = gen;
+    return factorySourceCache;
+}
+
+export function getAllFactorySources(): string[] {
+    const cache = getFactorySourceCache();
+    return [...cache.values()];
+}
+
+export function countInSources(sources: string[], text: string, max: number): number {
+    let count = 0;
+    for (const src of sources) {
+        if (src.includes(text)) {
+            count++;
+            if (count >= max) return count;
+        }
+    }
+    return count;
+}
+
+// ── Module lookups ──
+
 export function getFactorySource(id: number): string | null {
     const registry = getRuntimeFactoryRegistry();
     if (!registry) return null;
@@ -92,6 +128,8 @@ export function findModuleId(exportValue: unknown): number | null {
     return reverseCache.get(exportValue) ?? null;
 }
 
+// ── Patch metadata ──
+
 export function getPatchInfo(moduleId: number): string[] | null {
     const registry = getRuntimeFactoryRegistry();
     if (!registry) return null;
@@ -105,6 +143,38 @@ export function getPatchedSource(moduleId: number): string | null {
     const factory = registry.get(moduleId) as PatchedModuleFactory | undefined;
     return factory?.[SYM_PATCHED_CODE] ?? null;
 }
+
+export function isModulePatched(id: number): boolean {
+    return patchStats.patchedModules.has(id);
+}
+
+// ── Regex helpers ──
+
+export function countCaptureGroups(matchStr: string): number {
+    let count = 0;
+    for (let i = 0; i < matchStr.length; i++) {
+        if (matchStr[i] === "\\" && i + 1 < matchStr.length) {
+            i++;
+            continue;
+        }
+        if (matchStr[i] === "(" && matchStr[i + 1] !== "?") count++;
+    }
+    return count;
+}
+
+export function parseRegexPattern(pattern: string): { regex: RegExp | null; literal: string } {
+    const rm = pattern.match(/^\/(.+)\/([gimsuy]*)$/);
+    if (rm) {
+        try {
+            return { regex: new RegExp(rm[1], rm[2].includes("g") ? rm[2] : `${rm[2]}g`), literal: pattern };
+        } catch {
+            return { regex: null, literal: pattern };
+        }
+    }
+    return { regex: null, literal: pattern };
+}
+
+// ── General helpers ──
 
 export function getPath(obj: unknown, path: string): unknown {
     let current = obj;

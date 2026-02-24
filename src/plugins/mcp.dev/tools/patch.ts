@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import { getRuntimeFactoryRegistry, patches, patchStats } from "@turbopack/patchTurbopack";
+import { getRuntimeFactoryRegistry, patches, patchResults, patchStats } from "@turbopack/patchTurbopack";
 import { search } from "@turbopack/turbopack";
 import type { PatchedModuleFactory } from "@turbopack/types";
 import { SYM_PATCHED_BY } from "@turbopack/types";
@@ -12,6 +12,7 @@ import { canonicalizeMatch } from "@utils/patches";
 
 import { PATCH } from "./constants";
 import type { PatchArgs } from "./types";
+import { countCaptureGroups, countInSources, getAllFactorySources } from "./utils";
 
 interface LintWarning {
     severity: "error" | "warn" | "info";
@@ -41,10 +42,21 @@ function lintMatchRegex(matchStr: string, replaceStr?: string): LintWarning[] {
 
     if (/\.\{0,\d{3,}\}/.test(matchStr)) warnings.push({ severity: "warn", message: "Very large gap bound (100+)", fix: "Narrow the gap" });
 
-    const groups = (matchStr.match(/\((?!\?)/g) ?? []).length;
+    if (!/["'][^"']{2,}["']/.test(matchStr) && !/\\e\{/.test(matchStr)) {
+        warnings.push({ severity: "warn", message: "No string literal anchor in match", fix: "Add i18n key, component name, or data-testid" });
+    }
+
+    if (matchStr.length > 80 && matchStr.length <= 200) {
+        warnings.push({ severity: "info", message: `Match regex is ${matchStr.length} chars (>80)`, fix: "Simplify: use .{0,N}, $&, or lookbehind" });
+    }
+
+    const groups = countCaptureGroups(matchStr);
     if (groups > 5) warnings.push({ severity: "warn", message: `${groups} capture groups`, fix: "Use (?:...) for unused groups" });
 
     if (replaceStr) {
+        if (groups > 0 && !replaceStr.includes("$&") && !/\$\d/.test(replaceStr)) {
+            warnings.push({ severity: "info", message: "Capture groups defined but not referenced in replace", fix: "Use $& or (?:...) for non-capturing" });
+        }
         const refs = replaceStr.match(/\$(\d+)/g)?.map(g => Number(g.slice(1))) ?? [];
         for (const ref of refs) {
             if (ref > groups) warnings.push({ severity: "error", message: `$${ref} referenced but only ${groups} groups` });
@@ -55,12 +67,12 @@ function lintMatchRegex(matchStr: string, replaceStr?: string): LintWarning[] {
         }
     }
 
-    if (matchStr.length > 200) warnings.push({ severity: "info", message: "Long regex (200+ chars)", fix: "Split into multiple patches" });
+    if (matchStr.length > 200) warnings.push({ severity: "warn", message: "Long regex (200+ chars)", fix: "Split into multiple patches" });
 
     return warnings;
 }
 
-function testMatchOnSource(src: string, id: number, matchStr: string, replaceStr: string, flags?: string) {
+function testMatchOnSource(src: string, id: number, findStr: string, matchStr: string, replaceStr: string, flags?: string, contextPad?: number) {
     let regex: RegExp;
     try {
         regex = canonicalizeMatch(new RegExp(matchStr, flags ?? ""));
@@ -71,7 +83,7 @@ function testMatchOnSource(src: string, id: number, matchStr: string, replaceStr
     const warnings: string[] = [];
     if (/\.\+\?/.test(matchStr)) warnings.push("Unbounded .+? gap, use .{0,N}");
     if (/\.\*\?/.test(matchStr)) warnings.push("Unbounded .*? gap, use .{0,N}");
-    if ((matchStr.match(/\((?!\?)/g) ?? []).length > PATCH.MAX_CAPTURE_WARN) warnings.push("Many capture groups");
+    if (countCaptureGroups(matchStr) > PATCH.MAX_CAPTURE_WARN) warnings.push("Many capture groups");
     if (replaceStr.includes("$self")) warnings.push('$self is expanded at runtime to Void.plugins["Name"], not in test preview');
 
     let matched: RegExpMatchArray | null;
@@ -83,12 +95,17 @@ function testMatchOnSource(src: string, id: number, matchStr: string, replaceStr
 
     if (!matched) {
         const literal = matchStr.replace(/[\\^$.*+?()[\]{}|]/g, "").slice(0, PATCH.HINT_LITERAL_SLICE);
-        const hint = src.includes(literal) ? "Literal found but regex didn't match — check quantifiers and escaping" : "No literal match either — check find targets the right module";
-        return { status: "MATCH_FAILED", id, hint, ...(warnings.length && { warnings }) };
+        const literalFound = src.includes(literal);
+        const hint = literalFound ? "Literal found but regex didn't match — check quantifiers and escaping" : "No literal match either — check find targets the right module";
+        const canonFindStr = canonicalizeMatch(findStr);
+        const findIdx = typeof canonFindStr === "string" ? src.indexOf(canonFindStr) : src.search(canonFindStr);
+        const nfPad = Math.min(contextPad ?? PATCH.DEFAULT_CONTEXT_PAD, PATCH.MAX_CONTEXT_PAD);
+        const nearFind = findIdx >= 0 ? src.slice(Math.max(0, findIdx - nfPad), Math.min(src.length, findIdx + nfPad * 2)) : undefined;
+        return { status: "MATCH_FAILED", id, len: src.length, hint, ...(nearFind && { nearFind }), ...(warnings.length && { warnings }) };
     }
 
     const replaceGroups = replaceStr.match(/\$(\d+)/g)?.map((g: string) => Number(g.slice(1))) ?? [];
-    const captureCount = (matchStr.match(/\((?!\?)/g) ?? []).length;
+    const captureCount = countCaptureGroups(matchStr);
     for (const g of replaceGroups) {
         if (g > captureCount) warnings.push(`$${g} referenced but only ${captureCount} groups`);
     }
@@ -101,14 +118,20 @@ function testMatchOnSource(src: string, id: number, matchStr: string, replaceStr
     if (patchedSrc === src) warnings.push("Replacement produced identical output (no-op)");
 
     const at = src.indexOf(matched[0]);
-    const cs = Math.max(0, at - PATCH.CONTEXT_PAD);
-    const ce = Math.min(src.length, at + matched[0].length + PATCH.CONTEXT_PAD);
+    const pad = Math.min(contextPad ?? PATCH.DEFAULT_CONTEXT_PAD, PATCH.MAX_CONTEXT_PAD);
+    const cs = Math.max(0, at - pad);
+    const ce = Math.min(src.length, at + matched[0].length + pad);
+
+    const canonFind = canonicalizeMatch(findStr);
+    const findOffset = typeof canonFind === "string" ? src.indexOf(canonFind) : src.search(canonFind);
 
     const result: Record<string, unknown> = {
         status: "VALID",
         id,
         at,
+        findOffset,
         len: src.length,
+        matchLen: matched[0].length,
         matched: matched[0].slice(0, PATCH.MATCH_SLICE),
         before: src.slice(cs, ce),
         after: patchedSrc.slice(cs, ce + (patchedSrc.length - src.length)),
@@ -130,11 +153,14 @@ function diagnoseOrphaned(p: (typeof patches)[number]) {
     const src = String(results[ids[0]]);
     const failed = replacements.filter(r => {
         try {
-            return !canonicalizeMatch(new RegExp(String(r.match))).test(src);
+            const regex = r.match instanceof RegExp ? r.match : canonicalizeMatch(new RegExp(r.match as string));
+            return !regex.test(src);
         } catch {
             return true;
         }
     });
+
+    if (!failed.length) return null;
 
     const reason =
         failed.length === replacements.length
@@ -150,15 +176,22 @@ export function handlePatch(args: PatchArgs): unknown {
     if (action === "list") {
         return patches.map(p => {
             const replacements = Array.isArray(p.replacement) ? p.replacement : [p.replacement];
-            return {
+            const result = patchResults.find(r => r.plugin === p.plugin && r.find === String(p.find));
+            const entry: Record<string, unknown> = {
                 plugin: p.plugin,
                 find: String(p.find).slice(0, PATCH.FIND_SLICE),
                 all: !!p.all,
-                replacements: replacements.map(r => ({
-                    match: String(r.match).slice(0, PATCH.MATCH_SLICE),
-                    replace: typeof r.replace === "string" ? r.replace.slice(0, PATCH.MATCH_SLICE) : "[function]",
-                })),
+                replacements: replacements.map((r, i) => {
+                    const rep: Record<string, unknown> = {
+                        match: String(r.match).slice(0, PATCH.MATCH_SLICE),
+                        replace: typeof r.replace === "string" ? r.replace.slice(0, PATCH.MATCH_SLICE) : "[function]",
+                    };
+                    if (result?.replacements[i]) rep.status = result.replacements[i].status;
+                    return rep;
+                }),
             };
+            if (result) entry.moduleId = result.moduleId;
+            return entry;
         });
     }
 
@@ -169,11 +202,12 @@ export function handlePatch(args: PatchArgs): unknown {
         const ids = Object.keys(results).map(Number);
         if (!ids.length) return { unique: false, count: 0, hint: "No modules match this find string" };
 
+        const ctxPad = Math.min(args.context ?? 300, PATCH.MAX_CONTEXT_PAD);
+
         if (ids.length === 1) {
             const id = ids[0];
             const src = String(results[id]);
             const findIdx = typeof canonFind === "string" ? src.indexOf(canonFind) : src.search(canonFind);
-            const ctxPad = 300;
             const start = Math.max(0, findIdx - ctxPad);
             const ctx = src.slice(start, start + ctxPad * 2);
             const nearbyI18n = extractI18nKeys(ctx);
@@ -188,11 +222,21 @@ export function handlePatch(args: PatchArgs): unknown {
         const entries = ids.slice(0, PATCH.ANALYZE_IDS_LIMIT).map(mid => {
             const modSrc = String(results[mid]);
             const modIdx = typeof canonFind === "string" ? modSrc.indexOf(canonFind) : modSrc.search(canonFind);
-            const start = Math.max(0, modIdx - PATCH.ANALYZE_CONTEXT_PAD);
-            return { id: mid, ctx: modSrc.slice(start, start + PATCH.ANALYZE_CONTEXT_SIZE) };
+            const start = Math.max(0, modIdx - ctxPad);
+            const ctx = modSrc.slice(start, start + ctxPad * 2);
+            const nearbyI18n = extractI18nKeys(ctx);
+            const entry: Record<string, unknown> = { id: mid, ctx };
+            if (nearbyI18n.length) entry.i18nKeys = nearbyI18n;
+            return entry;
         });
 
-        return { unique: false, count: ids.length, entries, ...(sameSource && { sharedFactory: true }) };
+        const result: Record<string, unknown> = { unique: false, count: ids.length, entries };
+        if (sameSource) {
+            result.sharedFactory = true;
+            result.ids = ids.slice(0, PATCH.ANALYZE_IDS_LIMIT);
+            result.hint = `Shared factory — all ${ids.length} IDs share identical source. Use all:true in patch.`;
+        }
+        return result;
     }
 
     if (action === "test") {
@@ -205,11 +249,12 @@ export function handlePatch(args: PatchArgs): unknown {
 
         const id = ids[0];
         const src = String(results[id]);
-        const testResult = testMatchOnSource(src, id, matchStr, replaceStr, flags);
+        const testResult = testMatchOnSource(src, id, findStr, matchStr, replaceStr, flags, args.context);
 
         if (typeof testResult === "object" && testResult.status === "VALID") {
             const matchAt = testResult.at as number;
-            const neighborhood = src.slice(Math.max(0, matchAt - 300), Math.min(src.length, matchAt + 300));
+            const i18nPad = Math.min(args.context ?? PATCH.DEFAULT_CONTEXT_PAD, PATCH.MAX_CONTEXT_PAD);
+            const neighborhood = src.slice(Math.max(0, matchAt - i18nPad), Math.min(src.length, matchAt + i18nPad * 2));
             const nearbyI18n = extractI18nKeys(neighborhood);
             if (nearbyI18n.length) (testResult as Record<string, unknown>).nearbyI18n = nearbyI18n;
         }
@@ -238,8 +283,17 @@ export function handlePatch(args: PatchArgs): unknown {
     }
 
     if (action === "broken") {
+        const orphaned = patches.map(diagnoseOrphaned).filter(Boolean);
+        const noEffect = patchResults.flatMap(r =>
+            r.replacements.filter(rep => rep.status === "noEffect").map(rep => ({ plugin: r.plugin, moduleId: r.moduleId, match: rep.match.slice(0, PATCH.MATCH_SLICE) })),
+        );
+        const errors = patchResults.flatMap(r =>
+            r.replacements.filter(rep => rep.status === "error").map(rep => ({ plugin: r.plugin, moduleId: r.moduleId, match: rep.match.slice(0, PATCH.MATCH_SLICE) })),
+        );
         return {
-            orphaned: patches.map(diagnoseOrphaned),
+            orphaned,
+            ...(noEffect.length && { noEffect }),
+            ...(errors.length && { errors }),
             stats: {
                 applied: patchStats.applied,
                 noEffect: patchStats.noEffect,
@@ -355,6 +409,11 @@ function extractAnchors(ctx: string): Anchor[] {
         collect(`"${m[1]}",()=>`, "export", m.index);
     }
 
+    const testIdRe = /"data-testid":"([^"]+)"/g;
+    while ((m = testIdRe.exec(ctx)) !== null) {
+        collect(`"data-testid":"${m[1]}"`, "testid", m.index);
+    }
+
     const strRe = /"([^"\\]{6,80})"/g;
     while ((m = strRe.exec(ctx)) !== null) {
         if (seen.has(`"${m[1]}"`)) continue;
@@ -371,35 +430,11 @@ function extractAnchors(ctx: string): Anchor[] {
         collect(m[1], "prop", m.index);
     }
 
-    const typeOrder = ["i18n", "i18n-ns", "flag", "displayName", "export", "string", "jsx", "prop"];
+    const typeOrder = ["i18n", "i18n-ns", "flag", "displayName", "export", "testid", "string", "jsx", "prop"];
     anchors.sort((a, b) => {
         if (a.unique !== b.unique) return a.unique ? -1 : 1;
         return typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type);
     });
 
     return anchors.slice(0, PATCH.CONTEXT_MAX_ANCHORS);
-}
-
-let factorySourcesCache: string[] | null = null;
-let factorySourcesCacheGen = 0;
-
-function getAllFactorySources(): string[] {
-    const registry = getRuntimeFactoryRegistry();
-    if (!registry) return [];
-    if (factorySourcesCache && factorySourcesCacheGen === registry.size) return factorySourcesCache;
-    factorySourcesCache = [];
-    for (const [, factory] of registry) factorySourcesCache.push(String(factory));
-    factorySourcesCacheGen = registry.size;
-    return factorySourcesCache;
-}
-
-function countInSources(sources: string[], text: string, max: number): number {
-    let count = 0;
-    for (const src of sources) {
-        if (src.includes(text)) {
-            count++;
-            if (count >= max) return count;
-        }
-    }
-    return count;
 }

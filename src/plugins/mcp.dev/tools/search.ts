@@ -4,24 +4,11 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import { getModuleCache, getRuntimeFactoryRegistry, patchStats } from "@turbopack/patchTurbopack";
+import { getModuleCache } from "@turbopack/patchTurbopack";
 
 import { SEARCH } from "./constants";
 import type { SearchArgs } from "./types";
-
-let srcCache: Map<number, string> | null = null;
-let srcCacheGen = 0;
-
-function getSourceCache(): Map<number, string> {
-    const registry = getRuntimeFactoryRegistry();
-    if (!registry) return new Map();
-    const gen = registry.size;
-    if (srcCache && srcCacheGen === gen) return srcCache;
-    srcCache = new Map();
-    for (const [id, factory] of registry) srcCache.set(id, String(factory));
-    srcCacheGen = gen;
-    return srcCache;
-}
+import { getFactorySourceCache, isModulePatched } from "./utils";
 
 function findMatch(src: string, pattern: string, regex: RegExp | null, startFrom = 0): { idx: number; len: number } | null {
     if (regex) {
@@ -61,7 +48,7 @@ export function handleSearch(args: SearchArgs): unknown {
     if (!pattern && !andPatterns?.length)
         return { error: 'Provide pattern (string or /regex/) or and[] (array of strings). Use count:true for count-only, filter:"loaded"/"unloaded" to narrow scope.' };
 
-    const sources = getSourceCache();
+    const sources = getFactorySourceCache();
     if (!sources.size) return "Factory registry not available";
 
     const loadedCache = filter ? getModuleCache() : null;
@@ -82,8 +69,8 @@ export function handleSearch(args: SearchArgs): unknown {
             const idx = src.indexOf(allPatterns[0]);
             const start = Math.max(0, idx - ctx);
             const end = Math.min(src.length, idx + allPatterns[0].length + ctx);
-            const entry: SearchMatch = { id, s: src.slice(start, end), len: src.length };
-            if (patchStats.patchedModules.has(id)) entry.patched = true;
+            const entry: SearchMatch = { id, at: idx, s: src.slice(start, end), len: src.length };
+            if (isModulePatched(id)) entry.patched = true;
             matches.push(entry);
         }
         const result: { matches: SearchMatch[]; totalModules?: number } = { matches };
@@ -145,8 +132,8 @@ export function handleSearch(args: SearchArgs): unknown {
             const end = Math.min(src.length, hit.idx + hit.len + ctx);
             const snippet = src.slice(start, end);
             total += snippet.length;
-            const entry: SearchMatch = { id, len: src.length, s: snippet };
-            if (patchStats.patchedModules.has(id)) entry.patched = true;
+            const entry: SearchMatch = { id, at: hit.idx, len: src.length, s: snippet };
+            if (isModulePatched(id)) entry.patched = true;
             matches.push(entry);
         }
     }

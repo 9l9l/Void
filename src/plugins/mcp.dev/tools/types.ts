@@ -63,6 +63,7 @@ export interface PatchArgs {
     replace?: string;
     flags?: string;
     window?: number;
+    context?: number;
 }
 
 export interface PluginArgs {

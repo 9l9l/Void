@@ -27,7 +27,16 @@ import { isObject } from "@utils/misc";
 
 import { MODULE } from "./constants";
 import type { ModuleArgs } from "./types";
-import { findModuleId, getFactorySource, getPatchedSource, getPatchInfo, serialize } from "./utils";
+import { countInSources, findModuleId, getAllFactorySources, getFactorySource, getFactorySourceCache, getPatchedSource, getPatchInfo, serialize } from "./utils";
+
+function findSharedFactoryIds(id: number, src: string): number[] {
+    const cache = getFactorySourceCache();
+    const siblings: number[] = [];
+    for (const [fid, fsrc] of cache) {
+        if (fid !== id && fsrc === src) siblings.push(fid);
+    }
+    return siblings;
+}
 
 let whereUsedCache: Map<number, Array<{ id: number; n: number }>> | null = null;
 let whereUsedCacheGen = 0;
@@ -66,30 +75,6 @@ function buildWhereUsedIndex(): Map<number, Array<{ id: number; n: number }>> {
     return index;
 }
 
-let suggestSourceCache: string[] | null = null;
-let suggestSourceCacheGen = 0;
-
-function getSuggestSources(): string[] {
-    const registry = getRuntimeFactoryRegistry();
-    if (!registry) return [];
-    if (suggestSourceCache && suggestSourceCacheGen === registry.size) return suggestSourceCache;
-    suggestSourceCache = [];
-    for (const [, factory] of registry) suggestSourceCache.push(String(factory));
-    suggestSourceCacheGen = registry.size;
-    return suggestSourceCache;
-}
-
-function countSourceMatches(sources: string[], text: string, maxCheck: number): number {
-    let count = 0;
-    for (const src of sources) {
-        if (src.includes(text)) {
-            count++;
-            if (count >= maxCheck) return count;
-        }
-    }
-    return count;
-}
-
 interface SuggestCandidate {
     find: string;
     type: string;
@@ -97,8 +82,8 @@ interface SuggestCandidate {
     count: number;
 }
 
-function suggestAnchors(src: string): SuggestCandidate[] {
-    const sources = getSuggestSources();
+function suggestAnchors(src: string, maxCandidates: number = MODULE.DEFAULT_SUGGEST): SuggestCandidate[] {
+    const sources = getAllFactorySources();
     const seen = new Set<string>();
     const raw: Array<{ find: string; type: string }> = [];
 
@@ -109,16 +94,25 @@ function suggestAnchors(src: string): SuggestCandidate[] {
         }
     };
 
-    const stringRe = /"([^"\\]{6,80})"/g;
     let m;
-    while ((m = stringRe.exec(src)) !== null) collect(m[1], "string");
+    const i18nRe = /\w\("([a-z][a-z0-9]*(?:[-.][a-z0-9]+)+)","([^"]+)"\)/g;
+    while ((m = i18nRe.exec(src)) !== null) collect(`"${m[1]}","${m[2]}"`, "i18n");
 
     const exportRe = /\.s\(\[([^\]]*)\]/g;
     while ((m = exportRe.exec(src)) !== null) {
         const nameRe = /"([^"]+)"/g;
         let nm;
-        while ((nm = nameRe.exec(m[1])) !== null) collect(nm[1], "export");
+        while ((nm = nameRe.exec(m[1])) !== null) collect(`"${nm[1]}",()=>`, "export");
     }
+
+    const testIdRe = /"data-testid":"([^"]+)"/g;
+    while ((m = testIdRe.exec(src)) !== null) collect(`"data-testid":"${m[1]}"`, "testid");
+
+    const dnRe = /displayName="([^"]+)"/g;
+    while ((m = dnRe.exec(src)) !== null) collect(`displayName="${m[1]}"`, "displayName");
+
+    const stringRe = /"([^"\\]{6,80})"/g;
+    while ((m = stringRe.exec(src)) !== null) collect(m[1], "string");
 
     const templateRe = /`([^`\\]{6,80})`/g;
     while ((m = templateRe.exec(src)) !== null) collect(m[1], "template");
@@ -126,25 +120,25 @@ function suggestAnchors(src: string): SuggestCandidate[] {
     const propRe = /\.([a-zA-Z_$][\w$]{5,})\b/g;
     while ((m = propRe.exec(src)) !== null) collect(m[1], "prop");
 
-    const maxRaw = MODULE.SUGGEST_MAX_CANDIDATES * 3;
+    const maxRaw = maxCandidates * 3;
     const capped = raw.slice(0, maxRaw);
     const candidates: SuggestCandidate[] = [];
     let uniqueCount = 0;
     for (const { find, type } of capped) {
-        if (uniqueCount >= MODULE.SUGGEST_MAX_CANDIDATES) break;
-        const count = countSourceMatches(sources, find, 3);
+        if (uniqueCount >= maxCandidates) break;
+        const count = countInSources(sources, find, 3);
         const unique = count === 1;
         if (unique) uniqueCount++;
         candidates.push({ find, type, unique, count });
     }
 
-    const typeOrder = ["string", "export", "template", "prop"];
+    const typeOrder = ["i18n", "export", "testid", "displayName", "string", "template", "prop"];
     candidates.sort((a, b) => {
         if (a.unique !== b.unique) return a.unique ? -1 : 1;
         return typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type);
     });
 
-    return candidates.slice(0, MODULE.SUGGEST_MAX_CANDIDATES);
+    return candidates.slice(0, maxCandidates);
 }
 
 function extractFunctionAt(src: string, patternIdx: number): { start: number; end: number } | null {
@@ -314,7 +308,11 @@ export function handleModule(args: ModuleArgs): unknown {
         const result: Record<string, unknown> = { id: moduleId, exports: serialize(mod, 1) };
         if (moduleId != null) {
             const src = getFactorySource(moduleId);
-            if (src) result.len = src.length;
+            if (src) {
+                result.len = src.length;
+                const siblings = findSharedFactoryIds(moduleId, src);
+                if (siblings.length) result.sharedWith = siblings;
+            }
             const patch = getPatchInfo(moduleId);
             if (patch) result.patchedBy = patch;
         }
@@ -330,8 +328,9 @@ export function handleModule(args: ModuleArgs): unknown {
         else if (code?.length) mods = findAll(filters.byCode(...code));
         else return "Provide props, code, displayName, or storeName";
         if (!mods.length) return [];
-        const capped = mods.length > MODULE.FIND_ALL_LIMIT;
-        const results = mods.slice(0, MODULE.FIND_ALL_LIMIT).map(m => {
+        const findAllCap = Math.min(limit || MODULE.DEFAULT_FIND_ALL, MODULE.MAX_FIND_ALL);
+        const capped = mods.length > findAllCap;
+        const results = mods.slice(0, findAllCap).map(m => {
             const moduleId = findModuleId(m);
             const result: Record<string, unknown> = { id: moduleId, exports: serialize(m, 1) };
             if (moduleId != null) {
@@ -379,8 +378,12 @@ export function handleModule(args: ModuleArgs): unknown {
         const fn = comp as { displayName?: string; name?: string };
         const result: Record<string, unknown> = { id: moduleId, name: fn.displayName ?? fn.name ?? props?.[0] ?? null };
         if (moduleId != null) {
+            const src = getFactorySource(moduleId);
+            if (src) result.len = src.length;
             const exports = getModuleCache().get(moduleId);
             if (exports && typeof exports === "object") result.keys = Object.keys(exports as object).slice(0, 10);
+            const patch = getPatchInfo(moduleId);
+            if (patch) result.patchedBy = patch;
         }
         return result;
     }
@@ -390,6 +393,8 @@ export function handleModule(args: ModuleArgs): unknown {
         const foundId = findModuleIdByCode(...code);
         if (foundId == null) return { error: `No factory matches [${code}]` };
         const result: Record<string, unknown> = { id: foundId, loaded: getModuleCache().has(foundId) };
+        const src = getFactorySource(foundId);
+        if (src) result.len = src.length;
         const patch = getPatchInfo(foundId);
         if (patch) result.patchedBy = patch;
         return result;
@@ -402,7 +407,7 @@ export function handleModule(args: ModuleArgs): unknown {
         const target = (typeof exports === "object" ? exports : { default: exports }) as Record<string, unknown>;
         const keys = Object.keys(target);
         const result: Record<string, string> = {};
-        const cap = MODULE.MAX_EXPORT_KEYS;
+        const cap = Math.min(limit || MODULE.DEFAULT_EXPORT_KEYS, MODULE.MAX_EXPORT_KEYS);
         for (let i = 0, l = Math.min(keys.length, cap); i < l; i++) {
             try {
                 result[keys[i]] = describeExport(target[keys[i]]);
@@ -427,7 +432,12 @@ export function handleModule(args: ModuleArgs): unknown {
             start = Math.max(0, idx - 200);
         }
         const result: Record<string, unknown> = { len: src.length, at: start, src: src.slice(start, start + cap) };
+        if (args.search) result.searchAt = src.indexOf(args.search, offset) - start;
         if (patchedCode) result.patched = true;
+        const patch = getPatchInfo(id);
+        if (patch) result.patchedBy = patch;
+        const siblingIds = findSharedFactoryIds(id, src);
+        if (siblingIds.length) result.sharedWith = siblingIds;
         return result;
     }
 
@@ -582,7 +592,8 @@ export function handleModule(args: ModuleArgs): unknown {
         const patchedCode = factory[SYM_PATCHED_CODE];
         if (!patchedCode) return { patched: false };
         const orig = String(factory[SYM_ORIGINAL] ?? factory);
-        return { patched: true, by: factory[SYM_PATCHED_BY], changes: findDiffs(orig, patchedCode, MODULE.DIFF_SLICE) };
+        const diffBudget = Math.min(limit || MODULE.DEFAULT_DIFF_SLICE, MODULE.MAX_DIFF_SLICE);
+        return { patched: true, by: factory[SYM_PATCHED_BY], origLen: orig.length, patchedLen: patchedCode.length, changes: findDiffs(orig, patchedCode, diffBudget) };
     }
 
     if (action === "whereUsed") {
@@ -599,7 +610,8 @@ export function handleModule(args: ModuleArgs): unknown {
         if (id == null) return "Provide module id";
         const src = getFactorySource(id);
         if (!src) return { error: `Module ${id} not found` };
-        return { id, len: src.length, candidates: suggestAnchors(src) };
+        const suggestCap = Math.min(limit || MODULE.DEFAULT_SUGGEST, MODULE.MAX_SUGGEST);
+        return { id, len: src.length, candidates: suggestAnchors(src, suggestCap) };
     }
 
     if (action === "functionAt") {
