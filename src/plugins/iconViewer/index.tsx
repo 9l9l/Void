@@ -128,7 +128,7 @@ function IconsTab() {
 export const Tab = ErrorBoundary.wrap(IconsTab);
 
 export default definePlugin({
-    name: "Icons",
+    name: "IconViewer",
     description: "Browse and search all Grok icons.",
     authors: ["Prism"],
 });

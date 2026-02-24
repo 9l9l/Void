@@ -52,7 +52,7 @@ function UserInfo() {
 }
 
 export default definePlugin({
-    name: "Sidebar",
+    name: "BetterSidebar",
     description: "Shows your name and plan in the sidebar footer.",
     authors: ["Prism"],
 

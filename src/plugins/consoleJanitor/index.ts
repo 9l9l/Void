@@ -7,7 +7,7 @@
 import definePlugin from "@utils/types";
 
 export default definePlugin({
-    name: "Console",
+    name: "ConsoleJanitor",
     description: "Cleans up the browser developer console.",
     authors: ["Prism"],
 

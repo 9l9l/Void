@@ -13,7 +13,7 @@ import { TestTubeIcon } from "@components/icons/TestTubeIcon";
 import { UnplugIcon } from "@components/icons/UnplugIcon";
 import { CustomCSSTab, loadSavedCSS, PluginsTab } from "@components/settings/tabs";
 import { Tab as ExperimentsTab } from "@plugins/experiments";
-import { Tab as IconsTab } from "@plugins/icons";
+import { Tab as IconsTab } from "@plugins/iconViewer";
 import { createElement, React } from "@turbopack/common/react";
 import { findExportedComponentLazy } from "@turbopack/turbopack";
 import { classes, classNameFactory, registerStyle } from "@utils/css";
@@ -41,7 +41,7 @@ interface SettingsTab {
 const allTabs: SettingsTab[] = [
     { id: "void_plugins_tab", name: "Plugins", icon: UnplugIcon, component: PluginsTab },
     { id: "void_experiments_tab", name: "Experiments", icon: TestTubeIcon, component: ExperimentsTab, plugin: "Experiments" },
-    { id: "void_icons_tab", name: "Icons", icon: findExportedComponentLazy("SearchIcon"), component: IconsTab, plugin: "Icons" },
+    { id: "void_icons_tab", name: "Icons", icon: findExportedComponentLazy("SearchIcon"), component: IconsTab, plugin: "IconViewer" },
     { id: "void_css_tab", name: "Quick CSS", icon: findExportedComponentLazy("CodeIcon"), component: CustomCSSTab },
 ];
 
