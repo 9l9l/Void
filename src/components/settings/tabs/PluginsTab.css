@@ -6,14 +6,3 @@
     color: hsl(var(--fg-warning));
 }
 
-.void-plugins-reload-content {
-    width: 100%;
-    max-width: 420px;
-    padding: 1.5rem;
-    border-radius: 1rem;
-    border: 1px solid var(--border-l1);
-    background: var(--background);
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-}

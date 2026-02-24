@@ -11,6 +11,7 @@ import type {
     CardHeaderProps,
     CardProps,
     CardTitleProps,
+    CheckboxProps,
     DialogContentProps,
     DialogHeaderProps,
     DialogProps,
@@ -57,6 +58,7 @@ export type {
     CardProps,
     CardTitleProps,
     CardVariant,
+    CheckboxProps,
     DialogCloseProps,
     DialogContentProps,
     DialogDescriptionProps,
@@ -99,6 +101,7 @@ export type {
 
 export const Button: ComponentType<ButtonProps> = LazyComponent("Button", () => findExportedComponent("Button"));
 export const ButtonWithTooltip: ComponentType<ButtonWithTooltipProps> = LazyComponent("ButtonWithTooltip", () => findExportedComponent("ButtonWithTooltip"));
+export const Checkbox: ComponentType<CheckboxProps> = LazyComponent("Checkbox", () => findExportedComponent("Checkbox"));
 
 export const Card: ComponentType<CardProps> = LazyComponent("Card", () => findExportedComponent("Card"));
 export const CardHeader: ComponentType<CardHeaderProps> = LazyComponent("CardHeader", () => findExportedComponent("CardHeader"));
@@ -116,7 +119,9 @@ const dialogLazy = (name: string): AnyComponent => LazyComponent(name, () => (di
 
 export const Dialog: ComponentType<DialogProps> = dialogLazy("Dialog");
 export const DialogTrigger: ComponentType<RadixSubProps> = dialogLazy("DialogTrigger");
+
 export const DialogContent: ComponentType<DialogContentProps> = dialogLazy("DialogContent");
+
 export const DialogHeader: ComponentType<DialogHeaderProps> = dialogLazy("DialogHeader");
 export const DialogTitle: ComponentType<RadixSubProps> = dialogLazy("DialogTitle");
 export const DialogDescription: ComponentType<RadixSubProps> = dialogLazy("DialogDescription");

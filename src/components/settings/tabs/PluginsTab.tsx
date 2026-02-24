@@ -9,12 +9,7 @@ import "./PluginsTab.css";
 import { isPluginEnabled, plugins } from "@api/PluginManager";
 import {
     Button,
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
+    ConfirmDialog,
     Flex,
     Grid,
     Input,
@@ -161,27 +156,15 @@ export default function PluginsTab() {
                 </Paragraph>
             )}
             {dialogPlugin && <PluginDialog plugin={dialogPlugin} open={true} onClose={() => setDialogName(null)} />}
-            <Dialog
+            <ConfirmDialog
                 open={showReload}
-                onOpenChange={(v: boolean) => {
-                    if (!v) onDismiss();
-                }}
-            >
-                <DialogContent className={cl("reload-content")}>
-                    <DialogHeader>
-                        <DialogTitle>Reload required</DialogTitle>
-                        <DialogDescription>This plugin modifies Grok's code and requires a page reload to apply changes.</DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button variant="secondary" onClick={onDismiss}>
-                            Later
-                        </Button>
-                        <Button variant="primary" onClick={() => location.reload()}>
-                            Reload
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                onOpenChange={v => { if (!v) onDismiss(); }}
+                title="Reload required"
+                description="This plugin modifies Grok's code and requires a page reload to apply changes."
+                confirmText="Reload"
+                cancelText="Later"
+                onConfirm={() => location.reload()}
+            />
         </Flex>
     );
 }

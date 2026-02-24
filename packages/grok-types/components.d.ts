@@ -85,6 +85,26 @@ export type ButtonWithTooltip = ComponentType<ButtonWithTooltipProps>;
 
 // #endregion
 
+// #region Checkbox (Radix Checkbox)
+
+export interface CheckboxProps {
+    checked?: boolean | "indeterminate";
+    defaultChecked?: boolean;
+    disabled?: boolean;
+    required?: boolean;
+    name?: string;
+    value?: string;
+    form?: string;
+    onCheckedChange?: (checked: boolean | "indeterminate") => void;
+    className?: string;
+    children?: ReactNode;
+    [key: string]: any;
+}
+
+export type Checkbox = ComponentType<CheckboxProps>;
+
+// #endregion
+
 // #region Dialog (Radix Dialog)
 
 export interface DialogProps extends RadixRootProps {
