@@ -153,96 +153,167 @@ TypeScript type definitions for Grok's runtime (stores, components, enums, commo
 
 ### Philosophy
 
-Patches should read like Equicord patches: short, simple, one string anchor + minimal regex glue. The `find` targets the module; the `match` just needs to be unique **within that module**. Dont overthink it.
+Write patches like Equicord: minimal, surgical, future-proof. The `find` narrows to one module. The `match` targets only what you change. The `replace` is as short as possible. If your regex is longer than ~80 chars, you are matching too much — simplify.
 
-### Core
+### Rules
 
-- **ALWAYS** use MCP patch test before finalizing. **NEVER** guess module structure.
-- Minimum code touched. Stability over cleverness. One patch per concern.
-- Keep simplifying until you find the cleanest regex. Remove any character that doesnt change the result.
-- Every `match` regex **MUST** contain at least one stable string literal anchor (component name, i18n key, prop name, function name). Pure `\i` chains with no literals are too generic.
+1. **ALWAYS** use MCP patch test before finalizing. **NEVER** guess module structure.
+2. Match only what you change. `find` already narrowed to the right module.
+3. **Shortest regex wins.** If removing a token still gives one match in the module, remove it.
+4. Every `match` **MUST** contain a stable string literal anchor (component name, i18n key, prop name). Pure `\i` chains are too generic and will break.
+5. One patch per concern. Minimum code touched.
 
 ### Tokens
 
-- `\i` — matches any JS identifier: `(?:[A-Za-z_$][\w$]*)`. Use instead of hardcoded minified vars.
-- `\e{Name}` — matches an export entry: `["']Name["'],\(\)=>\i`. For targeting `e.s([...])` exports.
-- `#{i18n::KEY}` — expands to `"KEY"` in find, `"KEY"` with dots escaped in match regex.
-- `$self` — replaced with `Void.plugins["PluginName"]`. Call plugin methods from patched code.
-- `$&` — standard RegExp: keeps the entire matched string. Use for append/prepend patterns.
-- `$1`, `$2` — standard RegExp capture group references.
+| Token | Expands to | Use |
+|-------|-----------|-----|
+| `\i` | `(?:[A-Za-z_$][\w$]*)` | Any JS identifier. Glue between anchors, never the anchor itself. |
+| `\e{Name}` | `["']Name["'],\(\)=>\i` | Target named exports in `e.s([...])`. |
+| `#{i18n::KEY}` | `"KEY"` (dots escaped in regex) | i18n string literals. |
+| `$self` | `Void.plugins["PluginName"]` | Call plugin methods from patched code. |
+| `$&` | Entire matched string | Append/prepend without capture groups. |
+| `$1`, `$2` | Capture group refs | Only when reusing captured content. |
 
 ### Find
 
-- Find string **MUST** match exactly 1 module (or shared factory group). Use MCP patch analyze to verify.
-- Prefer i18n keys (`"user-dropdown.upgrade"`), exported names (`"UpsellCard",()=>`), feature flags, CSS class strings over minified code. These are the most stable anchors.
-- For shared factories (same source, multiple IDs): use `all: true` so the patch applies to all IDs.
+- **MUST** match exactly 1 module (or shared factory group). Verify with MCP.
+- Best anchors (most stable): i18n keys, exported component names, feature flags, CSS class strings.
+- Shared factories (same source, N module IDs): use `all: true`.
 
-### Match
+### Match Best Practices
 
-- Match only what you need to change. `find` already narrowed to the right module.
-- **Shortest regex wins.** Strip all `\i` noise that doesnt help uniqueness. If removing a `\i` still gives a single match in the module, remove it.
-- Use lookahead `(?=...)` or lookbehind `(?<=...)` to anchor to nearby stable strings without including them in the match/replace. This keeps replace strings trivial.
-- `$&` keeps original, append/prepend to it.
-- `.{0,N}` not `.+?` or `.*?`
-- Only use capture groups if reusing in replace.
-- `\i` is glue between anchors, not the anchor itself. Good: `DatabaseIcon,.{0,80}tab:"data"`. Bad: `\i\|\|\i\|\|\i\?null:`.
+**Use `$&` to append/prepend — no capture groups needed:**
+```
+match: /"Delete","Delete"\)\]\}\)/
+replace: '$&,$self.renderItems("conversation",{id:arguments[0].id})'
+```
+The `$&` keeps the entire match intact and appends after it. No `($1)($2)` reassembly needed.
+
+**Use `$&` to conditionally gate — prepend a guard:**
+```
+match: /\i\.user&&\(0,\i\.jsx\)\("div",.{0,120}:\i\.userId\}\)/
+replace: "!$self._hideUserId()&&$&"
+```
+Prepends `!$self._check()&&` before the original expression. When truthy, short-circuits to hide. When falsy, original renders. No capture groups, no reconstruction.
+
+**Use lookbehind `(?<=...)` to anchor without consuming:**
+```
+match: /(?<=useCheckSubscriptionOffer\)\(\);).{0,30}return null;/
+replace: "return null;"
+```
+The lookbehind anchors on a stable function call. Only the code after it is matched and replaced.
+
+**Use lookahead `(?=...)` to anchor on what comes next:**
+```
+match: /\i(?:\|\|\i)+(?=\?null:.{0,160}"user-dropdown\.upgrade")/
+replace: "true"
+```
+The lookahead verifies context without consuming it. Only the guard expression is replaced. Set the gap bound generously — the lookahead doesn't consume, so a wide `.{0,N}` is safe.
+
+**Capture groups only when reusing content in replace:**
+```
+match: /onSaveEdit:(\i)\}\)/
+replace: "onSaveEdit:$1,id:arguments[0].id})"
+```
+Here `$1` captures the original callback variable to keep it in the output. This is the only valid use of capture groups.
+
+**Use `group: true` for multi-step transforms:**
+```
+// jsx → jsxs + wrap children in array — two dependent replacements
+find: '"drop-container"'
+group: true
+replacement: [
+    { match: /\(0,(\i)\.jsx\)(\("div",.{0,80}"drop-container")/, replace: "(0,$1.jsxs)$2" },
+    { match: /"drop-container",children:(\(0,\i\.jsx\)\(\i,\{backend:\i,.{0,120}children:\i\}\)\}\))\}\)/,
+      replace: '"drop-container",children:[$self._stars(),$1]})' },
+]
+```
+Each replacement handles one concern. `group: true` ensures atomic rollback if either fails. Better than one massive regex with 3+ capture groups.
+
+**Bounded gaps `.{0,N}`, never `.*?` or `.+?`:**
+```
+// Good: bounded, predictable
+/DatabaseIcon,.{0,80}tab:"data"/
+
+// Bad: unbounded, could match across functions
+/DatabaseIcon,.+?tab:"data"/
+```
+Set `N` to ~1.5x the actual distance to handle minor source changes. In lookaheads, wider bounds are safe since they don't consume. Use MCP `patch.test` to find the right bound.
+
+**Flexible quantifiers for variable-length patterns:**
+```
+// Good: handles 2, 3, or N OR'd identifiers
+/\i(?:\|\|\i)+/
+
+// Bad: hardcodes exactly 3
+/\i\|\|\i\|\|\i/
+```
 
 ### Patch Options
 
-- `all: true` — dont consume patch after first match. Required for shared factories.
-- `group: true` — atomic: if any replacement fails, rollback all. Use when replacements depend on each other.
-- `predicate: () => boolean` — skip patch/replacement at registration time.
-- `noWarn: true` — suppress "no effect" warnings (patch or replacement level).
+- `all: true` — apply to all factory instances. Required for shared factories.
+- `group: true` — atomic rollback if any replacement fails. Use when replacements depend on each other.
+- `predicate: () => boolean` — conditionally skip patch at registration time.
+- `noWarn: true` — suppress "no effect" warnings.
 
 ### NEVER
 
-- **Hardcoded minified vars:** `e,t,n,r,i,o,s,l,c,u,$_,xx,eD,eH,eW`
+- **Hardcoded minified vars:** `e,t,n,r,i,o,s,l,c,u` — use `\i`.
 - **Unbounded gaps:** `.+?` or `.*?` — use `.{0,N}`.
-- **Pure `\i` patterns:** `/\i\|\|\i\|\|\i/`, `/\i\.\i/` alone — always pair with a string literal.
-- **Overlong regexes:** if match is longer than ~80 chars, you are matching too much. Simplify.
+- **Pure `\i` patterns:** `/\i\|\|\i/` alone — always pair with a string literal.
+- **Capture groups for reassembly:** `($1)($2)($3)` to splice in the middle — use `$&` append, lookbehind, or split into `group: true` replacements.
+- **Deep nesting captures:** `]\}\)\]\}\)` chains as capture groups — match up to the anchor, use `$&`.
+- **Single massive regex for multi-step transforms:** If you need jsx→jsxs AND children wrapping, split into a `group: true` with separate replacements.
 
 ### Examples
 
-**Append (anchor: `DatabaseIcon` + `tab:"data"`):**
+**Append after anchor (`$&` pattern):**
 ```
-find: "pressed_cmd_settings"
-match: /(\i\.jsx)\)\((\i),\{icon:\i\.DatabaseIcon,.{0,80}tab:"data"\}\)/
-replace: "$&,...$self.renderTabs($1,$2)"
-```
-
-**Prepend (anchor: `"data"===` + `{children:`):**
-```
-find: "pressed_cmd_settings"
-match: /"data"===(\i)&&\i\.user&&\(0,(\i\.jsx)\)\((\i),\{children:/
-replace: "...$self.renderPanels($2,$1,$3),$&"
+find: '"AvatarDropdownMenu",()=>'
+match: /"Sign Out"\)\]\}\)/
+replace: '$&,$self.renderItems("user")'
 ```
 
-**Strip guard (anchor: `void 0!==` override check):**
+**Strip guard (capture only the part you keep):**
 ```
 find: 'ENABLE_SCREEN_SHARING:"enable_screen_sharing"'
 match: /\i&&(void 0!==\i\[\i\])/
 replace: "$1"
 ```
 
-**Nullify component (anchor: `"UpsellCard"` literal):**
+**Nullify component (replace export with noop):**
 ```
 find: '"UpsellCard",()=>'
 match: /"UpsellCard",\(\)=>\i/
 replace: '"UpsellCard",()=>()=>null'
 ```
 
-**Lookahead anchor (anchor: `DropdownMenuItem` without capturing):**
+**Lookbehind injection (inject after stable anchor):**
+```
+find: "group/model-mode-select-upsell"
+match: /(?<=useCheckSubscriptionOffer\)\(\);).{0,30}return null;/
+replace: "return null;"
+```
+
+**Lookahead guard replace (verify context without consuming):**
 ```
 find: '"user-dropdown.upgrade","Upgrade plan"'
-match: /\i\|\|\i\|\|\i(?=\?null:\(0,\i\.jsxs\)\(\i\.DropdownMenuItem)/
+match: /\i(?:\|\|\i)+(?=\?null:.{0,160}"user-dropdown\.upgrade")/
 replace: "true"
 ```
 
-**Lookbehind anchor (anchor: `useCheckSubscriptionOffer` without capturing):**
+**Conditional gate (prepend `$self` check with `$&`):**
 ```
-find: "group/model-mode-select-upsell"
-match: /(?<=useCheckSubscriptionOffer\)\(\);)if\(!\i\|\|\i&&\i\)return null;/
-replace: "return null;"
+find: "pressed_cmd_settings"
+match: /\i\.user&&\(0,\i\.jsx\)\("div",.{0,120}:\i\.userId\}\)/
+replace: "!$self._hideUserId()&&$&"
+```
+
+**Prop injection (capture only what you reuse):**
+```
+find: "handleIsolateClick,children:[i&&"
+match: /onSaveEdit:(\i)\}\)/
+replace: "onSaveEdit:$1,id:arguments[0].id})"
 ```
 
 ## Finding
