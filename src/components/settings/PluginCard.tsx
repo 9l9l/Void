@@ -25,7 +25,7 @@ const cl = classNameFactory("void-plugin-card-");
 interface PluginCardProps {
     name: string;
     onSettings(name: string): void;
-    onReload(): void;
+    onReload(pluginName: string): void;
 }
 
 export default function PluginCard({ name, onSettings, onReload }: PluginCardProps) {
@@ -39,7 +39,7 @@ export default function PluginCard({ name, onSettings, onReload }: PluginCardPro
         if (!enabled) startPlugin(plugin);
         else stopPlugin(plugin);
         forceUpdate();
-        if (hasPatches) onReload();
+        if (hasPatches) onReload(name);
     };
 
     return (

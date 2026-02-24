@@ -53,6 +53,8 @@ export default function PluginsTab() {
     const [showReload, setShowReload] = useState(false);
     const [needsReload, setNeedsReload] = useState(false);
     const dismissed = useRef(false);
+    const initialStates = useRef<Map<string, boolean> | null>(null);
+    const changedPlugins = useRef(new Set<string>());
 
     const { userPlugins, requiredPlugins } = useMemo(() => {
         const user: string[] = [];
@@ -73,9 +75,26 @@ export default function PluginsTab() {
     const dialogPlugin = dialogName ? plugins[dialogName] : null;
     const hasResults = filteredUser.length > 0 || filteredRequired.length > 0;
 
-    const onReload = useCallback(() => {
-        setNeedsReload(true);
-        if (!dismissed.current) setShowReload(true);
+    if (!initialStates.current) {
+        initialStates.current = new Map();
+        for (const n of [...userPlugins, ...requiredPlugins])
+            initialStates.current.set(n, isPluginEnabled(n));
+    }
+
+    const onReload = useCallback((pluginName: string) => {
+        const initial = initialStates.current!.get(pluginName);
+        const current = isPluginEnabled(pluginName);
+        if (current === initial) changedPlugins.current.delete(pluginName);
+        else changedPlugins.current.add(pluginName);
+
+        if (changedPlugins.current.size > 0) {
+            setNeedsReload(true);
+            if (!dismissed.current) setShowReload(true);
+        } else {
+            setNeedsReload(false);
+            setShowReload(false);
+            dismissed.current = false;
+        }
     }, []);
 
     const onDismiss = useCallback(() => {
