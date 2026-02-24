@@ -1,5 +1,6 @@
 export * from "./conversation";
 export * from "./feature";
+export * from "./files";
 export * from "./models";
 export * from "./routing";
 export * from "./settings";

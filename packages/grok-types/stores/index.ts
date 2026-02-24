@@ -1,6 +1,7 @@
 export * from "./ChatPageStore";
 export * from "./ConversationStore";
 export * from "./FeatureStore";
+export * from "./FileStore";
 export * from "./ModelsStore";
 export * from "./ResponseStore";
 export * from "./RoutingStore";

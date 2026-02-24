@@ -1,3 +1,4 @@
+import type { FileMetadata } from "../common/Asset";
 import type { ResponseSender } from "../enums/conversation";
 import type { ZustandStore } from "../zustand";
 
@@ -43,7 +44,7 @@ export interface GrokResponse {
     /** File URIs for uploaded files. */
     fileUris?: string[];
     /** Metadata for file attachments (name, size, type, etc.). */
-    fileAttachmentsMetadata?: any[];
+    fileAttachmentsMetadata?: FileMetadata[];
     /** Whether this is a control message (not displayed to user). */
     isControl?: boolean;
     /** Reasoning/thinking trace text shown in "think" mode. */

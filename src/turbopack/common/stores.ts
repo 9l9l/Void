@@ -10,6 +10,7 @@ import type {
     ChatPageStoreModule,
     ConversationStoreModule,
     FeatureStoreModule,
+    FileStoreModule,
     ModelsStoreModule,
     ResponseStoreModule,
     RoutingStoreModule,
@@ -31,6 +32,7 @@ export const SessionStore: SessionStoreModule = findByPropsLazy("useSession", "S
 export const SettingsStore: SettingsStoreModule = findByPropsLazy("useSettingsStore", "TOOL_NAMES");
 export const SettingsDialogStore: SettingsDialogStoreModule = findByPropsLazy("useSettingsDialogStore");
 export const FeatureStore: FeatureStoreModule = findByPropsLazy("useFeatureStore");
+export const FileStore: FileStoreModule = findByPropsLazy("useFileStore");
 export const ConversationStore: ConversationStoreModule = findByPropsLazy("useConversationStore", "createOptimisticConversation");
 export const ResponseStore: ResponseStoreModule = findByPropsLazy("useResponseStore", "createOptimisticResponse");
 export const RoutingStore: RoutingStoreModule = findByPropsLazy("useRoutingStore", "formatUrl");
