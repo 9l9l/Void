@@ -137,8 +137,8 @@ export default definePlugin({
             find: 'ENABLE_SCREEN_SHARING:"enable_screen_sharing"',
             all: true,
             replacement: {
-                match: /(\i),\i&&(void 0!==\i\[\i\]\?!!)/,
-                replace: "$1,$2",
+                match: /\i&&(void 0!==\i\[\i\])/,
+                replace: "$1",
             },
         },
     ],
