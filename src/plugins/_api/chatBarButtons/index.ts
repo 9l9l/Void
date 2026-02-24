@@ -24,10 +24,16 @@ export default definePlugin({
         {
             find: "ImagineSelector,{iconOnlyTrigger",
             all: true,
-            replacement: {
-                match: /ModelModeSelect,\{iconOnlyTrigger:\i\}\)\}\),/,
-                replace: "$&$self.renderButtons(),",
-            },
+            replacement: [
+                {
+                    match: /ModelModeSelect,\{iconOnlyTrigger:\i\}\)\}\),/,
+                    replace: "$&$self.renderButtons(),",
+                },
+                {
+                    match: /paddingInlineEnd:\i\?void 0:(\i)\?/,
+                    replace: "paddingInlineEnd:$1?",
+                },
+            ],
         },
     ],
 });
