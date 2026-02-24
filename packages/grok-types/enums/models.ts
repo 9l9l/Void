@@ -1,9 +1,3 @@
-/*
- * Void, a modification for grok.com
- * Copyright (c) 2026 Void contributors
- * SPDX-License-Identifier: GPL-3.0-or-later
- */
-
 /** Model identifier strings used in API requests and store state. */
 export type ModelId =
     | "grok-3"

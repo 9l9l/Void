@@ -1,9 +1,3 @@
-/*
- * Void, a modification for grok.com
- * Copyright (c) 2026 Void contributors
- * SPDX-License-Identifier: GPL-3.0-or-later
- */
-
 /** Tab identifiers for the Grok settings dialog. */
 export type SettingsDialogTab =
     | "home"

@@ -1,9 +1,3 @@
-/*
- * Void, a modification for grok.com
- * Copyright (c) 2026 Void contributors
- * SPDX-License-Identifier: GPL-3.0-or-later
- */
-
 /** All page identifiers Grok's client-side router recognizes. */
 export type GrokPage =
     | "main"

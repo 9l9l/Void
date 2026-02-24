@@ -1,9 +1,3 @@
-/*
- * Void, a modification for grok.com
- * Copyright (c) 2026 Void contributors
- * SPDX-License-Identifier: GPL-3.0-or-later
- */
-
 import type { ConversationMode } from "../enums/conversation";
 import type { ModelMode, ReasoningMode } from "../enums/models";
 import type { VoiceActivityStatus, VoiceConnectionStatus } from "../enums/voice";

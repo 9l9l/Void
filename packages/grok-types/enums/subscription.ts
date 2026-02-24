@@ -1,9 +1,3 @@
-/*
- * Void, a modification for grok.com
- * Copyright (c) 2026 Void contributors
- * SPDX-License-Identifier: GPL-3.0-or-later
- */
-
 /**
  * Grok subscription tier identifiers from the API.
  *
@@ -53,3 +47,26 @@ export type SubscriptionStatus =
     | "SUBSCRIPTION_STATUS_ACTIVE"
     | "SUBSCRIPTION_STATUS_INACTIVE"
     | (string & {});
+
+/**
+ * X (Twitter) subscription type string from the linked account.
+ * Stored on `GrokUser.xSubscriptionType`. Empty string if no X subscription.
+ *
+ * `"PremiumPlus"` grants SuperGrok access even without a direct Grok subscription.
+ */
+export type XSubscriptionType = "" | "Basic" | "Premium" | "PremiumPlus" | (string & {});
+
+/**
+ * Session tier ID from the user profile.
+ * Stored on `GrokUser.sessionTierId` as a string-encoded number.
+ *
+ * This is the X-based tier, NOT the Grok subscription tier.
+ * For the actual Grok subscription, use `useSubscriptions().bestSubscription`.
+ *
+ * | Value | Meaning      |
+ * |-------|-------------|
+ * | "0"   | Free        |
+ * | "1"   | X Premium   |
+ * | "2"   | X Premium+  |
+ */
+export type SessionTierId = "0" | "1" | "2" | (string & {});

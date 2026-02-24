@@ -1,9 +1,3 @@
-/*
- * Void, a modification for grok.com
- * Copyright (c) 2026 Void contributors
- * SPDX-License-Identifier: GPL-3.0-or-later
- */
-
 /**
  * Tool name identifiers used by Grok's tool execution system.
  * These map to the keys in `SettingsStore.TOOL_NAMES`.
