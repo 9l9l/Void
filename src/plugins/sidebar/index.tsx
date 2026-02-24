@@ -6,12 +6,13 @@
 
 import { Flex } from "@components/Flex";
 import { Text } from "@components/Text";
+import type { SubscriptionTier } from "@grok-types/enums";
 import { SidebarComponents } from "@turbopack/common/components";
 import { React } from "@turbopack/common/react";
 import { SessionStore, SubscriptionUtils } from "@turbopack/common/stores";
 import definePlugin from "@utils/types";
 
-const TIER_DISPLAY: Record<string, string> = {
+const TIER_DISPLAY: Record<SubscriptionTier, string> = {
     SUBSCRIPTION_TIER_INVALID: "Free",
     SUBSCRIPTION_TIER_X_BASIC: "Basic",
     SUBSCRIPTION_TIER_X_PREMIUM: "Premium",
@@ -27,7 +28,7 @@ const SESSION_TIER_DISPLAY: Record<string, string> = {
     "3": "SuperGrok Pro",
 };
 
-function getPlanName(bestSubscription?: string, sessionTierId?: string) {
+function getPlanName(bestSubscription?: SubscriptionTier, sessionTierId?: string) {
     if (bestSubscription) return TIER_DISPLAY[bestSubscription] ?? bestSubscription;
     return SESSION_TIER_DISPLAY[sessionTierId ?? "0"] ?? "Free";
 }
