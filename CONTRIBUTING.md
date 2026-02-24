@@ -35,13 +35,13 @@ bun run build
 
 ## Code Style
 
-We use [Biome](https://biomejs.dev/) for linting and formatting. All source files need the license header.
+We use [ESLint](https://eslint.org/) for linting and [Stylelint](https://stylelint.io/) for CSS. All source files need the license header.
 
 Before committing, make sure the following all pass:
 
 ```sh
 bun run lint:fix
-bun run lint:headers:fix
+bun run lint:styles:fix
 bun run tsc
 bun run build
 ```
