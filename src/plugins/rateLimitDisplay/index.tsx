@@ -6,7 +6,7 @@
 
 import { ChatBarButton, Text } from "@components";
 import { GaugeIcon } from "@components/icons/GaugeIcon";
-import type { RateLimitResponse } from "@grok-types";
+import type { EffortRateLimits, RateLimitResponse } from "@grok-types";
 import type { ModelMode } from "@grok-types/enums";
 import { React, useEffect, useRef, useState } from "@turbopack/common/react";
 import { ChatPageStore, ModelsStore } from "@turbopack/common/stores";
@@ -29,20 +29,45 @@ interface Usage {
 
 const EMPTY: Usage = { remaining: -1, total: -1, windowSeconds: 0, waitSeconds: null };
 
-function parse(data: RateLimitResponse): Usage {
-    let remaining: number;
-    let total: number;
-    if (data.totalQueries > 0) {
-        remaining = data.remainingQueries;
-        total = data.totalQueries;
-    } else if (data.totalTokens != null && data.totalTokens > 0) {
-        remaining = data.remainingTokens ?? 0;
-        total = data.totalTokens;
-    } else {
-        return { ...EMPTY, windowSeconds: data.windowSizeSeconds };
+function effortToUsage(effort: EffortRateLimits, totalTokens: number, windowSeconds: number): Usage {
+    const total = Math.floor(totalTokens / effort.cost);
+    return {
+        remaining: effort.remainingQueries,
+        total,
+        windowSeconds,
+        waitSeconds: effort.waitTimeSeconds != null && effort.waitTimeSeconds > 0 ? Math.ceil(effort.waitTimeSeconds) : null,
+    };
+}
+
+function parse(data: RateLimitResponse, mode?: "fast" | "expert"): Usage {
+    const windowSeconds = data.windowSizeSeconds;
+    const tokenBudget = data.totalTokens ?? 0;
+
+    if (tokenBudget > 0) {
+        if (mode === "fast" && data.lowEffortRateLimits) return effortToUsage(data.lowEffortRateLimits, tokenBudget, windowSeconds);
+        if (mode === "expert" && data.highEffortRateLimits) return effortToUsage(data.highEffortRateLimits, tokenBudget, windowSeconds);
+        if (data.highEffortRateLimits) return effortToUsage(data.highEffortRateLimits, tokenBudget, windowSeconds);
+        if (data.lowEffortRateLimits) return effortToUsage(data.lowEffortRateLimits, tokenBudget, windowSeconds);
+        const wait = data.waitTimeSeconds;
+        return {
+            remaining: data.remainingTokens ?? 0,
+            total: tokenBudget,
+            windowSeconds,
+            waitSeconds: wait != null && wait > 0 ? Math.ceil(wait) : null,
+        };
     }
-    const wait = data.waitTimeSeconds ?? data.highEffortRateLimits?.waitTimeSeconds ?? data.lowEffortRateLimits?.waitTimeSeconds;
-    return { remaining, total, windowSeconds: data.windowSizeSeconds, waitSeconds: wait != null && wait > 0 ? Math.ceil(wait) : null };
+
+    if (data.totalQueries > 0) {
+        const wait = data.waitTimeSeconds;
+        return {
+            remaining: data.remainingQueries,
+            total: data.totalQueries,
+            windowSeconds,
+            waitSeconds: wait != null && wait > 0 ? Math.ceil(wait) : null,
+        };
+    }
+
+    return { ...EMPTY, windowSeconds };
 }
 
 function fetchForModel(modelId: string, requestKind: string): Promise<RateLimitResponse> {
@@ -137,14 +162,28 @@ function RateLimitIndicator() {
             const expertId = modelByMode?.expert?.modelId;
             if (!fastId && !expertId) return () => {};
 
-            Promise.all([fastId ? fetchForModel(fastId, requestKind) : null, expertId ? fetchForModel(expertId, requestKind) : null])
-                .then(([f, e]) => {
-                    if (cancelled) return;
-                    setFast(f ? parse(f) : EMPTY);
-                    setExpert(e ? parse(e) : EMPTY);
-                    setSingle(EMPTY);
-                })
-                .catch((err: unknown) => logger.error("Failed to fetch rate limits", err));
+            const sharedModel = fastId === expertId;
+            const targetId = fastId ?? expertId;
+
+            if (sharedModel && targetId) {
+                fetchForModel(targetId, requestKind)
+                    .then(data => {
+                        if (cancelled) return;
+                        setFast(parse(data, "fast"));
+                        setExpert(parse(data, "expert"));
+                        setSingle(EMPTY);
+                    })
+                    .catch((err: unknown) => logger.error("Failed to fetch rate limits", err));
+            } else {
+                Promise.all([fastId ? fetchForModel(fastId, requestKind) : null, expertId ? fetchForModel(expertId, requestKind) : null])
+                    .then(([f, e]) => {
+                        if (cancelled) return;
+                        setFast(f ? parse(f, "fast") : EMPTY);
+                        setExpert(e ? parse(e, "expert") : EMPTY);
+                        setSingle(EMPTY);
+                    })
+                    .catch((err: unknown) => logger.error("Failed to fetch rate limits", err));
+            }
         } else {
             const modelId = modelByMode?.[modelMode]?.modelId;
             if (!modelId) return () => {};
@@ -154,7 +193,7 @@ function RateLimitIndicator() {
                     if (cancelled) return;
                     setFast(EMPTY);
                     setExpert(EMPTY);
-                    setSingle(parse(result));
+                    setSingle(parse(result, modelMode as "fast" | "expert"));
                 })
                 .catch((err: unknown) => logger.error("Failed to fetch rate limits", err));
         }
