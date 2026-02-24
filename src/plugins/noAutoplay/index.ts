@@ -42,8 +42,8 @@ export default definePlugin({
             group: true,
             replacement: [
                 {
-                    match: /(src:\i),muted:!0,autoPlay:!0,controls:!1,loop:!0,playsInline:!0,poster:/,
-                    replace: "...$self._hoverProps(),$1,muted:!0,autoPlay:!1,controls:!1,loop:!0,playsInline:!0,poster:",
+                    match: /(src:\i),muted:!0,autoPlay:!0/,
+                    replace: "...$self._hoverProps(),$1,muted:!0,autoPlay:!1",
                 },
                 {
                     match: /"pointer-events-none"/,
