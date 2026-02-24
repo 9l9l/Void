@@ -36,8 +36,8 @@ export default definePlugin({
                     replace: "onEditClick:$1,...arguments[0]})",
                 },
                 {
-                    match: /(\i)\("Delete","Delete"\)\]\}\)(\]\}\)\]\}\))/,
-                    replace: '$1("Delete","Delete")]}),$self.renderItems("conversation",{conversationId:arguments[0].id})$2',
+                    match: /"Delete","Delete"\)\]\}\)/,
+                    replace: '$&,$self.renderItems("conversation",{conversationId:arguments[0].id})',
                 },
             ],
         },
@@ -45,16 +45,16 @@ export default definePlugin({
             find: '"CopyButton",()=>',
             all: true,
             replacement: {
-                match: /hash:(\i)\.slice\(0,5\)\}\}\)}\)\]}\)\]}\)}/,
-                replace: 'hash:$1.slice(0,5)}})})]}),$self.renderItems("message",{response:arguments[0].response})]})}',
+                match: /slice\(0,5\)\}\}\)\}\)\]\}\)/,
+                replace: '$&,$self.renderItems("message",{response:arguments[0].response})',
             },
         },
         {
             find: '"AvatarDropdownMenu",()=>',
             all: true,
             replacement: {
-                match: /"Sign Out"\)\]\}\)(\]\}\)\]\}\))/,
-                replace: '"Sign Out")]}),$self.renderItems("user")$1',
+                match: /"Sign Out"\)\]\}\)/,
+                replace: '$&,$self.renderItems("user")',
             },
         },
     ],
