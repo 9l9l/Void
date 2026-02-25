@@ -19,6 +19,7 @@
  */
 
 import { Devs } from "@utils/constants";
+import { fetchExternal } from "@utils/misc";
 import definePlugin from "@utils/types";
 
 const ONEKO_SCRIPT = "https://raw.githubusercontent.com/adryd325/oneko.js/c4ee66353b11a44e4a5b7e914a81f8d33111555e/oneko.js";
@@ -30,10 +31,19 @@ export default definePlugin({
     authors: [Devs.adryd],
 
     start() {
-        fetch(ONEKO_SCRIPT)
+        fetchExternal(ONEKO_SCRIPT)
             .then(r => r.text())
             .then(s => s.replace("./oneko.gif", ONEKO_GIF).replace("(isReducedMotion)", "(false)"))
-            .then(eval);
+            .then(s => {
+                const blob = new Blob([s], { type: "text/javascript" });
+                const el = document.createElement("script");
+                el.src = URL.createObjectURL(blob);
+                document.head.appendChild(el);
+                el.addEventListener("load", () => {
+                    el.remove();
+                    URL.revokeObjectURL(el.src);
+                });
+            });
     },
 
     stop() {

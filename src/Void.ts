@@ -23,7 +23,7 @@ export * from "@turbopack/turbopack";
 export { classes, classNameFactory, disableStyle, enableStyle, registerStyle } from "@utils/css";
 export { makeLazy, proxyLazy } from "@utils/lazy";
 export { Logger } from "@utils/Logger";
-export { copyToClipboard, debounce, formatCountdown, formatDuration, isNonNullish, isTruthy, mergeDefaults, onlyOnce, sleep } from "@utils/misc";
+export { copyToClipboard, debounce, fetchExternal, formatCountdown, formatDuration, isNonNullish, isTruthy, mergeDefaults, onlyOnce, sleep } from "@utils/misc";
 export { default as definePlugin, OptionType, StartAt } from "@utils/types";
 
 const logger = new Logger("TurbopackPatcher", "#8caaee");

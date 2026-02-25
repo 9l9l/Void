@@ -63,6 +63,28 @@ export function isNonNullish<T>(value: T | null | undefined): value is T {
     return value != null;
 }
 
+export function fetchExternal(url: string): Promise<Response> {
+    if (IS_EXTENSION || typeof GM_xmlhttpRequest === "undefined") return fetch(url);
+
+    return new Promise((resolve, reject) => {
+        GM_xmlhttpRequest({
+            method: "GET",
+            url,
+            responseType: "blob",
+            onload(resp: any) {
+                const blob: Blob = resp.response;
+                resolve(new Response(blob, {
+                    status: resp.status,
+                    statusText: resp.statusText,
+                }));
+            },
+            ontimeout() { reject(new Error("fetch timeout")); },
+            onerror() { reject(new Error("fetch error")); },
+            onabort() { reject(new Error("fetch aborted")); },
+        });
+    });
+}
+
 const pad = (n: number) => String(n).padStart(2, "0");
 
 export function formatCountdown(totalSeconds: number): string {

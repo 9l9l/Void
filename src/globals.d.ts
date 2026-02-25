@@ -16,6 +16,7 @@ declare function GM_setValue(key: string, value: unknown): void;
 declare function GM_deleteValue(key: string): void;
 declare function GM_listValues(): string[];
 declare function GM_setClipboard(text: string): void;
+declare function GM_xmlhttpRequest(options: Record<string, unknown>): void;
 
 declare namespace globalThis {
     var TURBOPACK: unknown;
