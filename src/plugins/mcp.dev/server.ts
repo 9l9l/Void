@@ -93,12 +93,13 @@ const server = Bun.serve({
         if (method === "tools/call") {
             const tool = params?.name;
             if (!tool) return Response.json(jsonRpc(id, undefined, { code: -32602, message: "Missing tool name" }), { headers: corsHeaders });
+            if (id == null) return Response.json(jsonRpc(null, undefined, { code: -32600, message: "Missing request id" }), { headers: corsHeaders });
 
             totalCalls++;
             const start = performance.now();
 
             try {
-                const result = await forwardToPage(id ?? 0, tool, params?.arguments ?? {});
+                const result = await forwardToPage(id, tool, params?.arguments ?? {});
                 const elapsed = (performance.now() - start).toFixed(0);
                 const text = typeof result === "string" ? result : JSON.stringify(result);
                 const ms = Number(elapsed);

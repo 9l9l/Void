@@ -95,13 +95,34 @@ function buildWhereUsedIndex(): Map<number, Array<{ id: number; n: number }>> {
 
 function extractFunctionAt(src: string, patternIdx: number): { start: number; end: number } | null {
     let openBrace = -1;
+    let hitSemicolon = false;
     const forwardLimit = Math.min(src.length, patternIdx + 500);
     for (let i = patternIdx; i < forwardLimit; i++) {
         if (src[i] === "{") {
             openBrace = i;
             break;
         }
-        if (src[i] === "}" || src[i] === ";") break;
+        if (src[i] === "}" || src[i] === ";") {
+            hitSemicolon = src[i] === ";";
+            break;
+        }
+    }
+
+    if (openBrace < 0 && hitSemicolon) {
+        const lookback = src.slice(Math.max(0, patternIdx - 200), patternIdx);
+        const arrowIdx = lookback.lastIndexOf("=>");
+        if (arrowIdx >= 0) {
+            let headerStart = Math.max(0, patternIdx - 200) + arrowIdx;
+            while (headerStart > 0 && patternIdx - headerStart < MODULE.FUNCTION_AT_HEADER_MAX) {
+                const ch = src[headerStart - 1];
+                if (ch === ";" || ch === "}" || ch === "\n") break;
+                headerStart--;
+            }
+            let end = patternIdx;
+            while (end < src.length && src[end] !== ";") end++;
+            if (end < src.length) end++;
+            return { start: headerStart, end };
+        }
     }
 
     if (openBrace < 0) {
@@ -153,7 +174,7 @@ function buildFilter(filterType: string): FilterFn {
     if (builtin) return builtin;
     if (filterType.startsWith("hasProps:")) return filters.byProps(...filterType.slice(9).split(","));
     if (filterType.startsWith("code:")) return filters.byCode(filterType.slice(5));
-    return v => typeof v === filterType;
+    return () => false;
 }
 
 function findDiffs(orig: string, patched: string, budget: number): DiffChunk[] {

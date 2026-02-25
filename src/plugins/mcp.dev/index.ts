@@ -22,10 +22,7 @@ const settings = definePluginSettings({
 const logger = new Logger("MCP", "#ca9ee6");
 
 const MCP_URL = "ws://localhost:7890";
-const MAX_RECONNECT_DELAY = 60_000;
-const MAX_RESULT_SIZE = 80_000;
-const INITIAL_RECONNECT_DELAY = 3000;
-const { SLOW_THRESHOLD } = MCP_CONSTANTS;
+const { SLOW_THRESHOLD, MAX_RESULT_SIZE, INITIAL_RECONNECT_DELAY, MAX_RECONNECT_DELAY } = MCP_CONSTANTS;
 
 interface WsMessage {
     id: string | number;
@@ -41,7 +38,7 @@ interface WsResponse {
 
 let ws: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-let reconnectDelay = INITIAL_RECONNECT_DELAY;
+let reconnectDelay: number = INITIAL_RECONNECT_DELAY;
 let wasConnected = false;
 
 function truncateResult(result: unknown): unknown {

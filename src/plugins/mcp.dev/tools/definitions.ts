@@ -8,7 +8,7 @@ export const TOOL_DEFINITIONS = [
     {
         name: "module",
         description:
-            "Find and inspect Turbopack modules. find: by props or code strings. findAll: find all matching modules. findBulk: resolve multiple filters in one cache pass. findComponent: find exported React component by name or by code. findModuleId: find module ID by factory code strings. exports: list all exports with types for a module ID. stats: cache and factory counts. source: view raw factory source code for a module ID (up to 8000 chars). diff: compare original vs patched factory source for a module ID. load: instantiate an unloaded module by ID. loadChunks: force-load lazy chunks by factory code anchor. findByFactory: find module by factory source code and return its exports. mapMangled: map obfuscated export names using type filters. css: find CSS class modules by class names. unloaded: list unloaded factory IDs with previews. whereUsed: find all modules that import a given module ID (reverse dependency). suggest: discover unique patch anchor strings for a module. functionAt: extract the full function body containing a pattern. Additional filters for find/findAll: displayName (React displayName), storeName (Zustand store name), componentByCode (true + code to search component source including $$typeof.type and .render).",
+            "Find and inspect Turbopack modules. find: by props or code strings. findAll: find all matching modules. findBulk: resolve multiple filters in one cache pass. findComponent: find exported React component by name or by code. findModuleId: find module ID by factory code strings. exports: list all exports with types for a module ID. stats: cache and factory counts. source: view raw factory source code for a module ID (up to 8000 chars, or up to 50000 with limit param). diff: compare original vs patched factory source for a module ID. load: instantiate an unloaded module by ID. loadChunks: force-load lazy chunks by factory code anchor. findByFactory: find module by factory source code and return its exports. mapMangled: map obfuscated export names using type filters. css: find CSS class modules by class names. unloaded: list unloaded factory IDs with previews. whereUsed: find all modules that import a given module ID (reverse dependency). suggest: discover unique patch anchor strings for a module. functionAt: extract the full function body containing a pattern. imports: list sync and async module IDs imported by a factory. namedExports: list named exports declared in a factory via e.s(). Additional filters for find/findAll: displayName (React displayName), storeName (Zustand store name), componentByCode (true + code to search component source including $$typeof.type and .render).",
         inputSchema: {
             type: "object",
             properties: {
@@ -57,7 +57,7 @@ export const TOOL_DEFINITIONS = [
                 max: { type: "number", description: "Max results to return.", default: 10 },
                 context: { type: "number", description: "Characters of context around each match (max 200).", default: 60 },
                 filter: { type: "string", enum: ["loaded", "unloaded"], description: "Filter to only search loaded or unloaded modules." },
-                count: { type: "boolean", description: "If true, return only the count of matching modules (much faster)." },
+                count: { type: "boolean", description: "If true, return only the count of matching modules (no snippets returned)." },
             },
             required: [],
         },

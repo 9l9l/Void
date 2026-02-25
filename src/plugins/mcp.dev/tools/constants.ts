@@ -87,6 +87,9 @@ export const INTERCEPT = {
 export const MCP = {
     SLOW_THRESHOLD: 1000,
     MAX_BATCH_SIZE: 20,
+    MAX_RESULT_SIZE: 80_000,
+    INITIAL_RECONNECT_DELAY: 3000,
+    MAX_RECONNECT_DELAY: 60_000,
 } as const;
 
 export const EVAL = {

@@ -20,7 +20,7 @@ export { definePluginSettings, PlainSettings, Settings, SettingsStore } from "@a
 export * as common from "@turbopack/common";
 export { getModuleCache, getRuntimeFactoryRegistry, getRuntimeModuleCache, getTurbopackHelpers, isBlacklisted, onceReady, patches, patchReport, patchResults, patchStats, syncLazyModules } from "@turbopack/patchTurbopack";
 export * from "@turbopack/turbopack";
-export { classNameFactory, classes, disableStyle, enableStyle, registerStyle } from "@utils/css";
+export { classes, classNameFactory, disableStyle, enableStyle, registerStyle } from "@utils/css";
 export { makeLazy, proxyLazy } from "@utils/lazy";
 export { Logger } from "@utils/Logger";
 export { copyToClipboard, debounce, formatCountdown, formatDuration, isNonNullish, isTruthy, mergeDefaults, onlyOnce, sleep } from "@utils/misc";

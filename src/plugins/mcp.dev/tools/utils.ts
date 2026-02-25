@@ -114,9 +114,18 @@ export function parseRegexPattern(pattern: string): { regex: RegExp | null; lite
 
 export function countCaptureGroups(matchStr: string): number {
     let count = 0;
+    let inCharClass = false;
     for (let i = 0; i < matchStr.length; i++) {
         if (matchStr[i] === "\\" && i + 1 < matchStr.length) {
             i++;
+            continue;
+        }
+        if (inCharClass) {
+            if (matchStr[i] === "]") inCharClass = false;
+            continue;
+        }
+        if (matchStr[i] === "[") {
+            inCharClass = true;
             continue;
         }
         if (matchStr[i] === "(") {
