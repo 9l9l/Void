@@ -187,6 +187,18 @@ export function findComponentByCodeLazy(...code: (string | RegExp)[]): any {
 }
 
 export function findExportedComponent(...props: string[]): any {
+    return silenceWarns(() => {
+        const result = scanExportedComponent(props);
+        if (result) return result;
+
+        const prevSize = getModuleCache().size;
+        syncLazyModules();
+        if (getModuleCache().size === prevSize) return null;
+        return scanExportedComponent(props);
+    });
+}
+
+function scanExportedComponent(props: string[]): any {
     const cache = getModuleCache();
     for (const [, exports] of cache) {
         if (exports == null || typeof exports !== "object" || isBlacklisted(exports)) continue;
@@ -238,29 +250,33 @@ export function findBulk(...filterFns: FilterFn[]): any[] {
 
         outer: for (const [, exports] of cache) {
             if (exports == null || isBlacklisted(exports)) continue;
+
             for (let j = 0; j < length; j++) {
                 const filter = activeFilters[j];
                 if (!filter) continue;
-
                 try {
                     if (filter(exports)) {
                         results[j] = exports;
                         activeFilters[j] = undefined;
                         if (++found === length) break outer;
-                        break;
                     }
                 } catch {}
+            }
 
-                if (typeof exports !== "object") continue;
+            if (typeof exports === "object") {
                 for (const key in exports) {
                     try {
                         const nested = exports[key];
                         if (nested == null || isBlacklisted(nested)) continue;
-                        if (filter(nested)) {
-                            results[j] = nested;
-                            activeFilters[j] = undefined;
-                            if (++found === length) break outer;
-                            continue outer;
+                        for (let j = 0; j < length; j++) {
+                            const filter = activeFilters[j];
+                            if (!filter) continue;
+                            if (filter(nested)) {
+                                results[j] = nested;
+                                activeFilters[j] = undefined;
+                                if (++found === length) break outer;
+                                break;
+                            }
                         }
                     } catch {}
                 }
@@ -385,8 +401,8 @@ export function search(...code: (string | RegExp)[]): Record<number, ModuleFacto
 }
 
 export function requireModule(moduleId: number): any {
-    const cached = getModuleCache().get(moduleId);
-    if (cached) return cached;
+    const cache = getModuleCache();
+    if (cache.has(moduleId)) return cache.get(moduleId);
 
     const helpers = getTurbopackHelpers();
     if (!helpers) return null;

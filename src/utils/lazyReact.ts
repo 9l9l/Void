@@ -19,8 +19,8 @@ export function LazyComponent<T extends AnyComponent = AnyComponent>(name: strin
 
     const wrapper = ((props: Record<string, unknown>) => {
         cached ??= factory();
-        if (!cached) return null;
-        return _createElement!(cached, props);
+        if (!cached || !_createElement) return null;
+        return _createElement(cached, props);
     }) as unknown as T;
 
     Object.defineProperty(wrapper, "name", { value: name });

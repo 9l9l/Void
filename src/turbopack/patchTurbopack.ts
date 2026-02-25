@@ -26,17 +26,19 @@ const motionSymbol = Symbol.for("motionComponentSymbol");
 
 let compileCounter = 0;
 
-function compileFactory(code: string): ModuleFactory {
-    const key = `__void_eval_${compileCounter++}`;
-    const script = document.createElement("script");
-    script.textContent = `window["${key}"]=(${code});`;
-    document.head.appendChild(script);
-    script.remove();
-    const fn = (pageWindow as any)[key];
-    delete (pageWindow as any)[key];
-    if (!fn) throw new Error("Factory compilation failed (CSP?)");
-    return fn;
-}
+const compileFactory: (code: string) => ModuleFactory = IS_EXTENSION
+    ? (code: string) => new Function(`return(${code})`)() as ModuleFactory
+    : (code: string) => {
+        const key = `__void_eval_${compileCounter++}`;
+        const script = document.createElement("script");
+        script.textContent = `window["${key}"]=(${code});`;
+        document.head.appendChild(script);
+        script.remove();
+        const fn = (pageWindow as any)[key];
+        delete (pageWindow as any)[key];
+        if (!fn) throw new Error("Factory compilation failed (CSP?)");
+        return fn;
+    };
 
 const cacheDiscoveryListeners = new Set<() => void>();
 
@@ -82,13 +84,13 @@ export function getRuntimeModuleCache(): Record<number, TurbopackModule> | null 
 let lazySynced = false;
 export function syncLazyModules(): void {
     if (lazySynced || !runtimeModuleCache) return;
-    lazySynced = true;
     for (const id in runtimeModuleCache) {
         const mod = runtimeModuleCache[id];
         if (mod?.exports == null) continue;
         const numId = Number(id);
         if (!moduleCache.has(numId)) notifyModuleLoaded(mod.exports, numId);
     }
+    lazySynced = true;
 }
 export function getRuntimeFactoryRegistry(): Map<number, ModuleFactory> | null {
     return runtimeFactoryRegistry;
@@ -183,6 +185,7 @@ function notifyModuleLoaded(exports: any, id: number) {
     if (exports == null) return;
     if (moduleCache.get(id) === exports) return;
     moduleCache.set(id, exports);
+    lazySynced = false;
 
     if (waitForSubscriptions.size) {
         for (const [filter, callback] of waitForSubscriptions) {
@@ -222,6 +225,7 @@ function patchFactory(moduleId: number, factory: ModuleFactory): PatchedModuleFa
         const previousCode = code;
         const previousFactory = patchedFactory;
         let allSucceeded = true;
+        let groupApplied = 0;
         const result: PatchResult = {
             plugin: patch.plugin,
             find: String(patch.find),
@@ -263,6 +267,7 @@ function patchFactory(moduleId: number, factory: ModuleFactory): PatchedModuleFa
                 patchedBy.add(patch.plugin);
                 patchedFactory[SYM_PATCHED_BY] = [...patchedBy];
                 patchStats.applied++;
+                groupApplied++;
                 patchStats.patchedModules.add(moduleId);
                 result.replacements.push({ match: String(match), status: "applied" });
             } catch (err) {
@@ -284,6 +289,7 @@ function patchFactory(moduleId: number, factory: ModuleFactory): PatchedModuleFa
         patchResults.push(result);
 
         if (patch.group && !allSucceeded) {
+            patchStats.applied -= groupApplied;
             code = previousCode;
             patchedFactory = previousFactory;
             patchedBy.delete(patch.plugin);
@@ -336,9 +342,11 @@ function wrapFactory(moduleId: number, factory: ModuleFactory): ModuleFactory {
 
     wrapped.toString = () => String(factory);
     wrapped[SYM_ORIGINAL] = original;
-    wrapped[SYM_PATCHED] = (patched as PatchedModuleFactory)[SYM_PATCHED];
-    wrapped[SYM_PATCHED_BY] = (patched as PatchedModuleFactory)[SYM_PATCHED_BY];
-    wrapped[SYM_PATCHED_CODE] = (patched as PatchedModuleFactory)[SYM_PATCHED_CODE];
+    if ((patched as PatchedModuleFactory)[SYM_PATCHED]) {
+        wrapped[SYM_PATCHED] = true;
+        wrapped[SYM_PATCHED_BY] = (patched as PatchedModuleFactory)[SYM_PATCHED_BY];
+        wrapped[SYM_PATCHED_CODE] = (patched as PatchedModuleFactory)[SYM_PATCHED_CODE];
+    }
 
     return wrapped;
 }
@@ -406,16 +414,8 @@ function scanExistingModules(cache: Record<number, TurbopackModule>) {
         if (mod?.exports == null) continue;
         const numId = Number(id);
         if (moduleCache.get(numId) !== mod.exports) {
-            moduleCache.set(numId, mod.exports);
+            notifyModuleLoaded(mod.exports, numId);
             count++;
-        }
-    }
-
-    if (count > 0) {
-        for (const cb of moduleLoadListeners) {
-            try {
-                cb();
-            } catch {}
         }
     }
     if (IS_DEV) logger.debug(`Scanned ${count} existing modules`);

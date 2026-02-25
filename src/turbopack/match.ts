@@ -6,8 +6,8 @@
 
 export function matchesPattern(text: string, pattern: string | RegExp): boolean {
     if (typeof pattern === "string") return text.includes(pattern);
-    if (!pattern.global) return pattern.test(text);
-    return new RegExp(pattern.source, pattern.flags).test(text);
+    pattern.lastIndex = 0;
+    return pattern.test(text);
 }
 
 export function matchesAllPatterns(text: string, patterns: (string | RegExp)[]): boolean {
