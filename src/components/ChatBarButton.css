@@ -45,3 +45,8 @@
     background-color: hsl(var(--surface-l3));
     color: hsl(var(--fg-primary));
 }
+
+.void-chatbar-btn-text-wrap {
+    overflow: hidden;
+    white-space: nowrap;
+}

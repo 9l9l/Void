@@ -11,11 +11,15 @@ import type { ComponentType, ReactNode } from "react";
 
 type LazyNode = ReactNode | (() => ReactNode);
 
+export interface ChatBarButtonRenderProps {
+    iconOnly: boolean;
+}
+
 export interface ChatBarButtonDef {
     icon?: LazyNode;
     tooltip?: LazyNode;
     order?: number;
-    render?: ComponentType;
+    render?: ComponentType<ChatBarButtonRenderProps>;
     onClick?: () => void;
 }
 
@@ -53,15 +57,15 @@ export function removeChatBarButton(id: string): void {
     notify();
 }
 
-function renderEntry(def: ChatBarButtonDef): ReactNode {
+function renderEntry(def: ChatBarButtonDef, iconOnly: boolean): ReactNode {
     if (def.render) {
         const Render = def.render;
-        return <Render />;
+        return <Render iconOnly={iconOnly} />;
     }
-    return <ChatBarButton icon={resolve(def.icon)} tooltip={resolve(def.tooltip)} onClick={def.onClick} />;
+    return <ChatBarButton icon={resolve(def.icon)} tooltip={resolve(def.tooltip)} onClick={def.onClick} iconOnly={iconOnly} />;
 }
 
-export function VoidChatBarButtons(): ReactNode {
+export function VoidChatBarButtons({ iconOnly }: { iconOnly: boolean }): ReactNode {
     React.useSyncExternalStore(subscribeButtons, getButtonsSnapshot);
 
     if (!buttons.size) return null;
@@ -71,7 +75,7 @@ export function VoidChatBarButtons(): ReactNode {
     return (
         <>
             {sorted.map(([id, def]) => (
-                <ErrorBoundary key={id}>{renderEntry(def)}</ErrorBoundary>
+                <ErrorBoundary key={id}>{renderEntry(def, iconOnly)}</ErrorBoundary>
             ))}
         </>
     );

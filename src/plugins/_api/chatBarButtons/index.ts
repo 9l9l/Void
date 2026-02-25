@@ -16,8 +16,8 @@ export default definePlugin({
     required: true,
     hidden: true,
 
-    renderButtons() {
-        return createElement(Fragment, null, createElement(VoidChatBarButtons, null), createElement(ModalContainer, null));
+    renderButtons(iconOnly: boolean) {
+        return createElement(Fragment, null, createElement(VoidChatBarButtons, { iconOnly }), createElement(ModalContainer, null));
     },
 
     patches: [
@@ -26,8 +26,8 @@ export default definePlugin({
             all: true,
             replacement: [
                 {
-                    match: /ModelModeSelect,\{iconOnlyTrigger:\i\}\)\}\),/,
-                    replace: "$&$self.renderButtons(),",
+                    match: /ModelModeSelect,\{iconOnlyTrigger:(\i)\}\)\}\),/,
+                    replace: "$&$self.renderButtons($1),",
                 },
                 {
                     match: /paddingInlineEnd:\i\?void 0:(\i)\?/,
