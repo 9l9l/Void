@@ -5,7 +5,8 @@
  */
 
 import { initPluginManager, isPluginEnabled, plugins, registerPlugin, startAllPlugins, startPlugin } from "@api/PluginManager";
-import { _resolveReady, blacklistBadModules, getModuleCache, onCacheDiscovery, onModuleLoad, patches, patchTurbopack, reportOrphanedPatches, rescanRuntimeModules } from "@turbopack/patchTurbopack";
+import { _resolveReady, blacklistBadModules, getModuleCache, getRuntimeFactoryRegistry, onModuleLoad, patches, patchTurbopack, reportOrphanedPatches, rescanRuntimeModules } from "@turbopack/patchTurbopack";
+import { filters, waitFor } from "@turbopack/turbopack";
 import { Logger } from "@utils/Logger";
 import { type Plugin, StartAt } from "@utils/types";
 
@@ -28,11 +29,11 @@ export { default as definePlugin, OptionType, StartAt } from "@utils/types";
 
 const logger = new Logger("TurbopackPatcher", "#8caaee");
 
-const SETTLE_MS = 300;
-const MIN_MODULES_BEFORE_SETTLE = 50;
-const FALLBACK_MS = 8000;
-const RETRY_TIMEOUT_MS = 15000;
-const ORPHAN_REPORT_DELAY_MS = 5000;
+const APP_READY_SETTLE_MS = 500;
+const MIN_FACTORY_RATIO = 0.4;
+const FALLBACK_MS = 15_000;
+const RETRY_TIMEOUT_MS = 15_000;
+const ORPHAN_REPORT_DELAY_MS = 5_000;
 
 function deferOrphanReport() {
     const hasNonGlobal = patches.some(p => !p.all);
@@ -90,9 +91,17 @@ function retryFailedPlugins() {
     }, RETRY_TIMEOUT_MS);
 }
 
+function hasEnoughModules(): boolean {
+    const registry = getRuntimeFactoryRegistry();
+    if (!registry) return false;
+    return getModuleCache().size / registry.size >= MIN_FACTORY_RATIO;
+}
+
 function waitForModulesStable() {
     let settleTimer: ReturnType<typeof setTimeout> | null = null;
     let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+    let unsubLoad: (() => void) | null = null;
+    let cancelWaitFor: (() => void) | null = null;
     let fired = false;
 
     const fire = () => {
@@ -100,8 +109,8 @@ function waitForModulesStable() {
         fired = true;
         if (settleTimer) clearTimeout(settleTimer);
         if (fallbackTimer) clearTimeout(fallbackTimer);
-        unsubLoad();
-        unsubCache();
+        if (unsubLoad) unsubLoad();
+        if (cancelWaitFor) cancelWaitFor();
         rescanRuntimeModules();
         blacklistBadModules();
         _resolveReady();
@@ -111,18 +120,27 @@ function waitForModulesStable() {
         deferOrphanReport();
     };
 
-    const bump = () => {
+    const settleUntilReady = () => {
         if (fired) return;
         if (settleTimer) clearTimeout(settleTimer);
-        if (getModuleCache().size >= MIN_MODULES_BEFORE_SETTLE) settleTimer = setTimeout(fire, SETTLE_MS);
+        if (hasEnoughModules()) {
+            fire();
+            return;
+        }
+        settleTimer = setTimeout(settleUntilReady, APP_READY_SETTLE_MS);
     };
 
-    const unsubLoad = onModuleLoad(bump);
-    const unsubCache = onCacheDiscovery(bump);
+    cancelWaitFor = waitFor(filters.byProps("useRoutingStore", "formatUrl"), () => {
+        cancelWaitFor = null;
+        settleUntilReady();
+    });
 
-    if (getModuleCache().size > 0) {
-        bump();
-    }
+    unsubLoad = onModuleLoad(() => {
+        if (!fired && !cancelWaitFor && settleTimer) {
+            clearTimeout(settleTimer);
+            settleTimer = setTimeout(settleUntilReady, APP_READY_SETTLE_MS);
+        }
+    });
 
     fallbackTimer = setTimeout(fire, FALLBACK_MS);
 }

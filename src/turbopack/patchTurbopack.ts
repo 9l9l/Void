@@ -81,18 +81,19 @@ export function getModuleCache(): Map<number, any> {
 export function getRuntimeModuleCache(): Record<number, TurbopackModule> | null {
     return runtimeModuleCache;
 }
-let lastSyncSize = 0;
+let lastSyncRtCount = 0;
 export function syncLazyModules(): void {
     if (!runtimeModuleCache) return;
-    const currentSize = moduleCache.size;
-    if (currentSize === lastSyncSize) return;
+    let rtCount = 0;
+    for (const _ in runtimeModuleCache) rtCount++;
+    if (rtCount === lastSyncRtCount) return;
     for (const id in runtimeModuleCache) {
         const mod = runtimeModuleCache[id];
         if (mod?.exports == null) continue;
         const numId = Number(id);
         if (!moduleCache.has(numId)) notifyModuleLoaded(mod.exports, numId);
     }
-    lastSyncSize = moduleCache.size;
+    lastSyncRtCount = rtCount;
 }
 export function getRuntimeFactoryRegistry(): Map<number, ModuleFactory> | null {
     return runtimeFactoryRegistry;
