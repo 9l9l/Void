@@ -11,7 +11,7 @@ const target = typeof unsafeWindow !== "undefined" ? unsafeWindow : window;
 Object.defineProperty(target, "Void", {
     value: Void,
     writable: false,
-    configurable: false,
+    configurable: true,
 });
 
 Void.init();

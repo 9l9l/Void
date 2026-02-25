@@ -11,15 +11,20 @@ import { type Plugin, StartAt } from "@utils/types";
 
 import Plugins from "~plugins";
 
+export { addChatBarButton, removeChatBarButton } from "@api/ChatBarButtons";
 export { dispatch, subscribe } from "@api/Events";
 export { closeAllModals, closeModal, confirm, openModal } from "@api/Modals";
 export { showToast, ToastType } from "@api/Notifications";
-export { isPluginEnabled, plugins, registerPlugin, startPlugin, stopPlugin } from "@api/PluginManager";
-export { Settings } from "@api/Settings";
+export { addPatch, isPluginEnabled, plugins, registerPlugin, startPlugin, stopPlugin } from "@api/PluginManager";
+export { definePluginSettings, PlainSettings, Settings, SettingsStore } from "@api/Settings";
 export * as common from "@turbopack/common";
-export { getModuleCache, getRuntimeFactoryRegistry, getRuntimeModuleCache, onceReady, patchReport, patchResults, patchStats } from "@turbopack/patchTurbopack";
+export { getModuleCache, getRuntimeFactoryRegistry, getRuntimeModuleCache, getTurbopackHelpers, isBlacklisted, onceReady, patches, patchReport, patchResults, patchStats, syncLazyModules } from "@turbopack/patchTurbopack";
 export * from "@turbopack/turbopack";
+export { classNameFactory, classes, disableStyle, enableStyle, registerStyle } from "@utils/css";
+export { makeLazy, proxyLazy } from "@utils/lazy";
 export { Logger } from "@utils/Logger";
+export { copyToClipboard, debounce, formatCountdown, formatDuration, isNonNullish, isTruthy, mergeDefaults, onlyOnce, sleep } from "@utils/misc";
+export { default as definePlugin, OptionType, StartAt } from "@utils/types";
 
 const logger = new Logger("TurbopackPatcher", "#8caaee");
 
