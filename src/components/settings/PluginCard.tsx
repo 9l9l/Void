@@ -23,6 +23,16 @@ import "./PluginCard.css";
 
 const cl = classNameFactory("void-plugin-card-");
 
+const ChromiumIcon = () => (
+    <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10.88 21.94 15.46 14" />
+        <path d="M21.17 8H12" />
+        <path d="M3.95 6.06 8.54 14" />
+        <circle cx="12" cy="12" r="10" />
+        <circle cx="12" cy="12" r="4" />
+    </svg>
+);
+
 interface PluginCardProps {
     name: string;
     onSettings(name: string): void;
@@ -78,6 +88,16 @@ export default function PluginCard({ name, onSettings, onReload }: PluginCardPro
                                 </span>
                             </TooltipTrigger>
                             <TooltipContent>Dev Only</TooltipContent>
+                        </Tooltip>
+                    )}
+                    {plugin.chrome && (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <span className={cl("chrome-icon")}>
+                                    <ChromiumIcon />
+                                </span>
+                            </TooltipTrigger>
+                            <TooltipContent>Chromium Only</TooltipContent>
                         </Tooltip>
                     )}
                 </span>

@@ -30,7 +30,7 @@ const USERSCRIPT_HEADER = `// ==UserScript==
 
 const pluginDir = resolve("src/plugins");
 
-function scanPluginDir(baseDir: string, imports: string[], exports: string[], counter: { i: number }) {
+function scanPluginDir(baseDir: string, imports: string[], exports: string[], mutations: string[], counter: { i: number }) {
     if (!existsSync(baseDir)) return;
     const entries = readdirSync(baseDir, { withFileTypes: true });
 
@@ -44,22 +44,28 @@ function scanPluginDir(baseDir: string, imports: string[], exports: string[], co
         const varName = `p${counter.i++}`;
         imports.push(`import ${varName} from "${resolve(baseDir, entry.name).replaceAll("\\", "/")}";`);
         exports.push(`[${varName}.name]: ${varName}`);
+
+        if (entry.name.endsWith(".chrome")) {
+            mutations.push(`${varName}.chrome=true;${varName}.hidden=!window.chrome;`);
+        }
     }
 }
 
 function generatePluginModule(): string {
     const imports: string[] = [];
     const exports: string[] = [];
+    const mutations: string[] = [];
     const counter = { i: 0 };
 
-    scanPluginDir(resolve(pluginDir, "_core"), imports, exports, counter);
-    scanPluginDir(resolve(pluginDir, "_api"), imports, exports, counter);
-    scanPluginDir(pluginDir, imports, exports, counter);
+    scanPluginDir(resolve(pluginDir, "_core"), imports, exports, mutations, counter);
+    scanPluginDir(resolve(pluginDir, "_api"), imports, exports, mutations, counter);
+    scanPluginDir(pluginDir, imports, exports, mutations, counter);
 
     logger.info(`Found ${counter.i} plugins`);
 
     if (!imports.length) return "export default {} as Record<string, unknown>;\n";
-    return `${imports.join("\n")}\n\nexport default { ${exports.join(", ")} } as Record<string, unknown>;\n`;
+    const mutationBlock = mutations.length ? `\n${mutations.join("\n")}\n` : "";
+    return `${imports.join("\n")}\n${mutationBlock}\nexport default { ${exports.join(", ")} } as Record<string, unknown>;\n`;
 }
 
 function pluginsPlugin(): import("bun").BunPlugin {

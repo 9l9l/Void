@@ -26,6 +26,16 @@
     gap: 0.375rem;
 }
 
+.void-plugin-card-chrome-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: hsl(var(--fg-secondary));
+    opacity: 0.7;
+    flex-shrink: 0;
+    line-height: 0;
+}
+
 .void-plugin-card-required-icon {
     display: inline-flex;
     align-items: center;

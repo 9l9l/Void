@@ -48,6 +48,7 @@ export interface PluginDef {
     name: string;
     description: string;
     authors: string[];
+    chrome?: boolean;
     start?(): void;
     stop?(): void;
     patches?: Omit<Patch, "plugin">[];
