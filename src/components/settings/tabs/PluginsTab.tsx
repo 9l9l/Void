@@ -21,13 +21,17 @@ import {
     SelectValue,
     Text,
 } from "@components";
-import { React, useCallback, useMemo, useRef, useState } from "@turbopack/common/react";
+import { React, useCallback, useMemo, useState } from "@turbopack/common/react";
 import { classNameFactory } from "@utils/css";
 
 import PluginCard from "../PluginCard";
 import PluginDialog from "./PluginDialog";
 
 const cl = classNameFactory("void-plugins-");
+
+const initialStates = new Map<string, boolean>();
+const changedPlugins = new Set<string>();
+let dismissed = false;
 
 type Filter = "all" | "enabled" | "disabled";
 
@@ -45,11 +49,8 @@ export default function PluginsTab() {
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState<Filter>("all");
     const [dialogName, setDialogName] = useState<string | null>(null);
-    const [showReload, setShowReload] = useState(false);
-    const [needsReload, setNeedsReload] = useState(false);
-    const dismissed = useRef(false);
-    const initialStates = useRef<Map<string, boolean> | null>(null);
-    const changedPlugins = useRef(new Set<string>());
+    const [showReload, setShowReload] = useState(!dismissed && changedPlugins.size > 0);
+    const needsReload = changedPlugins.size > 0;
 
     const { userPlugins, requiredPlugins } = useMemo(() => {
         const user: string[] = [];
@@ -70,30 +71,27 @@ export default function PluginsTab() {
     const dialogPlugin = dialogName ? plugins[dialogName] : null;
     const hasResults = filteredUser.length > 0 || filteredRequired.length > 0;
 
-    if (!initialStates.current) {
-        initialStates.current = new Map();
+    if (!initialStates.size) {
         for (const n of [...userPlugins, ...requiredPlugins])
-            initialStates.current.set(n, isPluginEnabled(n));
+            initialStates.set(n, isPluginEnabled(n));
     }
 
     const onReload = useCallback((pluginName: string) => {
-        const initial = initialStates.current!.get(pluginName);
+        const initial = initialStates.get(pluginName);
         const current = isPluginEnabled(pluginName);
-        if (current === initial) changedPlugins.current.delete(pluginName);
-        else changedPlugins.current.add(pluginName);
+        if (current === initial) changedPlugins.delete(pluginName);
+        else changedPlugins.add(pluginName);
 
-        if (changedPlugins.current.size > 0) {
-            setNeedsReload(true);
-            if (!dismissed.current) setShowReload(true);
+        if (changedPlugins.size > 0) {
+            if (!dismissed) setShowReload(true);
         } else {
-            setNeedsReload(false);
             setShowReload(false);
-            dismissed.current = false;
+            dismissed = false;
         }
     }, []);
 
     const onDismiss = useCallback(() => {
-        dismissed.current = true;
+        dismissed = true;
         setShowReload(false);
     }, []);
 
