@@ -27,7 +27,7 @@ export { Logger } from "@utils/Logger";
 export { copyToClipboard, debounce, fetchExternal, formatCountdown, formatDuration, isNonNullish, isTruthy, mergeDefaults, onlyOnce, sleep } from "@utils/misc";
 export { default as definePlugin, OptionType, StartAt } from "@utils/types";
 
-const logger = new Logger("TurbopackPatcher", "#8caaee");
+const logger = new Logger("TurbopackPatcher", "#e78284");
 
 const APP_READY_SETTLE_MS = 500;
 const MIN_FACTORY_RATIO = 0.4;

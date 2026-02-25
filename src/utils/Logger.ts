@@ -34,7 +34,7 @@ export class Logger {
         if (isBrowser) {
             console[level](
                 `%c Void %c %c ${this.name} `,
-                `background: ${COLORS[level]}; color: black; font-weight: bold; border-radius: 5px;`,
+                `background: white; color: black; font-weight: bold; border-radius: 5px;`,
                 "",
                 `background: ${this.color}; color: black; font-weight: bold; border-radius: 5px;`,
                 ...args,

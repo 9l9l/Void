@@ -16,7 +16,7 @@ import { addContextMenuItem, type ContextMenuLocation, removeContextMenuItem } f
 import { subscribe as subscribeEvent } from "./Events";
 import { Settings } from "./Settings";
 
-const logger = new Logger("PluginManager", "#a6d189");
+const logger = new Logger("PluginManager", "#b4befe");
 
 export const plugins: Record<string, Plugin> = {};
 const pluginUnsubscribers = new Map<string, Array<() => void>>();

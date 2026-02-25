@@ -113,7 +113,7 @@ function ModalInstance({ entry }: { entry: ModalEntry }) {
                 if (!open) onClose();
             }}
         >
-            <DialogContent>{entry.render({ onClose })}</DialogContent>
+            <DialogContent aria-describedby={undefined}>{entry.render({ onClose })}</DialogContent>
         </Dialog>
     );
 }
