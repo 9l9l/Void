@@ -22,6 +22,6 @@ export function subscribe(event: string, handler: Handler): () => void {
 
 export function dispatch(event: string, data?: unknown) {
     const set = listeners.get(event);
-    if (!set) return;
-    for (const handler of set) handler(data);
+    if (!set?.size) return;
+    for (const handler of [...set]) handler(data);
 }

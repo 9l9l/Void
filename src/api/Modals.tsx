@@ -72,40 +72,34 @@ export function closeAllModals() {
 
 export function confirm(options: ConfirmOptions): Promise<boolean> {
     return new Promise(resolve => {
-        let resolved = false;
-        const settle = (value: boolean) => {
-            if (resolved) return;
-            resolved = true;
-            resolve(value);
-        };
+        const key = openModal(({ onClose }) => {
+            const close = (value: boolean) => {
+                resolve(value);
+                onClose();
+            };
 
-        openModal(({ onClose }) => (
-            <DialogHeader>
-                <DialogTitle>{options.title}</DialogTitle>
-                <DialogDescription>{options.body}</DialogDescription>
-                <DialogFooter>
-                    <Button
-                        variant="secondary"
-                        onClick={() => {
-                            settle(false);
-                            onClose();
-                        }}
-                    >
-                        {options.cancelText ?? "Cancel"}
-                    </Button>
-                    <Button
-                        variant={options.danger ? "filled" : "primary"}
-                        btnColor={options.danger ? "danger" : undefined}
-                        onClick={() => {
-                            settle(true);
-                            onClose();
-                        }}
-                    >
-                        {options.confirmText ?? "Confirm"}
-                    </Button>
-                </DialogFooter>
-            </DialogHeader>
-        ));
+            return (
+                <DialogHeader>
+                    <DialogTitle>{options.title}</DialogTitle>
+                    <DialogDescription>{options.body}</DialogDescription>
+                    <DialogFooter>
+                        <Button variant="secondary" onClick={() => close(false)}>
+                            {options.cancelText ?? "Cancel"}
+                        </Button>
+                        <Button variant={options.danger ? "filled" : "primary"} btnColor={options.danger ? "danger" : undefined} onClick={() => close(true)}>
+                            {options.confirmText ?? "Confirm"}
+                        </Button>
+                    </DialogFooter>
+                </DialogHeader>
+            );
+        });
+
+        const unsub = subscribeModals(() => {
+            if (!modalStack.some(m => m.key === key)) {
+                unsub();
+                resolve(false);
+            }
+        });
     });
 }
 

@@ -25,6 +25,7 @@ export class SettingsStore<T extends object> {
     private pathListeners = new Map<string, Set<Listener>>();
     private prefixListeners = new Map<string, Set<Listener>>();
     private defaultGetters = new Map<string, (key: string) => unknown>();
+    private saveTimer: ReturnType<typeof setTimeout> | null = null;
 
     public declare store: T;
     public declare plain: T;
@@ -90,7 +91,15 @@ export class SettingsStore<T extends object> {
             if (path.startsWith(prefix)) for (const l of set) l();
         }
 
-        this.save();
+        this.scheduleSave();
+    }
+
+    private scheduleSave() {
+        if (this.saveTimer) return;
+        this.saveTimer = setTimeout(() => {
+            this.saveTimer = null;
+            this.save();
+        }, 100);
     }
 
     private save() {

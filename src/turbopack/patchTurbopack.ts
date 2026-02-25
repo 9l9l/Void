@@ -32,7 +32,7 @@ const compileFactory: (code: string) => ModuleFactory = IS_EXTENSION
         const key = `__void_eval_${compileCounter++}`;
         const script = document.createElement("script");
         script.textContent = `window["${key}"]=(${code});`;
-        document.head.appendChild(script);
+        (document.head ?? document.documentElement).appendChild(script);
         script.remove();
         const fn = (pageWindow as any)[key];
         delete (pageWindow as any)[key];
@@ -189,8 +189,9 @@ function notifyModuleLoaded(exports: any, id: number) {
     moduleCache.set(id, exports);
 
     if (waitForSubscriptions.size) {
-        for (const [filter, callback] of waitForSubscriptions) {
+        for (const [filter, callback] of [...waitForSubscriptions]) {
             try {
+                if (!waitForSubscriptions.has(filter)) continue;
                 if (filter(exports)) {
                     waitForSubscriptions.delete(filter);
                     callback(exports, id);
@@ -201,7 +202,7 @@ function notifyModuleLoaded(exports: any, id: number) {
         }
     }
 
-    for (const cb of moduleLoadListeners) {
+    for (const cb of [...moduleLoadListeners]) {
         try {
             cb();
         } catch {}

@@ -456,12 +456,23 @@ export function waitFor(filter: FilterFn, callback: (mod: any, id: number) => vo
         }
     };
 
-    addWaitForSubscription(wrappedFilter, wrappedCallback);
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-    const cancel = () => removeWaitForSubscription(wrappedFilter);
+    const wrappedCallbackWithCleanup = (exports: any, id: number) => {
+        if (timeoutId) clearTimeout(timeoutId);
+        wrappedCallback(exports, id);
+    };
+
+    addWaitForSubscription(wrappedFilter, wrappedCallbackWithCleanup);
+
+    const cancel = () => {
+        if (timeoutId) clearTimeout(timeoutId);
+        removeWaitForSubscription(wrappedFilter);
+    };
 
     if (timeout > 0) {
-        setTimeout(() => {
+        timeoutId = setTimeout(() => {
+            timeoutId = null;
             if (getModuleCache().size > 0 && !searchCache(filter)) {
                 logger.warn(`waitFor timed out after ${timeout}ms:`, filter);
                 cancel();
