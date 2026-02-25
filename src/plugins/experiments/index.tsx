@@ -14,11 +14,9 @@ import { React, useCallback, useMemo, useState } from "@turbopack/common/react";
 import { FeatureStore } from "@turbopack/common/stores";
 import { Devs } from "@utils/constants";
 import { classNameFactory } from "@utils/css";
-import { Logger } from "@utils/Logger";
 import { useFiltered } from "@utils/react";
 import definePlugin, { StartAt } from "@utils/types";
 
-const logger = new Logger("Experiments", "#a6d189");
 
 const cl = classNameFactory("void-experiments-");
 
@@ -59,7 +57,6 @@ function syncKnownFlags(config: FeatureStoreState["config"]) {
 
     if (changed) {
         settings.store.knownFlags = { ...known };
-        logger.info(`Synced known flags (${booleanKeys.length} total)`);
     }
 }
 

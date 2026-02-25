@@ -40,7 +40,6 @@ interface WsResponse {
 let ws: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let reconnectDelay: number = INITIAL_RECONNECT_DELAY;
-let wasConnected = false;
 
 function truncateResult(result: unknown): unknown {
     if (Array.isArray(result)) {
@@ -95,9 +94,7 @@ function connect() {
     }
 
     ws.onopen = () => {
-        logger.info("Connected to MCP server");
         reconnectDelay = INITIAL_RECONNECT_DELAY;
-        wasConnected = true;
     };
 
     ws.onmessage = (event: MessageEvent) => {
@@ -151,9 +148,7 @@ function connect() {
     };
 
     ws.onclose = () => {
-        if (wasConnected) logger.warn("Disconnected from MCP server");
         ws = null;
-        wasConnected = false;
         scheduleReconnect();
     };
 
