@@ -3,8 +3,9 @@ chrome.webRequest.onHeadersReceived.addListener(
         if (!responseHeaders) return;
 
         if (type === "main_frame" && url.includes("grok.com")) {
+            const blocked = new Set(["content-security-policy", "content-security-policy-report-only"]);
             responseHeaders = responseHeaders.filter(
-                h => h.name.toLowerCase() !== "content-security-policy"
+                h => !blocked.has(h.name.toLowerCase())
             );
         }
         return { responseHeaders };
