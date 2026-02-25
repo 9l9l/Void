@@ -523,6 +523,16 @@ export function patchTurbopack(): void {
                     }
                 }
                 queuedChunks.length = 0;
+
+                runtimeFactoryRegistry = captureFactoryRegistry();
+                if (runtimeFactoryRegistry) {
+                    for (const [id, factory] of runtimeFactoryRegistry) {
+                        runtimeFactoryRegistry.set(id, wrapFactory(id, factory));
+                    }
+                }
+                if (!runtimeModuleCache && runtimeFactoryRegistry) {
+                    captureModuleCache(runtimeFactoryRegistry);
+                }
             } else {
                 currentTurbopack = newValue as TurbopackPushable | unknown[];
             }
