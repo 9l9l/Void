@@ -4,7 +4,6 @@ import type { ZustandStore } from "../zustand";
 /**
  * Zustand state for feature flags and remote configuration.
  *
- * Module ID: **647245**. Manages ~310 feature flags fetched from the server.
  * Flags control UI experiments, model access, rollouts, and A/B tests.
  * Supports local overrides for development.
  *
@@ -39,7 +38,7 @@ export interface FeatureStoreState {
     clearAllOverrides: () => void;
 }
 
-/** Module exports for the Feature store (module **647245**). */
+/** Module exports for the Feature store. */
 export interface FeatureStoreModule {
     /** Zustand store hook for feature flags. */
     useFeatureStore: ZustandStore<FeatureStoreState>;

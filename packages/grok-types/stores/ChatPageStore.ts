@@ -1,18 +1,14 @@
 import type { ConversationMode } from "../enums/conversation";
-import type { ModelMode, ReasoningMode } from "../enums/models";
+import type { ModelId, ModelMode, ModelConfigModelMode, ReasoningMode } from "../enums/models";
 import type { VoiceActivityStatus, VoiceConnectionStatus } from "../enums/voice";
 import type { ZustandStore } from "../zustand";
 
 /**
- * Zustand state for the active chat page.
- *
- * Module ID: **246429**. The largest store in Grok, managing the current conversation,
+ * Zustand state for the active chat page, encompassing
  * model selection, rate limiting, voice mode, streaming state, side panel,
  * and all chat-related UI state.
  */
 export interface ChatPageStoreState {
-    // ── Conversation State ──────────────────────────────────────────────
-
     /** Active conversation ID, or undefined for a new chat. */
     conversationId: string | undefined;
     /** Optimistic conversation ID assigned before the server confirms creation. */
@@ -26,10 +22,8 @@ export interface ChatPageStoreState {
     /** Response ID associated with the current side panel content. */
     sidePanelResponseId: string | undefined;
 
-    // ── Model & Mode ────────────────────────────────────────────────────
-
     /** Currently selected model ID (e.g. "grok-420", "grok-4"). */
-    activeModelId: string;
+    activeModelId: ModelId;
     /** Selected custom system prompt ID, or undefined for default. */
     selectedSystemPromptId: string | undefined;
     /** Conversation interaction mode (e.g. "chat", "deep_search"). */
@@ -39,7 +33,6 @@ export interface ChatPageStoreState {
     /** Model variant mode from the model picker (e.g. "expert", "fast", "auto"). */
     modelMode: ModelMode;
 
-    // ── Rate Limiting ───────────────────────────────────────────────────
 
     /** Whether the user is rate-limited. `false` when not limited, or a string error message. */
     isRateLimited: boolean | string;
@@ -50,7 +43,6 @@ export interface ChatPageStoreState {
     /** Whether the user needs to authenticate to continue. */
     isUnauthenticated: boolean;
 
-    // ── UI State ────────────────────────────────────────────────────────
 
     /** Whether the query/input bar is expanded (default: true). */
     queryBarExpanded: boolean;
@@ -65,16 +57,14 @@ export interface ChatPageStoreState {
     /** Whether the chat page has finished its initial load. */
     chatPageLoaded: boolean;
 
-    // ── Default Models ──────────────────────────────────────────────────
 
     /** Default model ID for anonymous users, from the models API. */
-    defaultAnonModelId: string;
+    defaultAnonModelId: ModelId;
     /** Default model ID for free-tier users, from the models API. */
-    defaultFreeModelId: string;
+    defaultFreeModelId: ModelId;
     /** Default model ID for pro users, or undefined if not set. */
-    defaultProModelId: string | undefined;
+    defaultProModelId: ModelId | undefined;
 
-    // ── Streaming & Messages ────────────────────────────────────────────
 
     /** Set of message IDs that were optimistically created but are now stale. */
     staleOptimisticMessageIds: Set<string>;
@@ -87,7 +77,6 @@ export interface ChatPageStoreState {
     /** Whether the current response is using an experimental model. */
     usingExperiment: boolean;
 
-    // ── Side-by-Side & Metadata ─────────────────────────────────────────
 
     /** Configuration for side-by-side response comparison mode. */
     sideBySideConfig: any;
@@ -112,7 +101,6 @@ export interface ChatPageStoreState {
     /** Whether to show the template input guide overlay. */
     showConversationTemplateInputGuide: boolean;
 
-    // ── Voice Mode ──────────────────────────────────────────────────────
 
     /** Current voice activity state (idle, speaking, listening). */
     voiceActivityStatus: VoiceActivityStatus;
@@ -153,7 +141,6 @@ export interface ChatPageStoreState {
     /** Session data collected for the voice rating survey. */
     voiceRatingSessionData: any;
 
-    // ── Setters ─────────────────────────────────────────────────────────
 
     setModelMode: (mode: ModelMode) => void;
     setConversationId: (id: string | undefined) => void;
@@ -168,7 +155,7 @@ export interface ChatPageStoreState {
     updateSidePanelResponseId: (id: string | undefined, content: any) => void;
     toggleSidePanelContent: (content: any) => void;
     setStreamedMessageId: (id: string | undefined) => void;
-    setActiveModelId: (id: string) => void;
+    setActiveModelId: (id: ModelId) => void;
     setSelectedSystemPromptId: (id: string | undefined) => void;
     setIsRateLimited: (value: boolean | string) => void;
     setIsRateLimitedFromError: (error: any) => void;
@@ -177,9 +164,9 @@ export interface ChatPageStoreState {
     setConversationMode: (mode: ConversationMode) => void;
     setReasoningMode: (mode: ReasoningMode) => void;
     setChatPageLoaded: (loaded: boolean) => void;
-    setDefaultAnonModelId: (id: string) => void;
-    setDefaultFreeModelId: (id: string) => void;
-    setDefaultProModelId: (id: string) => void;
+    setDefaultAnonModelId: (id: ModelId) => void;
+    setDefaultFreeModelId: (id: ModelId) => void;
+    setDefaultProModelId: (id: ModelId) => void;
     setMetadata: (metadata: Record<string, any>) => void;
     setSelectedPersonalityId: (id: string | undefined) => void;
     setCustomPersonality: (personality: any) => void;
@@ -197,7 +184,6 @@ export interface ChatPageStoreState {
     setUsingExperiment: (value: boolean) => void;
     setStaleOptimisticMessageIds: (ids: Set<string>) => void;
 
-    // ── Voice Setters ───────────────────────────────────────────────────
 
     setVoiceConnectionStatus: (status: VoiceConnectionStatus) => void;
     setVoiceActivityStatus: (status: VoiceActivityStatus) => void;
@@ -218,7 +204,6 @@ export interface ChatPageStoreState {
     setVoiceRatingSessionData: (data: any) => void;
     setOptimisticVoiceConversationAssetIds: (ids: string[]) => void;
 
-    // ── Actions ─────────────────────────────────────────────────────────
 
     /** Check if a streaming error is retryable (transient network issues). */
     isErrorRetryable: (error: any) => boolean;
@@ -231,7 +216,6 @@ export interface ChatPageStoreState {
     /** Abort an active streaming response. */
     abortStream: (...args: any[]) => Promise<void>;
 
-    // ── Voice Actions ───────────────────────────────────────────────────
 
     /** Enter voice mode and establish a WebRTC connection. */
     enterVoiceMode: (...args: any[]) => Promise<void>;
@@ -259,14 +243,14 @@ export interface ChatPageStoreState {
     requestMicrophonePermission: () => Promise<boolean>;
 }
 
-/** Module exports for the ChatPage store (module **246429**). */
+/** Module exports for the ChatPage store. */
 export interface ChatPageStoreModule {
     /** Zustand store hook for chat page state. */
     useChatPageStore: ZustandStore<ChatPageStoreState>;
     /** Get the latest thread message ID for branching conversations. */
     getLatestThreadMessageId: (...args: any[]) => string | undefined;
     /** Convert model config mode string to internal ModelMode. */
-    modelConfigModelModeToModelMode: (mode: string) => string;
+    modelConfigModelModeToModelMode: (mode: ModelConfigModelMode) => ModelMode;
     /** Convert internal ModelMode to model config mode string. */
-    modelModeToModelConfigModelMode: (mode: string) => string;
+    modelModeToModelConfigModelMode: (mode: ModelMode) => ModelConfigModelMode;
 }

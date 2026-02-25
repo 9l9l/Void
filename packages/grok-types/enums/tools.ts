@@ -22,4 +22,5 @@ export type ToolName =
     | "get_x_liked_posts"
     | "render_x_posts"
     | "render_x_users"
-    | "render_card";
+    | "render_card"
+    | (string & {});

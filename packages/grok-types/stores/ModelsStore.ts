@@ -1,11 +1,10 @@
 import type { GrokModel } from "../common/Model";
+import type { ModelId, ModelMode } from "../enums/models";
 import type { ZustandStore } from "../zustand";
 
 /**
- * Zustand state for available AI models.
- *
- * Module ID: **814515**. Manages the list of models accessible to the current user,
- * default model selections per tier, and lookup indexes.
+ * Zustand state for available AI models, including
+ * default model selections per tier and lookup indexes.
  * Populated from the models API on page load.
  */
 export interface ModelsStoreState {
@@ -14,28 +13,28 @@ export interface ModelsStoreState {
     /** Models that exist but are not accessible to the user (e.g. require SuperGrokPro). */
     unavailableModels: GrokModel[];
     /** Default model ID for anonymous (logged out) users (e.g. "grok-3"). */
-    defaultAnonModelId: string;
+    defaultAnonModelId: ModelId;
     /** Default model ID for free-tier authenticated users (e.g. "grok-3"). */
-    defaultFreeModelId: string;
+    defaultFreeModelId: ModelId;
     /** Default model ID for Pro/paid users (e.g. "grok-4"). */
-    defaultProModelId: string;
+    defaultProModelId: ModelId;
     /** Default model ID for heavy/premium queries (e.g. "grok-4"). */
-    defaultHeavyModelId: string;
+    defaultHeavyModelId: ModelId;
     /** Lookup map from model ID to the full GrokModel object. */
-    modelById: Record<string, GrokModel>;
+    modelById: Record<ModelId, GrokModel>;
     /** Lookup map from model mode string to the corresponding GrokModel. */
-    modelByMode: Record<string, GrokModel>;
+    modelByMode: Record<ModelMode, GrokModel>;
     /** Whether the models API request is in flight. */
     isPending: boolean;
     /** Whether the models API request completed successfully. */
     isSuccess: boolean;
     /** Set of all model IDs the user can access (includes auto, companion, etc.). */
-    allAccessibleModelIds: Set<string>;
+    allAccessibleModelIds: Set<ModelId>;
     /** Set of all mode IDs the user can access (e.g. "fast", "expert", "auto"). */
-    allAccessibleModeIds: Set<string>;
+    allAccessibleModeIds: Set<ModelMode>;
 }
 
-/** Module exports for the Models store (module **814515**). */
+/** Module exports for the Models store. */
 export interface ModelsStoreModule {
     /** Zustand store hook for models state. */
     useModelsStore: ZustandStore<ModelsStoreState>;

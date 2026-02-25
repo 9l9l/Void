@@ -16,10 +16,8 @@ export interface PendingFileUpload {
 }
 
 /**
- * Zustand state for file upload and metadata management.
- *
- * Module ID: **688578**. Manages file uploads, metadata caching, third-party
- * file attachments, and per-conversation file lists. Used by the chat input
+ * Zustand state for file upload and metadata management, tracking
+ * file attachments and per-conversation file lists. Used by the chat input
  * bar for file attachments and by workspace file management.
  */
 export interface FileStoreState {
@@ -97,7 +95,7 @@ export interface FileStoreState {
 	) => PendingFileUpload;
 }
 
-/** Module exports for the File store (module **688578**). */
+/** Module exports for the File store. */
 export interface FileStoreModule {
 	/** Zustand store hook for file state. */
 	useFileStore: ZustandStore<FileStoreState>;

@@ -47,10 +47,8 @@ export interface GrokConversation {
 }
 
 /**
- * Zustand state for conversation management.
- *
- * Module ID: **136783**. Manages the list of conversations, per-ID caching,
- * in-flight request tracking, and CRUD operations against the conversations API.
+ * Zustand state for conversation management, including
+ * in-flight request tracking and CRUD operations against the conversations API.
  */
 export interface ConversationStoreState {
     /** In-flight fetch promises keyed by conversation ID (deduplication). */
@@ -81,7 +79,6 @@ export interface ConversationStoreState {
     /** Clear all cached data (logout/reset). */
     clear: () => void;
 
-    // ── API Operations ──────────────────────────────────────────────────
 
     /** Upsert a conversation and update the runtime cache. */
     upsertAndCacheConversation: (conversation: GrokConversation, cache: any) => void;
@@ -107,7 +104,7 @@ export interface ConversationStoreState {
     fetchSoftDeleteAllConversations: () => Promise<void>;
 }
 
-/** Module exports for the Conversation store (module **136783**). */
+/** Module exports for the Conversation store. */
 export interface ConversationStoreModule {
     /** Zustand store hook for conversation state. */
     useConversationStore: ZustandStore<ConversationStoreState>;

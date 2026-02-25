@@ -1,10 +1,6 @@
+import type { LoadingStatus } from "../common/LoadingStatus";
+import type { NotificationStatus, NotificationType } from "../enums/notifications";
 import type { ZustandStore } from "../zustand";
-
-/** Status of a notification from the API. */
-export type NotificationStatus =
-    | "NOTIFICATION_STATUS_UNREAD"
-    | "NOTIFICATION_STATUS_READ"
-    | (string & {});
 
 /**
  * A notification object from the Grok notifications API.
@@ -20,7 +16,7 @@ export interface GrokNotification {
     /** Read/unread status. */
     status?: NotificationStatus;
     /** Notification type/category. */
-    type?: string;
+    type?: NotificationType;
     /** Creation timestamp as ISO string. */
     createTime?: string;
     /** Deep link URL for the notification action. */
@@ -35,13 +31,8 @@ export interface NotificationEntry {
     error?: Error;
 }
 
-/** Loading status of the notification list. */
-export type NotificationListStatus = "initial" | "loading" | "ready" | "error";
-
 /**
- * Zustand state for the in-app notifications system.
- *
- * Module ID: **130568**. Manages notification fetching, read status,
+ * Zustand state for the in-app notifications system, supporting read tracking
  * and periodic polling. Notifications are loaded on app init when
  * the ENABLE_NOTIFICATIONS feature flag is on.
  */
@@ -53,7 +44,7 @@ export interface NotificationsStoreState {
     /** Ordered list of notification IDs. */
     list: string[];
     /** Current loading status of the notification list. */
-    listStatus: NotificationListStatus;
+    listStatus: LoadingStatus;
     /** Pagination token for the next page, empty string if no more pages. */
     listNextPageToken: string;
     /** Whether the user has been exposed to the notifications feature. */
@@ -67,7 +58,7 @@ export interface NotificationsStoreState {
     removeNotification: (notificationId: string) => void;
 }
 
-/** Module exports for the Notifications store (module **130568**). */
+/** Module exports for the Notifications store. */
 export interface NotificationsStoreModule {
     /** Zustand store hook for notification state. */
     useNotificationsStore: ZustandStore<NotificationsStoreState>;

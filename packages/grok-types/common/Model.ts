@@ -1,4 +1,4 @@
-import type { ModelConfigModelMode, PromptingBackend } from "../enums/models";
+import type { ModelConfigModelMode, ModelId, PromptingBackend } from "../enums/models";
 
 /**
  * A Grok model definition as returned by the models API.
@@ -13,7 +13,7 @@ import type { ModelConfigModelMode, PromptingBackend } from "../enums/models";
  */
 export interface GrokModel {
     /** Unique model identifier used in API requests (e.g. "grok-4", "grok-420"). */
-    modelId: string;
+    modelId: ModelId;
     /** Human-readable display name (e.g. "Grok 4", "Grok 4.20 (Beta)"). */
     name: string;
     /** Short description shown in the model picker (e.g. "Expert", "Legacy"). */

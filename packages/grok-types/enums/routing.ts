@@ -30,3 +30,23 @@ export type GrokPage =
     | "clear-cache"
     | "unknown"
     | (string & {});
+
+/** Sub-page identifiers for the Build page. */
+export type BuildSubPage =
+    | "remote"
+    | "history"
+    | "settings"
+    | "environment-create"
+    | "environment-edit"
+    | "environment"
+    | "share"
+    | "compare"
+    | "arena"
+    | (string & {});
+
+/** Tab identifiers for the workspace main page. */
+export type WorkspaceTab =
+    | "own"
+    | "shared"
+    | "examples"
+    | (string & {});

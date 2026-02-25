@@ -1,5 +1,6 @@
 import type { FileMetadata } from "../common/Asset";
 import type { ResponseSender } from "../enums/conversation";
+import type { ModelId, ModelMode, RequestKind } from "../enums/models";
 import type { ZustandStore } from "../zustand";
 
 /**
@@ -26,7 +27,7 @@ export interface GrokResponse {
     /** The user's query text that prompted this response. */
     query?: string;
     /** Type of query (e.g. "DEFAULT", "REASONING"). */
-    queryType?: string;
+    queryType?: RequestKind;
     /** Web search results cited in this response. */
     webSearchResults?: any[];
     /** X (Twitter) post IDs referenced in this response. */
@@ -88,15 +89,15 @@ export interface GrokResponse {
     /** Quoted text from the parent message. */
     parentQuotedText?: string;
     /** Model identifier that generated this response. */
-    model?: string;
+    model?: ModelId;
     /** Side-by-side comparison configuration. */
     sideBySideConfig?: any;
     /** Fast tool response data (inline tool results). */
     fastToolResponse?: any;
     /** Request metadata (model, mode, effort level) for this response. */
     requestMetadata?: {
-        model?: string;
-        mode?: string;
+        model?: ModelId;
+        mode?: ModelMode;
         effort?: any;
     };
 }
@@ -113,9 +114,7 @@ export interface ResponseNode {
 }
 
 /**
- * Zustand state for response (message) management.
- *
- * Module ID: **159422**. Manages all responses across conversations,
+ * Zustand state for response (message) management,
  * including caching, streaming, pagination, branching (nodes), and
  * optimistic updates. The most data-heavy store in Grok.
  */
@@ -154,7 +153,6 @@ export interface ResponseStoreState {
     /** Clear all cached response data (logout/reset). */
     clear: () => void;
 
-    // ── Data Loading ────────────────────────────────────────────────────
 
     /** Fetch the response node tree for a conversation. */
     fetchListResponseNodes: (conversationId: string) => Promise<any>;
@@ -175,7 +173,6 @@ export interface ResponseStoreState {
     /** Load thread messages for a specific parent message. */
     loadThreadMessages: (conversationId: string, options?: any) => Promise<any>;
 
-    // ── Streaming ───────────────────────────────────────────────────────
 
     /** Close stale streaming responses and upsert a new one. */
     closeStaleResponsesInConversationAndUpsert: (conversationId: string, response: GrokResponse) => void;
@@ -195,7 +192,7 @@ export interface ResponseStoreState {
     createVoiceUserMessage: (params: any) => Promise<any>;
 }
 
-/** Module exports for the Response store (module **159422**). */
+/** Module exports for the Response store. */
 export interface ResponseStoreModule {
     /** Zustand store hook for response state. */
     useResponseStore: ZustandStore<ResponseStoreState>;

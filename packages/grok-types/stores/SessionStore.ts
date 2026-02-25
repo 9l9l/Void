@@ -5,10 +5,8 @@ import type { GrokUser } from "../common/User";
 import type { ZustandStore } from "../zustand";
 
 /**
- * Zustand state for the authenticated user session.
- *
- * Module ID: **572848**. Manages the current user, team context,
- * country detection, and subscription info. The session is established
+ * Zustand state for the authenticated user session, including
+ * country detection and subscription info. The session is established
  * on page load and refreshed periodically.
  */
 export interface SessionStoreState {
@@ -33,7 +31,7 @@ export interface SessionStoreState {
     refreshAnonUser: (force?: boolean, transport?: any) => Promise<void>;
 }
 
-/** Module exports for the Session store (module **572848**). */
+/** Module exports for the Session store. */
 export interface SessionStoreModule {
     /** React hook that returns the full session state. Not a Zustand selector hook. */
     useSession: () => SessionStoreState;

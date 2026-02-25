@@ -22,9 +22,7 @@ export interface TabConversationInput {
 }
 
 /**
- * Zustand state for the chat tabs manager.
- *
- * Module ID: **582175**. Manages the browser-tab-like conversation tabs
+ * Zustand state for the chat tabs manager, controlling open conversation tabs
  * in the sidebar. Persisted to localStorage under "active-chat-tabs".
  */
 export interface TabsManagerStoreState {
@@ -61,7 +59,7 @@ export interface TabsManagerStoreState {
     setInEditId: (id: string | undefined) => void;
 }
 
-/** Module exports for the TabsManager store (module **582175**). */
+/** Module exports for the TabsManager store. */
 export interface TabsManagerStoreModule {
     /** Zustand store hook for tabs manager state. */
     useTabsManagerStore: ZustandStore<TabsManagerStoreState>;

@@ -96,9 +96,7 @@ export interface ImagineModelOverride {
 }
 
 /**
- * Zustand state for the Imagine media store.
- *
- * Module ID: **874249**. Manages all media generation, streaming,
+ * Zustand state for the Imagine media store, handling
  * caching, side-by-side comparisons, and media post CRUD for the
  * Imagine tab. The largest store in Grok.
  */
@@ -517,7 +515,7 @@ export interface ScrollStoreState {
 	reset: () => void;
 }
 
-/** Module exports for the Media store (module **874249**). */
+/** Module exports for the Media store. */
 export interface MediaStoreModule {
 	/** Zustand store hook for media state. */
 	useMediaStore: ZustandStore<MediaStoreState>;

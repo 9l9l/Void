@@ -1,3 +1,5 @@
+import type { ModelId } from "../enums/models";
+import type { ToolName } from "../enums/tools";
 import type { ZustandStore } from "../zustand";
 
 /**
@@ -30,10 +32,8 @@ export interface UserSettings {
 }
 
 /**
- * Zustand state for user settings and dev tool overrides.
- *
- * Module ID: **470753**. Manages incognito mode, user preferences,
- * age verification, and developer model/system prompt overrides.
+ * Zustand state for user settings and dev tool overrides, including
+ * age verification and developer model/system prompt overrides.
  */
 export interface SettingsStoreState {
     /** Whether incognito mode is active (conversations not saved). */
@@ -53,7 +53,7 @@ export interface SettingsStoreState {
     /** Global model config override object (dev tools). */
     modelConfigOverride: any;
     /** Per-model config overrides keyed by model ID (dev tools). */
-    modelConfigOverrideByModel: Record<string, any>;
+    modelConfigOverrideByModel: Record<ModelId, any>;
     /** Custom system prompt override applied to all conversations (dev tools). */
     systemPromptOverride: string | undefined;
     /** Custom memory system prompt override (dev tools). */
@@ -80,7 +80,7 @@ export interface SettingsStoreState {
     setShowAgeVerification: (show: boolean) => void;
     setAgeVerificationBehavior: (behavior: any) => void;
     setAgeVerificationCallback: (cb: (() => void) | undefined) => void;
-    setModelConfigOverrideByModel: (overrides: Record<string, any>) => void;
+    setModelConfigOverrideByModel: (overrides: Record<ModelId, any>) => void;
     setIsToolComposer2: (value: boolean) => void;
     setSideBySideMode: (value: boolean) => void;
     setSkipResponseCache: (value: boolean) => void;
@@ -105,14 +105,14 @@ export interface SettingsStoreState {
     fetchSetPreference: (key: string, value: any) => Promise<void>;
 }
 
-/** Module exports for the Settings store (module **470753**). */
+/** Module exports for the Settings store. */
 export interface SettingsStoreModule {
     /** Zustand store hook for user settings state. */
     useSettingsStore: ZustandStore<SettingsStoreState>;
     /** Map of tool name identifiers to their display names. */
-    TOOL_NAMES: Record<string, string>;
+    TOOL_NAMES: Record<ToolName, string>;
     /** Check if a dev model config override exists for the given model ID. */
-    hasModelConfigOverride: (model: string) => boolean;
+    hasModelConfigOverride: (model: ModelId) => boolean;
     /** Zod-like validation schema for model config override objects. */
     modelConfigOverrideSchema: any;
 }

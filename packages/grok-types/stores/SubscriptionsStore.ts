@@ -3,11 +3,9 @@ import type { SubscriptionTier } from "../enums/subscription";
 import type { ZustandStore } from "../zustand";
 
 /**
- * Zustand state for the user's subscription data.
- *
- * Module ID: **425296**. Stores the active subscriptions fetched from the
- * session API and computes the best (highest-tier) subscription. Populated
- * by the session provider on page load.
+ * Zustand state for the user's subscription data, populated from the
+ * session API. Computes the best (highest-tier) active subscription
+ * on page load.
  */
 export interface SubscriptionsStoreState {
     /** Whether the user has any active subscriptions. */
@@ -18,7 +16,7 @@ export interface SubscriptionsStoreState {
     bestSubscription: SubscriptionTier | undefined;
 }
 
-/** Module exports for the Subscriptions store (module **425296**). */
+/** Module exports for the Subscriptions store. */
 export interface SubscriptionsStoreModule {
     /** Zustand store hook for subscription state. */
     useSubscriptionsStore: ZustandStore<SubscriptionsStoreState>;

@@ -1,4 +1,4 @@
-import type { GrokPage } from "../enums";
+import type { BuildSubPage, GrokPage, WorkspaceTab } from "../enums";
 import type { ZustandStore } from "../zustand";
 
 export type { GrokPage };
@@ -26,11 +26,11 @@ export interface GrokRoute {
     /** Workspace ID for project pages. */
     workspaceId?: string;
     /** Active tab within the current page. */
-    tab?: string | null;
+    tab?: WorkspaceTab | null;
     /** Build session ID. */
     sessionId?: string;
     /** Build sub-page (e.g. "remote", "history", "settings", "share", "compare", "arena"). */
-    subPage?: string;
+    subPage?: BuildSubPage;
     /** Story ID for highlights/trends pages. */
     storyId?: string;
     /** Post ID for imagine pages. */
@@ -52,9 +52,7 @@ export interface GrokRoute {
 }
 
 /**
- * Zustand state for client-side routing.
- *
- * Module ID: **258722**. Manages page navigation, history stack,
+ * Zustand state for client-side routing, handling navigation history
  * and scroll position restoration. Grok does not use React Router;
  * this store + `useRoutingSync` hook handle all routing.
  */
@@ -84,7 +82,7 @@ export interface RoutingStoreState {
     replace: (route: GrokRoute, state?: Record<string, any>) => void;
 }
 
-/** Module exports for the Routing store (module **258722**). */
+/** Module exports for the Routing store. */
 export interface RoutingStoreModule {
     /** Zustand store hook for routing state. */
     useRoutingStore: ZustandStore<RoutingStoreState>;
@@ -99,5 +97,5 @@ export interface RoutingStoreModule {
     /** Project ID for the deep search workspace feature. */
     DEEP_SEARCH_PROJECT_ID: string;
     /** Valid tab identifiers for the workspace main page (e.g. "own", "shared", "examples"). */
-    workspaceMainPageTabs: string[];
+    workspaceMainPageTabs: WorkspaceTab[];
 }

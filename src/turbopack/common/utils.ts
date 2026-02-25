@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import type { AssetMetadata } from "@grok-types/common";
-import type { ReasoningMode, RequestKind } from "@grok-types/enums";
+import type { AssetMetadata, ResolvedSubscriptionInfo } from "@grok-types/common";
+import type { ReasoningMode, RequestKind, SubscriptionTier, SubscriptionTierName } from "@grok-types/enums";
 
 import { findByPropsLazy } from "../turbopack";
 
@@ -133,6 +133,12 @@ export const ReactQueryMutation = findByPropsLazy("useMutation");
 export const RateLimits = findByPropsLazy("useRateLimits");
 
 export const SubscriptionDetails = findByPropsLazy("useCheckSubscriptionOffer", "useSubscriptions", "useStripe");
+
+export const SubscriptionUtils: {
+    getSubscriptionTierName: (tier: SubscriptionTier) => SubscriptionTierName;
+    useSubscriptions: () => ResolvedSubscriptionInfo;
+    SubscriptionTier: Record<string, SubscriptionTier>;
+} = findByPropsLazy("getSubscriptionTierName", "SubscriptionTier");
 
 export const FeatureControls = findByPropsLazy("useFeatureControls", "useOrganizationControls");
 
