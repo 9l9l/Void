@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import { dispatch } from "@api/Events";
 import { isPluginEnabled, plugins, startPlugin, stopPlugin } from "@api/PluginManager";
 import { Settings } from "@api/Settings";
 import { Button, Switch, Tooltip, TooltipContent, TooltipTrigger } from "@components";
@@ -40,6 +41,7 @@ export default function PluginCard({ name, onSettings, onReload }: PluginCardPro
         if (!enabled) startPlugin(plugin);
         else stopPlugin(plugin);
         forceUpdate();
+        dispatch("pluginToggle");
         if (hasPatches) onReload(name);
     };
 

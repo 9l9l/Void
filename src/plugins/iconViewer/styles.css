@@ -1,4 +1,8 @@
-.void-icon-card-root {
+.void-icon-viewer-section {
+    padding: 0 0.75rem;
+}
+
+.void-icon-viewer-card {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -12,16 +16,21 @@
     transition: background-color 0.15s, color 0.15s;
 }
 
-.void-icon-card-root:hover {
+.void-icon-viewer-card:hover {
     background-color: rgb(255 255 255 / 6%);
     color: hsl(var(--fg-primary));
 }
 
-.void-icon-card-label {
+.void-icon-viewer-label {
     font-size: 0.625rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     width: 100%;
     text-align: center;
+}
+
+.void-icon-viewer-empty {
+    text-align: center;
+    padding: 2rem;
 }

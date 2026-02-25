@@ -6,6 +6,7 @@
 
 import "./styles.css";
 
+import { subscribe } from "@api/Events";
 import { isPluginEnabled } from "@api/PluginManager";
 import { definePluginSettings } from "@api/Settings";
 import { Flex, Text } from "@components";
@@ -14,9 +15,10 @@ import { UnplugIcon } from "@components/icons/UnplugIcon";
 import { CustomCSSTab, loadSavedCSS, PluginsTab } from "@components/settings/tabs";
 import { Tab as ExperimentsTab } from "@plugins/experiments";
 import { Tab as IconsTab } from "@plugins/iconViewer";
-import { createElement, React } from "@turbopack/common/react";
+import { createElement, Fragment, React, useEffect } from "@turbopack/common/react";
 import { findExportedComponentLazy } from "@turbopack/turbopack";
 import { classes, classNameFactory, registerStyle } from "@utils/css";
+import { useForceUpdater } from "@utils/react";
 import definePlugin, { OptionType } from "@utils/types";
 import type { ComponentType, ReactNode } from "react";
 
@@ -102,6 +104,28 @@ interface WrapperProps {
     children: ReactNode;
 }
 
+function VoidTabs({ jsx, TabButton }: { jsx: typeof createElement; TabButton: ComponentType<TabButtonProps> }) {
+    const forceUpdate = useForceUpdater();
+
+    useEffect(() => subscribe("pluginToggle", forceUpdate), [forceUpdate]);
+
+    return (
+        <Fragment>
+            {getVisibleTabs().map(t => jsx(TabButton, { key: t.id, icon: t.icon, text: t.name, tab: t.id }))}
+        </Fragment>
+    );
+}
+
+function VoidPanels({ jsx, activeTab, Wrapper }: { jsx: typeof createElement; activeTab: string; Wrapper: ComponentType<WrapperProps> }) {
+    const forceUpdate = useForceUpdater();
+
+    useEffect(() => subscribe("pluginToggle", forceUpdate), [forceUpdate]);
+
+    const tab = getVisibleTabs().find(t => t.id === activeTab);
+    if (!tab) return null;
+    return jsx(Wrapper, { key: tab.id, children: jsx(tab.component, {}) });
+}
+
 export default definePlugin({
     name: "Settings",
     description: "Adds Void settings UI.",
@@ -114,13 +138,11 @@ export default definePlugin({
     },
 
     renderTabs(jsx: typeof createElement, TabButton: ComponentType<TabButtonProps>) {
-        return [...getVisibleTabs().map(t => jsx(TabButton, { key: t.id, icon: t.icon, text: t.name, tab: t.id })), <VersionInfo key="void-version" />];
+        return [<VoidTabs key="void-tabs" jsx={jsx} TabButton={TabButton} />, <VersionInfo key="void-version" />];
     },
 
     renderPanels(jsx: typeof createElement, activeTab: string, Wrapper: ComponentType<WrapperProps>) {
-        const tab = getVisibleTabs().find(t => t.id === activeTab);
-        if (!tab) return [];
-        return [jsx(Wrapper, { key: tab.id, children: jsx(tab.component, {}) })];
+        return [<VoidPanels key="void-panels" jsx={jsx} activeTab={activeTab} Wrapper={Wrapper} />];
     },
 
     start() {

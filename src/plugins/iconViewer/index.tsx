@@ -7,72 +7,88 @@
 import "./styles.css";
 
 import { ErrorBoundary, Flex, Grid, Input, Paragraph, Text } from "@components";
-import { React, useCallback, useMemo, useState } from "@turbopack/common/react";
+import { React, useMemo, useState } from "@turbopack/common/react";
 import { ClipboardUtils } from "@turbopack/common/utils";
-import { getModuleCache } from "@turbopack/patchTurbopack";
-import { findAll } from "@turbopack/turbopack";
+import { getModuleCache, isBlacklisted } from "@turbopack/patchTurbopack";
 import { classNameFactory } from "@utils/css";
 import { useIntersection, useModuleLoadEffect } from "@utils/react";
 import definePlugin from "@utils/types";
 import type { ComponentType } from "react";
 
-const cl = classNameFactory("void-icon-card-");
+const cl = classNameFactory("void-icon-viewer-");
 
 type IconComponent = ComponentType<{ className?: string; size?: number }>;
-type IconEntry = { name: string; Icon: IconComponent };
+
+interface IconEntry {
+    name: string;
+    Icon: IconComponent;
+}
 
 const FORWARD_REF = Symbol.for("react.forward_ref");
 const MOTION = Symbol.for("motionComponentSymbol");
-const HOOKS = /\.use[A-Z]\w*[)(]/;
+const HOOKS_PATTERN = /\.use[A-Z]\w*[)(]/;
+const ICON_SIZE = 24;
 
 function isSvgIcon(val: unknown): val is IconComponent {
-    let fn: Function | null = null;
-    if (typeof val === "function") fn = val;
-    else if (val && typeof val === "object" && (val as any).$$typeof === FORWARD_REF) fn = (val as any).render;
-    if (!fn || HOOKS.test(String(fn))) return false;
-    if ((val as any)[MOTION]) return false;
-    return true;
+    if (typeof val === "function") return !HOOKS_PATTERN.test(String(val));
+
+    if (val && typeof val === "object" && (val as any).$$typeof === FORWARD_REF) {
+        const { render } = (val as any);
+        if (typeof render !== "function") return false;
+        if (HOOKS_PATTERN.test(String(render))) return false;
+        if ((val as any)[MOTION]) return false;
+        return true;
+    }
+
+    return false;
 }
 
 let cached: IconEntry[] = [];
-let lastSize = 0;
+let lastCacheSize = 0;
 
 function collectIcons(): IconEntry[] {
-    const { size } = getModuleCache();
-    if (cached.length && size === lastSize) return cached;
-    lastSize = size;
+    const cache = getModuleCache();
+    if (cached.length && cache.size === lastCacheSize) return cached;
+    lastCacheSize = cache.size;
 
     const seen = new Set<string>();
     const icons: IconEntry[] = [];
 
-    findAll(mod => {
-        if (!mod || typeof mod !== "object") return false;
+    for (const [, mod] of cache) {
+        if (!mod || typeof mod !== "object" || isBlacklisted(mod)) continue;
+
         try {
             for (const key of Object.keys(mod)) {
-                if (!key.endsWith("Icon") || key === "Icon" || key[0] !== key[0].toUpperCase()) continue;
-                if (key.includes("Lottie") || seen.has(key)) continue;
-                const val: unknown = mod[key];
+                if (key[0] !== key[0].toUpperCase() || !key.endsWith("Icon")) continue;
+                if (key === "Icon" || key.includes("Lottie") || seen.has(key)) continue;
+
+                const val = mod[key];
                 if (!isSvgIcon(val)) continue;
+
                 seen.add(key);
                 icons.push({ name: key, Icon: val });
             }
         } catch {}
-        return false;
-    });
+    }
 
     icons.sort((a, b) => a.name.localeCompare(b.name));
     cached = icons;
     return icons;
 }
 
-function IconCard({ entry, onCopy }: { entry: IconEntry; onCopy: (name: string) => void }) {
+function IconCard({ entry }: { entry: IconEntry }) {
     const [ref, visible] = useIntersection(true);
 
     return (
-        <button ref={ref} onClick={() => onCopy(entry.name)} className={cl("root")} title={entry.name}>
+        <button
+            ref={ref}
+            onClick={() => ClipboardUtils.copyAndToast(entry.name, `Copied "${entry.name}"`)}
+            className={cl("card")}
+            title={entry.name}
+        >
             {visible && (
                 <ErrorBoundary fallback={null}>
-                    <entry.Icon size={24} />
+                    <entry.Icon size={ICON_SIZE} />
                 </ErrorBoundary>
             )}
             <Text as="span" className={cl("label")}>
@@ -94,13 +110,9 @@ function IconsTab() {
         return allIcons.filter(e => e.name.toLowerCase().includes(q));
     }, [search, allIcons]);
 
-    const onCopy = useCallback((name: string) => {
-        ClipboardUtils.copyAndToast(name, `Copied "${name}"`);
-    }, []);
-
     return (
         <Flex flexDirection="column" gap="1rem">
-            <Flex flexDirection="column" gap="0" style={{ padding: "0 0.75rem" }}>
+            <Flex flexDirection="column" gap="0" className={cl("section")}>
                 <Text size="sm" weight="medium">
                     Icons
                 </Text>
@@ -108,16 +120,16 @@ function IconsTab() {
                     Browse all available Grok icons. Click any icon to copy its name.
                 </Text>
             </Flex>
-            <Flex style={{ padding: "0 0.75rem" }}>
-                <Input type="text" placeholder={`Search ${allIcons.length} icons...`} value={search} onChange={(e: { target: { value: string } }) => setSearch(e.target.value)} style={{ flex: 1 }} />
+            <Flex className={cl("section")}>
+                <Input type="text" placeholder={`Search ${allIcons.length} icons...`} value={search} onChange={e => setSearch(e.target.value)} className="flex-1" />
             </Flex>
-            <Grid columns="repeat(auto-fill, minmax(96px, 1fr))" gap="0.25rem" style={{ padding: "0 0.75rem" }}>
+            <Grid columns="repeat(auto-fill, minmax(96px, 1fr))" gap="0.25rem" className={cl("section")}>
                 {filtered.map(entry => (
-                    <IconCard key={entry.name} entry={entry} onCopy={onCopy} />
+                    <IconCard key={entry.name} entry={entry} />
                 ))}
             </Grid>
             {!filtered.length && (
-                <Paragraph color="secondary" style={{ textAlign: "center", padding: "2rem 0" }}>
+                <Paragraph color="secondary" className={cl("empty")}>
                     No icons match your search.
                 </Paragraph>
             )}
