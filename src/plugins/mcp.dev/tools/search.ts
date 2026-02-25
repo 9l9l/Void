@@ -5,10 +5,11 @@
  */
 
 import { getModuleCache } from "@turbopack/patchTurbopack";
+import { matchesAllPatterns } from "@turbopack/turbopack";
 
 import { SEARCH } from "./constants";
-import type { SearchArgs } from "./types";
-import { getFactorySourceCache, isModulePatched } from "./utils";
+import type { SearchArgs, SearchMatch } from "./types";
+import { getFactorySourceCache, isModulePatched, parseRegexPattern } from "./utils";
 
 function findMatch(src: string, pattern: string, regex: RegExp | null, startFrom = 0): { idx: number; len: number } | null {
     if (regex) {
@@ -22,23 +23,11 @@ function findMatch(src: string, pattern: string, regex: RegExp | null, startFrom
     return { idx, len: pattern.length };
 }
 
-function sourceMatchesAll(src: string, patterns: string[]): boolean {
-    return patterns.every(p => src.includes(p));
-}
-
 function shouldSkipModule(id: number, filter: string | undefined, loadedCache: Map<number, unknown> | null): boolean {
     if (!filter || !loadedCache) return false;
     if (filter === "loaded") return !loadedCache.has(id);
     if (filter === "unloaded") return loadedCache.has(id);
     return false;
-}
-
-interface SearchMatch {
-    id: number;
-    s: string;
-    len?: number;
-    at?: number;
-    patched?: boolean;
 }
 
 export function handleSearch(args: SearchArgs): unknown {
@@ -62,7 +51,7 @@ export function handleSearch(args: SearchArgs): unknown {
         for (const [id, src] of sources) {
             if (targetId != null && id !== targetId) continue;
             if (shouldSkipModule(id, filter, loadedCache)) continue;
-            if (!sourceMatchesAll(src, allPatterns)) continue;
+            if (!matchesAllPatterns(src, allPatterns)) continue;
             moduleHits++;
             if (matches.length >= max) continue;
 
@@ -78,14 +67,9 @@ export function handleSearch(args: SearchArgs): unknown {
         return result;
     }
 
-    let regex: RegExp | null = null;
-    const rm = pattern!.match(/^\/(.+)\/([gimsuy]*)$/);
-    if (rm) {
-        try {
-            regex = new RegExp(rm[1], rm[2].includes("g") ? rm[2] : `${rm[2]}g`);
-        } catch (e: unknown) {
-            return `Invalid regex: ${e instanceof Error ? e.message : String(e)}`;
-        }
+    const { regex } = parseRegexPattern(pattern!);
+    if (!regex && pattern!.startsWith("/")) {
+        return `Invalid regex: could not parse ${pattern}`;
     }
 
     if (args.count) {

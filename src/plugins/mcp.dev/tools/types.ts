@@ -115,3 +115,117 @@ export interface BatchArgs {
 export type ToolArgs = ModuleArgs | SearchArgs | EvalArgs | PatchArgs | PluginArgs | ReactArgs | StoreArgs | GrokArgs | InterceptArgs | BatchArgs;
 
 export type ToolHandler = (args: any) => unknown;
+
+export interface SingleResult {
+    tool: string;
+    result?: unknown;
+    error?: string;
+}
+
+export interface SuggestCandidate {
+    text: string;
+    type: string;
+    unique: boolean;
+    count: number;
+}
+
+export interface DiffChunk {
+    at: number;
+    orig: string;
+    patched: string;
+}
+
+export interface SearchMatch {
+    id: number;
+    s: string;
+    len?: number;
+    at?: number;
+    patched?: boolean;
+}
+
+export interface EvalResult {
+    ok: true;
+    value: unknown;
+}
+
+export interface EvalError {
+    ok: false;
+    error: unknown;
+}
+
+export interface LintWarning {
+    severity: "error" | "warn" | "info";
+    message: string;
+    fix?: string;
+}
+
+export interface Anchor {
+    text: string;
+    type: string;
+    at: number;
+    unique: boolean;
+}
+
+export interface Fiber {
+    tag: number;
+    type: { displayName?: string; name?: string } | string | null;
+    stateNode: Element | null;
+    return: Fiber | null;
+    child: Fiber | null;
+    sibling: Fiber | null;
+    memoizedProps: Record<string, unknown> | null;
+    memoizedState: FiberState | null;
+    _debugOwner?: Fiber | null;
+}
+
+export interface FiberState {
+    memoizedState: unknown;
+    queue: { dispatch?: Function } | null;
+    next: FiberState | null;
+}
+
+export interface ZustandLike {
+    getState(): Record<string, unknown>;
+    setState(partial: Record<string, unknown>): void;
+    subscribe(listener: (state: Record<string, unknown>) => void): () => void;
+    name?: string;
+}
+
+export interface StoreEntry {
+    id: number;
+    name: string | null;
+    keys: string[];
+}
+
+export interface Capture {
+    t: number;
+    args: unknown;
+    ret: unknown;
+    err?: string;
+}
+
+export interface InterceptState {
+    id: number;
+    moduleId: number;
+    exportKey: string;
+    finalKey: string;
+    captures: Capture[];
+    startTime: number;
+    original: Function;
+    holder: Record<string, unknown>;
+    timer: ReturnType<typeof setTimeout>;
+}
+
+export interface PluginInfo {
+    name: string;
+    enabled: boolean;
+    started: boolean;
+    required?: boolean;
+    desc?: string;
+}
+
+export interface MemoryInfo {
+    usedJSHeapSize: number;
+    totalJSHeapSize: number;
+    jsHeapSizeLimit: number;
+}

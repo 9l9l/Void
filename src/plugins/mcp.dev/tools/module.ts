@@ -21,12 +21,31 @@ import {
     importModule,
     requireModule,
 } from "@turbopack/turbopack";
-import { type FilterFn, type PatchedModuleFactory,SYM_ORIGINAL, SYM_PATCHED_BY, SYM_PATCHED_CODE } from "@turbopack/types";
+import { type FilterFn, type PatchedModuleFactory, SYM_ORIGINAL, SYM_PATCHED_BY, SYM_PATCHED_CODE } from "@turbopack/types";
 import { isObject } from "@utils/misc";
 
 import { MODULE } from "./constants";
-import type { ModuleArgs } from "./types";
-import { countInSources, findModuleId, getAllFactorySources, getFactorySource, getFactorySourceCache, getPatchedSource, getPatchInfo, serialize } from "./utils";
+import type { DiffChunk, ModuleArgs } from "./types";
+import {
+    attachPatchInfo,
+    clampDefault,
+    describeValue,
+    errorMessage,
+    extractSuggestAnchors,
+    findModuleId,
+    getAllFactorySources,
+    getFactorySource,
+    getFactorySourceCache,
+    getPatchedSource,
+    re,
+    serialize,
+} from "./utils";
+
+const MODULE_ACTIONS = [
+    "find", "findAll", "findBulk", "findComponent", "findModuleId", "exports", "stats",
+    "source", "diff", "imports", "namedExports", "load", "loadChunks", "findByFactory",
+    "mapMangled", "css", "unloaded", "whereUsed", "suggest", "functionAt",
+] as const;
 
 function findSharedFactoryIds(id: number, src: string): number[] {
     const cache = getFactorySourceCache();
@@ -46,13 +65,13 @@ function buildWhereUsedIndex(): Map<number, Array<{ id: number; n: number }>> {
     if (whereUsedCache && whereUsedCacheGen === registry.size) return whereUsedCache;
 
     const index = new Map<number, Array<{ id: number; n: number }>>();
-    const importRe = /\.[irA]\((\d+)\)/g;
+    const importRe = re.turbopackImport();
 
     for (const [moduleId, factory] of registry) {
         const src = String(factory);
         const counts = new Map<number, number>();
-        let m;
         importRe.lastIndex = 0;
+        let m;
         while ((m = importRe.exec(src)) !== null) {
             const depId = Number(m[1]);
             if (depId !== moduleId) counts.set(depId, (counts.get(depId) ?? 0) + 1);
@@ -72,72 +91,6 @@ function buildWhereUsedIndex(): Map<number, Array<{ id: number; n: number }>> {
     whereUsedCache = index;
     whereUsedCacheGen = registry.size;
     return index;
-}
-
-interface SuggestCandidate {
-    find: string;
-    type: string;
-    unique: boolean;
-    count: number;
-}
-
-function suggestAnchors(src: string, maxCandidates: number = MODULE.DEFAULT_SUGGEST): SuggestCandidate[] {
-    const sources = getAllFactorySources();
-    const seen = new Set<string>();
-    const raw: Array<{ find: string; type: string }> = [];
-
-    const collect = (find: string, type: string) => {
-        if (!seen.has(find) && find.length >= MODULE.SUGGEST_MIN_LEN) {
-            seen.add(find);
-            raw.push({ find, type });
-        }
-    };
-
-    let m;
-    const i18nRe = /\w\("([a-z][a-z0-9]*(?:[-.][a-z0-9]+)+)","([^"]+)"\)/g;
-    while ((m = i18nRe.exec(src)) !== null) collect(`"${m[1]}","${m[2]}"`, "i18n");
-
-    const exportRe = /\.s\(\[([^\]]*)\]/g;
-    while ((m = exportRe.exec(src)) !== null) {
-        const nameRe = /"([^"]+)"/g;
-        let nm;
-        while ((nm = nameRe.exec(m[1])) !== null) collect(`"${nm[1]}",()=>`, "export");
-    }
-
-    const testIdRe = /"data-testid":"([^"]+)"/g;
-    while ((m = testIdRe.exec(src)) !== null) collect(`"data-testid":"${m[1]}"`, "testid");
-
-    const dnRe = /displayName="([^"]+)"/g;
-    while ((m = dnRe.exec(src)) !== null) collect(`displayName="${m[1]}"`, "displayName");
-
-    const stringRe = /"([^"\\]{6,80})"/g;
-    while ((m = stringRe.exec(src)) !== null) collect(m[1], "string");
-
-    const templateRe = /`([^`\\]{6,80})`/g;
-    while ((m = templateRe.exec(src)) !== null) collect(m[1], "template");
-
-    const propRe = /\.([a-zA-Z_$][\w$]{5,})\b/g;
-    while ((m = propRe.exec(src)) !== null) collect(m[1], "prop");
-
-    const maxRaw = maxCandidates * 3;
-    const capped = raw.slice(0, maxRaw);
-    const candidates: SuggestCandidate[] = [];
-    let uniqueCount = 0;
-    for (const { find, type } of capped) {
-        if (uniqueCount >= maxCandidates) break;
-        const count = countInSources(sources, find, 3);
-        const unique = count === 1;
-        if (unique) uniqueCount++;
-        candidates.push({ find, type, unique, count });
-    }
-
-    const typeOrder = ["i18n", "export", "testid", "displayName", "string", "template", "prop"];
-    candidates.sort((a, b) => {
-        if (a.unique !== b.unique) return a.unique ? -1 : 1;
-        return typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type);
-    });
-
-    return candidates.slice(0, maxCandidates);
 }
 
 function extractFunctionAt(src: string, patternIdx: number): { start: number; end: number } | null {
@@ -184,20 +137,6 @@ function extractFunctionAt(src: string, patternIdx: number): { start: number; en
     return { start: headerStart, end: fnEnd };
 }
 
-function describeExport(val: unknown): string {
-    if (val == null) return String(val);
-    const t = typeof val;
-    if (t === "function") {
-        const fn = val as Function;
-        return fn.name ? `fn:${fn.name}(${fn.length})` : `fn(${fn.length})`;
-    }
-    if (t !== "object") return `${t}:${String(val).slice(0, MODULE.EXPORT_VALUE_SLICE)}`;
-    if (Array.isArray(val)) return `[${val.length}]`;
-    if (val instanceof Map) return `Map(${(val as Map<unknown, unknown>).size})`;
-    if (val instanceof Set) return `Set(${(val as Set<unknown>).size})`;
-    return `{${Object.keys(val as object).slice(0, MODULE.EXPORT_KEYS_PREVIEW)}}`;
-}
-
 const FILTER_BUILDERS: Record<string, (v: unknown) => boolean> = {
     fn: v => typeof v === "function",
     function: v => typeof v === "function",
@@ -217,8 +156,66 @@ function buildFilter(filterType: string): FilterFn {
     return v => typeof v === filterType;
 }
 
+function findDiffs(orig: string, patched: string, budget: number): DiffChunk[] {
+    const pad = 60;
+    const diffs: DiffChunk[] = [];
+    let used = 0;
+    let oi = 0;
+    let pi = 0;
+
+    while (oi < orig.length && pi < patched.length && used < budget) {
+        if (orig[oi] === patched[pi]) {
+            oi++;
+            pi++;
+            continue;
+        }
+
+        const origCtxStart = Math.max(0, oi - pad);
+        const patchCtxStart = Math.max(0, pi - pad);
+
+        let oe = oi;
+        let pe = pi;
+        const scan = Math.min(orig.length - oi, patched.length - pi, 5000);
+        let resynced = false;
+        for (let len = 1; len < scan; len++) {
+            const origSlice = orig.slice(oi + len, oi + len + 20);
+            if (origSlice.length < 20) break;
+            const pj = patched.indexOf(origSlice, pi);
+            if (pj !== -1) {
+                oe = oi + len;
+                pe = pj;
+                resynced = true;
+                break;
+            }
+            const patchSlice = patched.slice(pi + len, pi + len + 20);
+            if (patchSlice.length < 20) break;
+            const oj = orig.indexOf(patchSlice, oi);
+            if (oj !== -1) {
+                oe = oj;
+                pe = pi + len;
+                resynced = true;
+                break;
+            }
+        }
+
+        if (!resynced) {
+            diffs.push({ at: oi, orig: orig.slice(origCtxStart, oi + 200), patched: patched.slice(patchCtxStart, pi + 200) });
+            break;
+        }
+
+        const origChunk = orig.slice(origCtxStart, Math.min(oe + pad, orig.length));
+        const patchChunk = patched.slice(patchCtxStart, Math.min(pe + pad, patched.length));
+        used += origChunk.length + patchChunk.length;
+        diffs.push({ at: oi, orig: origChunk, patched: patchChunk });
+        oi = oe;
+        pi = pe;
+    }
+
+    return diffs;
+}
+
 export function handleModule(args: ModuleArgs): unknown {
-    const { action, props, code, id, offset = 0, limit = MODULE.DEFAULT_SOURCE_LIMIT } = args;
+    const { action, props, code, id } = args;
 
     if (action === "stats") {
         const cache = getModuleCache();
@@ -312,8 +309,7 @@ export function handleModule(args: ModuleArgs): unknown {
                 const siblings = findSharedFactoryIds(moduleId, src);
                 if (siblings.length) result.sharedWith = siblings;
             }
-            const patch = getPatchInfo(moduleId);
-            if (patch) result.patchedBy = patch;
+            attachPatchInfo(result, moduleId);
         }
         return result;
     }
@@ -327,18 +323,14 @@ export function handleModule(args: ModuleArgs): unknown {
         else if (code?.length) mods = findAll(filters.byCode(...code));
         else return "Provide props, code, displayName, or storeName";
         if (!mods.length) return [];
-        const findAllCap = Math.min(limit || MODULE.DEFAULT_FIND_ALL, MODULE.MAX_FIND_ALL);
-        const capped = mods.length > findAllCap;
-        const results = mods.slice(0, findAllCap).map(m => {
+        const cap = clampDefault(args.limit, MODULE.DEFAULT_FIND_ALL, MODULE.MAX_FIND_ALL);
+        const results = mods.slice(0, cap).map(m => {
             const moduleId = findModuleId(m);
             const result: Record<string, unknown> = { id: moduleId, exports: serialize(m, 1) };
-            if (moduleId != null) {
-                const patch = getPatchInfo(moduleId);
-                if (patch) result.patchedBy = patch;
-            }
+            if (moduleId != null) attachPatchInfo(result, moduleId);
             return result;
         });
-        if (capped) results.push({ truncated: mods.length });
+        if (mods.length > cap) results.push({ truncated: mods.length });
         return results;
     }
 
@@ -381,8 +373,7 @@ export function handleModule(args: ModuleArgs): unknown {
             if (src) result.len = src.length;
             const exports = getModuleCache().get(moduleId);
             if (exports && typeof exports === "object") result.keys = Object.keys(exports as object).slice(0, 10);
-            const patch = getPatchInfo(moduleId);
-            if (patch) result.patchedBy = patch;
+            attachPatchInfo(result, moduleId);
         }
         return result;
     }
@@ -394,22 +385,22 @@ export function handleModule(args: ModuleArgs): unknown {
         const result: Record<string, unknown> = { id: foundId, loaded: getModuleCache().has(foundId) };
         const src = getFactorySource(foundId);
         if (src) result.len = src.length;
-        const patch = getPatchInfo(foundId);
-        if (patch) result.patchedBy = patch;
+        attachPatchInfo(result, foundId);
         return result;
     }
 
     if (action === "exports") {
         if (id == null) return "Provide module id";
-        const exports = getModuleCache().get(id);
-        if (!exports) return null;
+        const exportCache = getModuleCache();
+        if (!exportCache.has(id)) return null;
+        const exports = exportCache.get(id);
         const target = (typeof exports === "object" ? exports : { default: exports }) as Record<string, unknown>;
         const keys = Object.keys(target);
         const result: Record<string, string> = {};
-        const cap = Math.min(limit || MODULE.DEFAULT_EXPORT_KEYS, MODULE.MAX_EXPORT_KEYS);
+        const cap = clampDefault(args.limit, MODULE.DEFAULT_EXPORT_KEYS, MODULE.MAX_EXPORT_KEYS);
         for (let i = 0, l = Math.min(keys.length, cap); i < l; i++) {
             try {
-                result[keys[i]] = describeExport(target[keys[i]]);
+                result[keys[i]] = describeValue(target[keys[i]]);
             } catch {
                 result[keys[i]] = "!";
             }
@@ -423,18 +414,18 @@ export function handleModule(args: ModuleArgs): unknown {
         const patchedCode = args.patched ? getPatchedSource(id) : null;
         const src = patchedCode ?? getFactorySource(id);
         if (!src) return null;
-        const cap = Math.min(limit, MODULE.MAX_SOURCE_LIMIT);
-        let start = offset;
+        const cap = clampDefault(args.limit, MODULE.DEFAULT_SOURCE_LIMIT, MODULE.MAX_SOURCE_LIMIT);
+        let start = args.offset ?? 0;
+        let searchIdx = -1;
         if (args.search) {
-            const idx = src.indexOf(args.search, offset);
-            if (idx === -1) return { len: src.length, searchNotFound: args.search };
-            start = Math.max(0, idx - 200);
+            searchIdx = src.indexOf(args.search, start);
+            if (searchIdx === -1) return { len: src.length, searchNotFound: args.search };
+            start = Math.max(0, searchIdx - 200);
         }
         const result: Record<string, unknown> = { len: src.length, at: start, src: src.slice(start, start + cap) };
-        if (args.search) result.searchAt = src.indexOf(args.search, offset) - start;
+        if (args.search) result.searchAt = searchIdx - start;
         if (patchedCode) result.patched = true;
-        const patch = getPatchInfo(id);
-        if (patch) result.patchedBy = patch;
+        attachPatchInfo(result, id);
         const siblingIds = findSharedFactoryIds(id, src);
         if (siblingIds.length) result.sharedWith = siblingIds;
         return result;
@@ -446,10 +437,10 @@ export function handleModule(args: ModuleArgs): unknown {
         if (!src) return null;
         const sync = new Set<number>();
         const async = new Set<number>();
-        const importRe = /\.[ir]\((\d+)\)/g;
-        const asyncRe = /\.A\((\d+)\)/g;
+        const syncRe = re.turbopackSyncImport();
+        const asyncRe = re.turbopackAsyncImport();
         let m;
-        while ((m = importRe.exec(src)) !== null) sync.add(Number(m[1]));
+        while ((m = syncRe.exec(src)) !== null) sync.add(Number(m[1]));
         while ((m = asyncRe.exec(src)) !== null) async.add(Number(m[1]));
         const result: Record<string, unknown> = { id, sync: [...sync] };
         if (async.size) result.async = [...async];
@@ -461,11 +452,11 @@ export function handleModule(args: ModuleArgs): unknown {
         const src = getFactorySource(id);
         if (!src) return null;
         const named: Array<{ name: string; mid?: number }> = [];
-        const re = /\.s\(\[([^\]]*)\](?:,(\d+))?\)/g;
+        const exportDefRe = re.turbopackExportDef();
         let m;
-        while ((m = re.exec(src)) !== null) {
+        while ((m = exportDefRe.exec(src)) !== null) {
             const mid = m[2] ? Number(m[2]) : undefined;
-            const nameRe = /"([^"]+)"/g;
+            const nameRe = re.exportInner();
             let nm;
             while ((nm = nameRe.exec(m[1])) !== null) {
                 named.push(mid !== undefined ? { name: nm[1], mid } : { name: nm[1] });
@@ -485,12 +476,12 @@ export function handleModule(args: ModuleArgs): unknown {
         if (args.async) {
             return importModule(id).then(
                 (mod: unknown) => ({ id, loaded: true, exports: serialize(mod) }),
-                (err: unknown) => ({ error: err instanceof Error ? err.message : String(err) }),
+                (err: unknown) => ({ error: errorMessage(err) }),
             );
         }
 
         const mod = requireModule(id);
-        if (!mod) return { error: `Module ${id} load returned null` };
+        if (mod == null) return { error: `Module ${id} load returned null` };
         return { id, loaded: true, exports: serialize(mod) };
     }
 
@@ -498,7 +489,7 @@ export function handleModule(args: ModuleArgs): unknown {
         if (!code?.length) return "Provide code to identify the chunk-loading factory";
         return extractAndLoadChunks(code).then(
             (loaded: boolean) => ({ loaded }),
-            (err: unknown) => ({ error: err instanceof Error ? err.message : String(err) }),
+            (err: unknown) => ({ error: errorMessage(err) }),
         );
     }
 
@@ -507,16 +498,11 @@ export function handleModule(args: ModuleArgs): unknown {
         const found = findModuleFactory(...code);
         if (!found) return { error: `No factory matches [${code}]` };
         const [factoryId, factory] = found;
-        const exports = getModuleCache().get(factoryId);
-        const result: Record<string, unknown> = { id: factoryId, len: String(factory).length };
-        if (exports) {
-            result.exports = serialize(exports, 1);
-            result.loaded = true;
-        } else {
-            result.loaded = false;
-        }
-        const patch = getPatchInfo(factoryId);
-        if (patch) result.patchedBy = patch;
+        const modCache = getModuleCache();
+        const loaded = modCache.has(factoryId);
+        const result: Record<string, unknown> = { id: factoryId, len: String(factory).length, loaded };
+        if (loaded) result.exports = serialize(modCache.get(factoryId), 1);
+        attachPatchInfo(result, factoryId);
         return result;
     }
 
@@ -527,8 +513,10 @@ export function handleModule(args: ModuleArgs): unknown {
         const found = findModuleFactory(...code);
         if (!found) return { error: `No factory matches [${code}]` };
         const [factoryId] = found;
-        const exports = getModuleCache().get(factoryId);
-        if (!exports || typeof exports !== "object") return { id: factoryId, error: "Not loaded or not an object" };
+        const mangledCache = getModuleCache();
+        if (!mangledCache.has(factoryId)) return { id: factoryId, error: "Not loaded" };
+        const exports = mangledCache.get(factoryId);
+        if (typeof exports !== "object" || exports == null) return { id: factoryId, error: "Not an object" };
 
         const builtFilters: Record<string, FilterFn> = {};
         for (const [name, filterType] of Object.entries(mapperDefs)) builtFilters[name] = buildFilter(filterType);
@@ -575,7 +563,7 @@ export function handleModule(args: ModuleArgs): unknown {
         for (const [fid] of registry) {
             if (!cache.has(fid)) unloaded.push(fid);
         }
-        const maxPreview = Math.min(args.limit ?? 20, 50);
+        const maxPreview = clampDefault(args.limit, 20, 50);
         const previewed = unloaded.slice(0, maxPreview).map(uid => {
             const src = getFactorySource(uid);
             if (!src) return { id: uid };
@@ -591,7 +579,7 @@ export function handleModule(args: ModuleArgs): unknown {
         const patchedCode = factory[SYM_PATCHED_CODE];
         if (!patchedCode) return { patched: false };
         const orig = String(factory[SYM_ORIGINAL] ?? factory);
-        const diffBudget = Math.min(limit || MODULE.DEFAULT_DIFF_SLICE, MODULE.MAX_DIFF_SLICE);
+        const diffBudget = clampDefault(args.limit, MODULE.DEFAULT_DIFF_SLICE, MODULE.MAX_DIFF_SLICE);
         return { patched: true, by: factory[SYM_PATCHED_BY], origLen: orig.length, patchedLen: patchedCode.length, changes: findDiffs(orig, patchedCode, diffBudget) };
     }
 
@@ -601,7 +589,7 @@ export function handleModule(args: ModuleArgs): unknown {
         if (!registry?.has(id)) return { error: `Module ${id} not found` };
         const index = buildWhereUsedIndex();
         const importers = index.get(id) ?? [];
-        const cap = Math.min(args.limit ?? MODULE.WHERE_USED_LIMIT, MODULE.WHERE_USED_LIMIT);
+        const cap = clampDefault(args.limit, MODULE.WHERE_USED_LIMIT, MODULE.WHERE_USED_LIMIT);
         return { id, total: importers.length, importers: importers.slice(0, cap) };
     }
 
@@ -609,8 +597,8 @@ export function handleModule(args: ModuleArgs): unknown {
         if (id == null) return "Provide module id";
         const src = getFactorySource(id);
         if (!src) return { error: `Module ${id} not found` };
-        const suggestCap = Math.min(limit || MODULE.DEFAULT_SUGGEST, MODULE.MAX_SUGGEST);
-        return { id, len: src.length, candidates: suggestAnchors(src, suggestCap) };
+        const cap = clampDefault(args.limit, MODULE.DEFAULT_SUGGEST, MODULE.MAX_SUGGEST);
+        return { id, len: src.length, candidates: extractSuggestAnchors(src, getAllFactorySources(), cap) };
     }
 
     if (action === "functionAt") {
@@ -622,7 +610,7 @@ export function handleModule(args: ModuleArgs): unknown {
         if (idx < 0) return { error: "Pattern not found" };
         const fn = extractFunctionAt(src, idx);
         if (!fn) return { error: "Cannot determine function boundaries" };
-        const maxLen = Math.min(args.limit ?? MODULE.FUNCTION_AT_MAX, MODULE.FUNCTION_AT_MAX);
+        const maxLen = clampDefault(args.limit, MODULE.FUNCTION_AT_MAX, MODULE.FUNCTION_AT_MAX);
         const fnSrc = src.slice(fn.start, fn.end);
         return {
             at: idx,
@@ -633,69 +621,5 @@ export function handleModule(args: ModuleArgs): unknown {
         };
     }
 
-    return { error: `Unknown action: ${action}` };
-}
-
-interface DiffChunk {
-    at: number;
-    orig: string;
-    patched: string;
-}
-
-function findDiffs(orig: string, patched: string, budget: number): DiffChunk[] {
-    const pad = 60;
-    const diffs: DiffChunk[] = [];
-    let used = 0;
-    let oi = 0;
-    let pi = 0;
-
-    while (oi < orig.length && pi < patched.length && used < budget) {
-        if (orig[oi] === patched[pi]) {
-            oi++;
-            pi++;
-            continue;
-        }
-
-        const origCtxStart = Math.max(0, oi - pad);
-        const patchCtxStart = Math.max(0, pi - pad);
-
-        let oe = oi;
-        let pe = pi;
-        const scan = Math.min(orig.length - oi, patched.length - pi, 5000);
-        let resynced = false;
-        for (let len = 1; len < scan; len++) {
-            const origSlice = orig.slice(oi + len, oi + len + 20);
-            if (origSlice.length < 20) break;
-            const pj = patched.indexOf(origSlice, pi);
-            if (pj !== -1) {
-                oe = oi + len;
-                pe = pj;
-                resynced = true;
-                break;
-            }
-            const patchSlice = patched.slice(pi + len, pi + len + 20);
-            if (patchSlice.length < 20) break;
-            const oj = orig.indexOf(patchSlice, oi);
-            if (oj !== -1) {
-                oe = oj;
-                pe = pi + len;
-                resynced = true;
-                break;
-            }
-        }
-
-        if (!resynced) {
-            diffs.push({ at: oi, orig: orig.slice(origCtxStart, oi + 200), patched: patched.slice(patchCtxStart, pi + 200) });
-            break;
-        }
-
-        const origChunk = orig.slice(origCtxStart, Math.min(oe + pad, orig.length));
-        const patchChunk = patched.slice(patchCtxStart, Math.min(pe + pad, patched.length));
-        used += origChunk.length + patchChunk.length;
-        diffs.push({ at: oi, orig: origChunk, patched: patchChunk });
-        oi = oe;
-        pi = pe;
-    }
-
-    return diffs;
+    return { error: `Unknown action: ${action}`, validActions: MODULE_ACTIONS };
 }

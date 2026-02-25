@@ -7,21 +7,8 @@
 import { getModuleCache } from "@turbopack/patchTurbopack";
 
 import { SERIALIZE, STORE } from "./constants";
-import type { StoreArgs } from "./types";
-import { clamp, getPath, serialize } from "./utils";
-
-interface ZustandLike {
-    getState(): Record<string, unknown>;
-    setState(partial: Record<string, unknown>): void;
-    subscribe(listener: (state: Record<string, unknown>) => void): () => void;
-    name?: string;
-}
-
-interface StoreEntry {
-    id: number;
-    name: string | null;
-    keys: string[];
-}
+import type { StoreArgs, StoreEntry, ZustandLike } from "./types";
+import { clamp, describeValue, errorMessage, getPath, serialize } from "./utils";
 
 const STORE_ACTIONS = ["list", "get", "keys", "methods", "call", "subscribe"] as const;
 
@@ -55,9 +42,7 @@ function findStores(): StoreEntry[] {
                 const stateKeys = state && typeof state === "object" ? Object.keys(state) : [];
                 const storeName = (key.startsWith("use") ? key : null) ?? (typeof val.name === "string" && val.name !== "r" ? val.name : null) ?? (key !== "default" && key !== "r" ? key : null);
                 stores.push({ id, name: storeName, keys: stateKeys.slice(0, 10) });
-            } catch {
-                /* skip problematic exports */
-            }
+            } catch {}
         }
     }
 
@@ -102,17 +87,6 @@ function storeNotFound(query: string | number): { error: string; similar?: strin
         .map(s => s.name ?? `module:${s.id}`)
         .slice(0, 5);
     return similar.length ? { error: `No store "${query}"`, similar } : { error: `No store "${query}". Use list action.` };
-}
-
-function describeValue(v: unknown): string {
-    if (v == null) return String(v);
-    const t = typeof v;
-    if (t === "function") return `fn(${(v as Function).length})`;
-    if (t !== "object") return `${t}:${String(v).slice(0, 40)}`;
-    if (Array.isArray(v)) return `[${v.length}]`;
-    if (v instanceof Map) return `Map(${v.size})`;
-    if (v instanceof Set) return `Set(${v.size})`;
-    return `{${Object.keys(v as object).length}}`;
 }
 
 export function handleStore(args: StoreArgs): unknown {
@@ -174,12 +148,12 @@ export function handleStore(args: StoreArgs): unknown {
             if (result != null && typeof (result as Promise<unknown>).then === "function") {
                 return (result as Promise<unknown>).then(
                     v => serialize(v, Math.min(depth, 4)),
-                    (e: unknown) => ({ error: e instanceof Error ? e.message : String(e) }),
+                    (e: unknown) => ({ error: errorMessage(e) }),
                 );
             }
             return serialize(result, Math.min(depth, 4));
         } catch (e: unknown) {
-            return { error: e instanceof Error ? e.message : String(e) };
+            return { error: errorMessage(e) };
         }
     }
 
@@ -231,5 +205,5 @@ export function handleStore(args: StoreArgs): unknown {
         });
     }
 
-    return { error: `Unknown action: ${action}`, valid: STORE_ACTIONS };
+    return { error: `Unknown action: ${action}`, validActions: STORE_ACTIONS };
 }

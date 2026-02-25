@@ -7,27 +7,8 @@
 import { getModuleCache } from "@turbopack/patchTurbopack";
 
 import { INTERCEPT } from "./constants";
-import type { InterceptArgs } from "./types";
-import { clamp, serialize } from "./utils";
-
-interface Capture {
-    t: number;
-    args: unknown;
-    ret: unknown;
-    err?: string;
-}
-
-interface InterceptState {
-    id: number;
-    moduleId: number;
-    exportKey: string;
-    finalKey: string;
-    captures: Capture[];
-    startTime: number;
-    original: Function;
-    holder: Record<string, unknown>;
-    timer: ReturnType<typeof setTimeout>;
-}
+import type { InterceptArgs, InterceptState } from "./types";
+import { clamp, errorMessage, serialize } from "./utils";
 
 let nextId = 1;
 const active = new Map<number, InterceptState>();
@@ -35,9 +16,7 @@ const active = new Map<number, InterceptState>();
 function restoreIntercept(state: InterceptState) {
     try {
         state.holder[state.finalKey] = state.original;
-    } catch {
-        /* module may have been unloaded */
-    }
+    } catch {}
     clearTimeout(state.timer);
     active.delete(state.id);
 }
@@ -81,28 +60,24 @@ export function handleIntercept(args: InterceptArgs): unknown {
         };
 
         holder[finalKey] = function (this: unknown, ...callArgs: unknown[]) {
+            const elapsed = Date.now() - state.startTime;
             try {
                 const ret = original.apply(this, callArgs);
                 if (state.captures.length < maxCaptures) {
-                    state.captures.push({ t: Date.now() - state.startTime, args: serialize(callArgs, 2), ret: serialize(ret, 2) });
+                    state.captures.push({ t: elapsed, args: serialize(callArgs, 2), ret: serialize(ret, 2) });
                 }
                 return ret;
             } catch (err: unknown) {
                 if (state.captures.length < maxCaptures) {
-                    state.captures.push({
-                        t: Date.now() - state.startTime,
-                        args: serialize(callArgs, 2),
-                        ret: null,
-                        err: err instanceof Error ? err.message : String(err),
-                    });
+                    state.captures.push({ t: elapsed, args: serialize(callArgs, 2), ret: null, err: errorMessage(err) });
                 }
                 throw err;
             }
         };
         Object.defineProperties(holder[finalKey], {
-            length: { value: original.length },
-            name: { value: original.name },
-            toString: { value: () => String(original) },
+            length: { value: original.length, configurable: true },
+            name: { value: original.name, configurable: true },
+            toString: { value: () => String(original), configurable: true },
         });
 
         active.set(id, state);

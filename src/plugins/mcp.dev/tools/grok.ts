@@ -6,14 +6,10 @@
 
 import { ChatPageStore, FeatureStore, ModelsStore, RoutingStore, SessionStore, SettingsStore } from "@turbopack/common";
 
-import type { GrokArgs } from "./types";
+import type { GrokArgs, MemoryInfo } from "./types";
 import { serialize } from "./utils";
 
-interface MemoryInfo {
-    usedJSHeapSize: number;
-    totalJSHeapSize: number;
-    jsHeapSizeLimit: number;
-}
+const GROK_ACTIONS = ["context", "features", "models", "route", "settings", "performance"] as const;
 
 export function handleGrok(args: GrokArgs): unknown {
     const { action } = args;
@@ -130,5 +126,5 @@ export function handleGrok(args: GrokArgs): unknown {
         };
     }
 
-    return { error: `Unknown action: ${action}` };
+    return { error: `Unknown action: ${action}`, validActions: GROK_ACTIONS };
 }

@@ -7,17 +7,9 @@
 import { isPluginEnabled, plugins, startPlugin, stopPlugin } from "@api/PluginManager";
 import { Settings } from "@api/Settings";
 
-import type { PluginArgs } from "./types";
+import type { PluginArgs, PluginInfo } from "./types";
 
 const PLUGIN_ACTIONS = ["list", "enable", "disable", "toggle", "settings", "setSetting"] as const;
-
-interface PluginInfo {
-    name: string;
-    enabled: boolean;
-    started: boolean;
-    required?: boolean;
-    desc?: string;
-}
 
 export function handlePlugin(args: PluginArgs): unknown {
     const { action, name, key, value } = args;

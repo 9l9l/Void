@@ -5,29 +5,8 @@
  */
 
 import { EVAL } from "./constants";
-import type { EvalArgs } from "./types";
-import { serialize } from "./utils";
-
-interface EvalResult {
-    ok: true;
-    value: unknown;
-}
-
-interface EvalError {
-    ok: false;
-    error: unknown;
-}
-
-function formatError(err: unknown): string {
-    if (!(err instanceof Error)) return `Error: ${String(err)}`;
-    const stack = err.stack
-        ? `\n${err.stack
-              .split("\n")
-              .slice(1, 1 + EVAL.STACK_LINES)
-              .join("\n")}`
-        : "";
-    return `Error: ${err.message}${stack}`;
-}
+import type { EvalArgs, EvalError, EvalResult } from "./types";
+import { formatError, serialize } from "./utils";
 
 function evalAsync(code: string): Promise<unknown> {
     return (0, eval)(`(async()=>{${autoReturn(code)}})()`);
@@ -42,7 +21,11 @@ const STATEMENT_RE = /^(return|throw|break|continue|if|for|while|switch|try|clas
 
 function autoReturn(code: string): string {
     const lastNewline = code.lastIndexOf("\n");
-    if (lastNewline === -1) return code;
+    if (lastNewline === -1) {
+        const expr = code.trim().replace(/;$/, "").trim();
+        if (expr && !STATEMENT_RE.test(expr)) return `return ${expr};`;
+        return code;
+    }
     const lastLine = code.slice(lastNewline + 1).trim();
     if (!lastLine) return code;
     const expr = lastLine.replace(/;$/, "").trim();

@@ -6,18 +6,14 @@
 
 import { getRuntimeFactoryRegistry, patches, patchResults, patchStats } from "@turbopack/patchTurbopack";
 import { search } from "@turbopack/turbopack";
-import { type PatchedModuleFactory,SYM_PATCHED_BY } from "@turbopack/types";
+import { type PatchedModuleFactory, SYM_PATCHED_BY } from "@turbopack/types";
 import { canonicalizeMatch } from "@utils/patches";
 
 import { PATCH } from "./constants";
-import type { PatchArgs } from "./types";
-import { countCaptureGroups, countInSources, getAllFactorySources } from "./utils";
+import type { LintWarning, PatchArgs } from "./types";
+import { clampDefault, countCaptureGroups, extractContextAnchors, extractI18nKeys, getAllFactorySources } from "./utils";
 
-interface LintWarning {
-    severity: "error" | "warn" | "info";
-    message: string;
-    fix?: string;
-}
+const PATCH_ACTIONS = ["test", "analyze", "list", "conflicts", "broken", "lint", "context"] as const;
 
 function lintMatchRegex(matchStr: string, replaceStr?: string): LintWarning[] {
     const warnings: LintWarning[] = [];
@@ -79,10 +75,9 @@ function testMatchOnSource(src: string, id: number, findStr: string, matchStr: s
         return { status: "INVALID_REGEX" as const, error: e instanceof Error ? e.message : String(e) };
     }
 
-    const warnings: string[] = [];
-    if (/\.\+\?/.test(matchStr)) warnings.push("Unbounded .+? gap, use .{0,N}");
-    if (/\.\*\?/.test(matchStr)) warnings.push("Unbounded .*? gap, use .{0,N}");
-    if (countCaptureGroups(matchStr) > PATCH.MAX_CAPTURE_WARN) warnings.push("Many capture groups");
+    const lintWarnings = lintMatchRegex(matchStr, replaceStr);
+    const warnings = lintWarnings.filter(w => w.severity === "error" || w.severity === "warn").map(w => w.message);
+
     if (replaceStr.includes("$self")) warnings.push('$self is expanded at runtime to Void.plugins["Name"], not in test preview');
 
     let matched: RegExpMatchArray | null;
@@ -98,7 +93,7 @@ function testMatchOnSource(src: string, id: number, findStr: string, matchStr: s
         const hint = literalFound ? "Literal found but regex didn't match — check quantifiers and escaping" : "No literal match either — check find targets the right module";
         const canonFindStr = canonicalizeMatch(findStr);
         const findIdx = typeof canonFindStr === "string" ? src.indexOf(canonFindStr) : src.search(canonFindStr);
-        const nfPad = Math.min(contextPad ?? PATCH.DEFAULT_CONTEXT_PAD, PATCH.MAX_CONTEXT_PAD);
+        const nfPad = clampDefault(contextPad, PATCH.DEFAULT_CONTEXT_PAD, PATCH.MAX_CONTEXT_PAD);
         const nearFind = findIdx >= 0 ? src.slice(Math.max(0, findIdx - nfPad), Math.min(src.length, findIdx + nfPad * 2)) : undefined;
         return { status: "MATCH_FAILED", id, len: src.length, hint, ...(nearFind && { nearFind }), ...(warnings.length && { warnings }) };
     }
@@ -117,7 +112,7 @@ function testMatchOnSource(src: string, id: number, findStr: string, matchStr: s
     if (patchedSrc === src) warnings.push("Replacement produced identical output (no-op)");
 
     const at = src.indexOf(matched[0]);
-    const pad = Math.min(contextPad ?? PATCH.DEFAULT_CONTEXT_PAD, PATCH.MAX_CONTEXT_PAD);
+    const pad = clampDefault(contextPad, PATCH.DEFAULT_CONTEXT_PAD, PATCH.MAX_CONTEXT_PAD);
     const cs = Math.max(0, at - pad);
     const ce = Math.min(src.length, at + matched[0].length + pad);
 
@@ -153,6 +148,7 @@ function diagnoseOrphaned(p: (typeof patches)[number]) {
     const failed = replacements.filter(r => {
         try {
             const regex = r.match instanceof RegExp ? r.match : canonicalizeMatch(new RegExp(r.match as string));
+            if (regex instanceof RegExp) regex.lastIndex = 0;
             return !regex.test(src);
         } catch {
             return true;
@@ -201,7 +197,7 @@ export function handlePatch(args: PatchArgs): unknown {
         const ids = Object.keys(results).map(Number);
         if (!ids.length) return { unique: false, count: 0, hint: "No modules match this find string" };
 
-        const ctxPad = Math.min(args.context ?? 300, PATCH.MAX_CONTEXT_PAD);
+        const ctxPad = clampDefault(args.context, 300, PATCH.MAX_CONTEXT_PAD);
 
         if (ids.length === 1) {
             const id = ids[0];
@@ -252,7 +248,7 @@ export function handlePatch(args: PatchArgs): unknown {
 
         if (typeof testResult === "object" && testResult.status === "VALID") {
             const matchAt = testResult.at as number;
-            const i18nPad = Math.min(args.context ?? PATCH.DEFAULT_CONTEXT_PAD, PATCH.MAX_CONTEXT_PAD);
+            const i18nPad = clampDefault(args.context, PATCH.DEFAULT_CONTEXT_PAD, PATCH.MAX_CONTEXT_PAD);
             const neighborhood = src.slice(Math.max(0, matchAt - i18nPad), Math.min(src.length, matchAt + i18nPad * 2));
             const nearbyI18n = extractI18nKeys(neighborhood);
             if (nearbyI18n.length) (testResult as Record<string, unknown>).nearbyI18n = nearbyI18n;
@@ -305,9 +301,9 @@ export function handlePatch(args: PatchArgs): unknown {
     if (action === "lint") {
         if (!matchStr) return "Provide match regex string to lint";
         const warnings = lintMatchRegex(matchStr, replaceStr);
-        const errors = warnings.filter(w => w.severity === "error").length;
-        const warns = warnings.filter(w => w.severity === "warn").length;
-        return { warnings, summary: { errors, warns, info: warnings.length - errors - warns }, clean: !errors && !warns };
+        const errorCount = warnings.filter(w => w.severity === "error").length;
+        const warnCount = warnings.filter(w => w.severity === "warn").length;
+        return { warnings, summary: { errors: errorCount, warns: warnCount, info: warnings.length - errorCount - warnCount }, clean: !errorCount && !warnCount };
     }
 
     if (action === "context") {
@@ -322,13 +318,13 @@ export function handlePatch(args: PatchArgs): unknown {
         const findIdx = typeof canonFind === "string" ? src.indexOf(canonFind) : src.search(canonFind);
         if (findIdx < 0) return { error: "Find matched module but indexOf failed" };
 
-        const windowSize = Math.min(args.window ?? PATCH.CONTEXT_DEFAULT_WINDOW, PATCH.CONTEXT_MAX_WINDOW);
+        const windowSize = clampDefault(args.window, PATCH.CONTEXT_DEFAULT_WINDOW, PATCH.CONTEXT_MAX_WINDOW);
         const half = Math.floor(windowSize / 2);
         const ctxStart = Math.max(0, findIdx - half);
         const ctxEnd = Math.min(src.length, findIdx + half);
         const ctx = src.slice(ctxStart, ctxEnd);
 
-        const anchors = extractAnchors(ctx);
+        const anchors = extractContextAnchors(ctx, getAllFactorySources(), PATCH.CONTEXT_MAX_ANCHORS);
 
         const result: Record<string, unknown> = {
             id,
@@ -346,94 +342,5 @@ export function handlePatch(args: PatchArgs): unknown {
         return result;
     }
 
-    return { error: `Unknown action: ${action}` };
-}
-
-function extractI18nKeys(ctx: string): Array<{ key: string; default: string }> {
-    const keys: Array<{ key: string; default: string }> = [];
-    const seen = new Set<string>();
-    const re = /\w\("([a-z][a-z0-9]*(?:[-.][a-z0-9]+)+)","([^"]+)"\)/g;
-    let m;
-    while ((m = re.exec(ctx)) !== null) {
-        if (!seen.has(m[1])) {
-            seen.add(m[1]);
-            keys.push({ key: m[1], default: m[2] });
-        }
-    }
-    return keys;
-}
-
-interface Anchor {
-    text: string;
-    type: string;
-    at: number;
-    unique: boolean;
-}
-
-function extractAnchors(ctx: string): Anchor[] {
-    const allSources = getAllFactorySources();
-    const anchors: Anchor[] = [];
-    const seen = new Set<string>();
-
-    const collect = (text: string, type: string, at: number) => {
-        if (text.length < 4 || seen.has(text)) return;
-        seen.add(text);
-        const globalCount = countInSources(allSources, text, 3);
-        anchors.push({ text, type, at, unique: globalCount === 1 });
-    };
-
-    const i18nRe = /\w\("([a-z][a-z0-9]*(?:[-.][a-z0-9]+)+)","([^"]+)"\)/g;
-    let m;
-    while ((m = i18nRe.exec(ctx)) !== null) {
-        collect(`"${m[1]}","${m[2]}"`, "i18n", m.index);
-    }
-
-    const nsRe = /useTranslation\)\("([a-z]+)"\)/g;
-    while ((m = nsRe.exec(ctx)) !== null) {
-        collect(`useTranslation)("${m[1]}")`, "i18n-ns", m.index);
-    }
-
-    const flagRe = /"((?:ENABLE|DISABLE|ALLOW|SHOW|HIDE|IS|HAS)_[A-Z][A-Z0-9_]+)"/g;
-    while ((m = flagRe.exec(ctx)) !== null) {
-        collect(`"${m[1]}"`, "flag", m.index);
-    }
-
-    const dnRe = /displayName="([^"]+)"/g;
-    while ((m = dnRe.exec(ctx)) !== null) {
-        collect(`displayName="${m[1]}"`, "displayName", m.index);
-    }
-
-    const exportRe = /\["([A-Z][\w]+)",\(\)=>/g;
-    while ((m = exportRe.exec(ctx)) !== null) {
-        collect(`"${m[1]}",()=>`, "export", m.index);
-    }
-
-    const testIdRe = /"data-testid":"([^"]+)"/g;
-    while ((m = testIdRe.exec(ctx)) !== null) {
-        collect(`"data-testid":"${m[1]}"`, "testid", m.index);
-    }
-
-    const strRe = /"([^"\\]{6,80})"/g;
-    while ((m = strRe.exec(ctx)) !== null) {
-        if (seen.has(`"${m[1]}"`)) continue;
-        collect(m[1], "string", m.index);
-    }
-
-    const jsxRe = /jsx\)\(\w+\.(\w{3,}),/g;
-    while ((m = jsxRe.exec(ctx)) !== null) {
-        collect(m[1], "jsx", m.index);
-    }
-
-    const propRe = /\.([a-zA-Z_$][\w$]{4,})[=(]/g;
-    while ((m = propRe.exec(ctx)) !== null) {
-        collect(m[1], "prop", m.index);
-    }
-
-    const typeOrder = ["i18n", "i18n-ns", "flag", "displayName", "export", "testid", "string", "jsx", "prop"];
-    anchors.sort((a, b) => {
-        if (a.unique !== b.unique) return a.unique ? -1 : 1;
-        return typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type);
-    });
-
-    return anchors.slice(0, PATCH.CONTEXT_MAX_ANCHORS);
+    return { error: `Unknown action: ${action}`, validActions: PATCH_ACTIONS };
 }

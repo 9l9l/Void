@@ -5,26 +5,8 @@
  */
 
 import { REACT } from "./constants";
-import type { ReactArgs } from "./types";
-import { serialize } from "./utils";
-
-interface Fiber {
-    tag: number;
-    type: { displayName?: string; name?: string } | string | null;
-    stateNode: Element | null;
-    return: Fiber | null;
-    child: Fiber | null;
-    sibling: Fiber | null;
-    memoizedProps: Record<string, unknown> | null;
-    memoizedState: FiberState | null;
-    _debugOwner?: Fiber | null;
-}
-
-interface FiberState {
-    memoizedState: unknown;
-    queue: { dispatch?: Function } | null;
-    next: FiberState | null;
-}
+import type { Fiber, FiberState, ReactArgs } from "./types";
+import { clampDefault, serialize } from "./utils";
 
 const REACT_ACTIONS = ["find", "root", "query", "fiber", "props", "hooks", "state", "tree", "owner"] as const;
 
@@ -78,21 +60,18 @@ function walkUp(f: Fiber | null, max: number, test: (f: Fiber) => boolean): Fibe
 }
 
 function resolveEl(selector: string): Element | string {
-    let el: Element | null;
     try {
-        el = document.querySelector(selector);
+        const el = document.querySelector(selector);
+        return el ?? `No element: ${selector}`;
     } catch {
         return "Invalid CSS selector";
     }
-    return el ?? `No element: ${selector}`;
 }
 
 export function handleReact(args: ReactArgs): unknown {
     const { action, selector, componentName } = args;
-    const maxD = Math.min(args.depth ?? REACT.DEFAULT_DEPTH, REACT.MAX_DEPTH);
-    const lim = Math.min(args.limit ?? REACT.DEFAULT_LIMIT, REACT.MAX_LIMIT);
-
-    if (!(REACT_ACTIONS as readonly string[]).includes(action)) return { error: `Unknown action: ${action}` };
+    const maxD = clampDefault(args.depth, REACT.DEFAULT_DEPTH, REACT.MAX_DEPTH);
+    const lim = clampDefault(args.limit, REACT.DEFAULT_LIMIT, REACT.MAX_LIMIT);
 
     if (action === "find") {
         if (!componentName) return "Provide componentName";
@@ -205,7 +184,7 @@ export function handleReact(args: ReactArgs): unknown {
         if (!target) return "No hooks found";
 
         const hooks: Array<Record<string, unknown>> = [];
-        let state = target.memoizedState;
+        let state: FiberState | null = target.memoizedState;
         let i = 0;
         while (state && i < REACT.MAX_HOOKS) {
             const ms = state.memoizedState;
@@ -236,7 +215,7 @@ export function handleReact(args: ReactArgs): unknown {
         if (!target) return "No state found";
 
         const vals: unknown[] = [];
-        let hs = target.memoizedState;
+        let hs: FiberState | null = target.memoizedState;
         while (hs && vals.length < REACT.MAX_STATE_VALUES) {
             if (hs.queue?.dispatch) vals.push(serialize(hs.memoizedState, 2));
             hs = hs.next;
@@ -245,7 +224,7 @@ export function handleReact(args: ReactArgs): unknown {
     }
 
     if (action === "tree") {
-        const breadth = Math.min(args.breadth ?? REACT.DEFAULT_BREADTH, REACT.MAX_BREADTH);
+        const breadth = clampDefault(args.breadth, REACT.DEFAULT_BREADTH, REACT.MAX_BREADTH);
         const build = (node: Element, d: number): Record<string, unknown> => {
             const info: Record<string, unknown> = { tag: node.tagName.toLowerCase() };
             if (node.id) info.id = node.id;
@@ -278,5 +257,5 @@ export function handleReact(args: ReactArgs): unknown {
         return owners;
     }
 
-    return { error: `Unknown action: ${action}` };
+    return { error: `Unknown action: ${action}`, validActions: REACT_ACTIONS };
 }

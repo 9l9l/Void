@@ -14,7 +14,8 @@ import { handlePlugin } from "./plugin";
 import { handleReact } from "./react";
 import { handleSearch } from "./search";
 import { handleStore } from "./store";
-import type { ToolHandler } from "./types";
+import type { SingleResult, ToolHandler } from "./types";
+import { errorMessage } from "./utils";
 
 export { TOOL_DEFINITIONS } from "./definitions";
 
@@ -38,12 +39,6 @@ const handlers: Record<string, ToolHandler> = {
     reload: handleReload,
 };
 
-interface SingleResult {
-    tool: string;
-    result?: unknown;
-    error?: string;
-}
-
 function executeSingle(tool: string, args: Record<string, unknown>): SingleResult | Promise<SingleResult> {
     const handler = handlers[tool];
     if (!handler) return { tool, error: `Unknown tool: ${tool}` };
@@ -52,12 +47,12 @@ function executeSingle(tool: string, args: Record<string, unknown>): SingleResul
         if (result != null && typeof (result as Promise<unknown>).then === "function") {
             return (result as Promise<unknown>).then(
                 val => ({ tool, result: val }),
-                (err: unknown) => ({ tool, error: err instanceof Error ? err.message : String(err) }),
+                (err: unknown) => ({ tool, error: errorMessage(err) }),
             );
         }
         return { tool, result };
     } catch (err: unknown) {
-        return { tool, error: err instanceof Error ? err.message : String(err) };
+        return { tool, error: errorMessage(err) };
     }
 }
 

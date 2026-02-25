@@ -5,9 +5,37 @@
  */
 
 import { getModuleCache, getRuntimeFactoryRegistry, patchStats } from "@turbopack/patchTurbopack";
-import { type PatchedModuleFactory,SYM_PATCHED_BY, SYM_PATCHED_CODE } from "@turbopack/types";
+import { type PatchedModuleFactory, SYM_PATCHED_BY, SYM_PATCHED_CODE } from "@turbopack/types";
 
-import { SERIALIZE } from "./constants";
+import { EVAL, MODULE, SERIALIZE } from "./constants";
+import type { Anchor, SuggestCandidate } from "./types";
+
+export const errorMessage = (err: unknown): string => (err instanceof Error ? err.message : String(err));
+
+export function formatError(err: unknown): string {
+    if (!(err instanceof Error)) return `Error: ${String(err)}`;
+    const stack = err.stack
+        ? `\n${err.stack
+              .split("\n")
+              .slice(1, 1 + EVAL.STACK_LINES)
+              .join("\n")}`
+        : "";
+    return `Error: ${err.message}${stack}`;
+}
+
+export function describeValue(val: unknown, maxSlice = MODULE.EXPORT_VALUE_SLICE): string {
+    if (val == null) return String(val);
+    const t = typeof val;
+    if (t === "function") {
+        const fn = val as Function;
+        return fn.name ? `fn:${fn.name}(${fn.length})` : `fn(${fn.length})`;
+    }
+    if (t !== "object") return `${t}:${String(val).slice(0, maxSlice)}`;
+    if (Array.isArray(val)) return `[${val.length}]`;
+    if (val instanceof Map) return `Map(${val.size})`;
+    if (val instanceof Set) return `Set(${val.size})`;
+    return `{${Object.keys(val as object).slice(0, MODULE.EXPORT_KEYS_PREVIEW)}}`;
+}
 
 export function serialize(value: unknown, depth: number = SERIALIZE.DEFAULT_DEPTH): unknown {
     if (value == null) return value;
@@ -18,8 +46,7 @@ export function serialize(value: unknown, depth: number = SERIALIZE.DEFAULT_DEPT
     if (t !== "object") return value;
     if (depth <= 0) return "[…]";
 
-    const seen = new WeakSet<object>();
-    return serializeInner(value as object, depth, seen);
+    return serializeInner(value as object, depth, new WeakSet());
 }
 
 function serializeInner(value: unknown, depth: number, seen: WeakSet<object>): unknown {
@@ -60,6 +87,68 @@ function serializeInner(value: unknown, depth: number, seen: WeakSet<object>): u
     }
 }
 
+export const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
+
+export const clampDefault = (value: number | undefined, defaultVal: number, max: number): number => Math.min(value ?? defaultVal, max);
+
+export function getPath(obj: unknown, path: string): unknown {
+    let current = obj;
+    for (const p of path.split(".")) {
+        if (current == null || typeof current !== "object") return undefined;
+        current = (current as Record<string, unknown>)[p];
+    }
+    return current;
+}
+
+export function parseRegexPattern(pattern: string): { regex: RegExp | null; literal: string } {
+    const rm = pattern.match(/^\/(.+)\/([gimsuy]*)$/);
+    if (rm) {
+        try {
+            return { regex: new RegExp(rm[1], rm[2].includes("g") ? rm[2] : `${rm[2]}g`), literal: pattern };
+        } catch {
+            return { regex: null, literal: pattern };
+        }
+    }
+    return { regex: null, literal: pattern };
+}
+
+export function countCaptureGroups(matchStr: string): number {
+    let count = 0;
+    for (let i = 0; i < matchStr.length; i++) {
+        if (matchStr[i] === "\\" && i + 1 < matchStr.length) {
+            i++;
+            continue;
+        }
+        if (matchStr[i] === "(") {
+            if (matchStr[i + 1] !== "?") {
+                count++;
+            } else if (matchStr[i + 2] === "<" && matchStr[i + 3] !== "!" && matchStr[i + 3] !== "=") {
+                count++;
+            }
+        }
+    }
+    return count;
+}
+
+export const re = {
+    i18nKey: () => /\w\("([a-z][a-z0-9]*(?:[-.][a-z0-9]+)+)","([^"]+)"\)/g,
+    displayName: () => /displayName="([^"]+)"/g,
+    dataTestId: () => /"data-testid":"([^"]+)"/g,
+    stringLiteral: () => /"([^"\\]{6,80})"/g,
+    templateLiteral: () => /`([^`\\]{6,80})`/g,
+    exportBlock: () => /\.s\(\[([^\]]*)\]/g,
+    exportEntry: () => /\["([A-Z][\w]+)",\(\)=>/g,
+    exportInner: () => /"([^"]+)"/g,
+    propAccess: (minLen = 4) => new RegExp(`\\.([a-zA-Z_$][\\w$]{${minLen},})[=(]`, "g"),
+    i18nNamespace: () => /useTranslation\)\("([a-z]+)"\)/g,
+    featureFlag: () => /"((?:ENABLE|DISABLE|ALLOW|SHOW|HIDE|IS|HAS)_[A-Z][A-Z0-9_]+)"/g,
+    jsxComponent: () => /jsx\)\(\w+\.(\w{3,}),/g,
+    turbopackImport: () => /\.[irAR]\((\d+)\)/g,
+    turbopackSyncImport: () => /\.[irR]\((\d+)\)/g,
+    turbopackAsyncImport: () => /\.A\((\d+)\)/g,
+    turbopackExportDef: () => /\.s\(\[([^\]]*)\](?:,(\d+))?\)/g,
+};
+
 let factorySourceCache: Map<number, string> | null = null;
 let factorySourceCacheGen = 0;
 
@@ -75,8 +164,7 @@ export function getFactorySourceCache(): Map<number, string> {
 }
 
 export function getAllFactorySources(): string[] {
-    const cache = getFactorySourceCache();
-    return [...cache.values()];
+    return [...getFactorySourceCache().values()];
 }
 
 export function countInSources(sources: string[], text: string, max: number): number {
@@ -139,39 +227,127 @@ export function isModulePatched(id: number): boolean {
     return patchStats.patchedModules.has(id);
 }
 
-export function countCaptureGroups(matchStr: string): number {
-    let count = 0;
-    for (let i = 0; i < matchStr.length; i++) {
-        if (matchStr[i] === "\\" && i + 1 < matchStr.length) {
-            i++;
-            continue;
-        }
-        if (matchStr[i] === "(" && matchStr[i + 1] !== "?") count++;
-    }
-    return count;
+export function attachPatchInfo(result: Record<string, unknown>, moduleId: number): void {
+    const info = getPatchInfo(moduleId);
+    if (info) result.patchedBy = info;
 }
 
-export function parseRegexPattern(pattern: string): { regex: RegExp | null; literal: string } {
-    const rm = pattern.match(/^\/(.+)\/([gimsuy]*)$/);
-    if (rm) {
-        try {
-            return { regex: new RegExp(rm[1], rm[2].includes("g") ? rm[2] : `${rm[2]}g`), literal: pattern };
-        } catch {
-            return { regex: null, literal: pattern };
+export function extractI18nKeys(ctx: string): Array<{ key: string; default: string }> {
+    const keys: Array<{ key: string; default: string }> = [];
+    const seen = new Set<string>();
+    const pattern = re.i18nKey();
+    let m;
+    while ((m = pattern.exec(ctx)) !== null) {
+        if (!seen.has(m[1])) {
+            seen.add(m[1]);
+            keys.push({ key: m[1], default: m[2] });
         }
     }
-    return { regex: null, literal: pattern };
+    return keys;
 }
 
-export function getPath(obj: unknown, path: string): unknown {
-    let current = obj;
-    for (const p of path.split(".")) {
-        if (current == null || typeof current !== "object") return undefined;
-        current = (current as Record<string, unknown>)[p];
+const ANCHOR_TYPE_ORDER = ["i18n", "i18n-ns", "flag", "displayName", "export", "testid", "string", "template", "jsx", "prop"] as const;
+
+function sortAnchors<T extends { unique: boolean; type: string }>(items: T[]): T[] {
+    items.sort((a, b) => {
+        if (a.unique !== b.unique) return a.unique ? -1 : 1;
+        return ANCHOR_TYPE_ORDER.indexOf(a.type as (typeof ANCHOR_TYPE_ORDER)[number]) - ANCHOR_TYPE_ORDER.indexOf(b.type as (typeof ANCHOR_TYPE_ORDER)[number]);
+    });
+    return items;
+}
+
+interface AnchorCollectorOpts {
+    minLen?: number;
+    propMinLen?: number;
+    includeTemplates?: boolean;
+    includeI18nNamespace?: boolean;
+    includeFlags?: boolean;
+    includeJsx?: boolean;
+}
+
+function collectRawAnchors(
+    src: string,
+    opts: AnchorCollectorOpts = {},
+): Array<{ text: string; type: string; at: number }> {
+    const { minLen = 4, propMinLen = 4, includeTemplates = false, includeI18nNamespace = false, includeFlags = false, includeJsx = false } = opts;
+    const seen = new Set<string>();
+    const raw: Array<{ text: string; type: string; at: number }> = [];
+
+    const collect = (text: string, type: string, at: number) => {
+        if (text.length < minLen || seen.has(text)) return;
+        seen.add(text);
+        raw.push({ text, type, at });
+    };
+
+    let m;
+    const i18nRe = re.i18nKey();
+    while ((m = i18nRe.exec(src)) !== null) collect(`"${m[1]}","${m[2]}"`, "i18n", m.index);
+
+    if (includeI18nNamespace) {
+        const nsRe = re.i18nNamespace();
+        while ((m = nsRe.exec(src)) !== null) collect(`useTranslation)("${m[1]}")`, "i18n-ns", m.index);
     }
-    return current;
+
+    if (includeFlags) {
+        const flagRe = re.featureFlag();
+        while ((m = flagRe.exec(src)) !== null) collect(`"${m[1]}"`, "flag", m.index);
+    }
+
+    const dnRe = re.displayName();
+    while ((m = dnRe.exec(src)) !== null) collect(`displayName="${m[1]}"`, "displayName", m.index);
+
+    const exportRe = re.exportBlock();
+    while ((m = exportRe.exec(src)) !== null) {
+        const innerRe = re.exportInner();
+        let nm;
+        while ((nm = innerRe.exec(m[1])) !== null) collect(`"${nm[1]}",()=>`, "export", m.index);
+    }
+
+    const testIdRe = re.dataTestId();
+    while ((m = testIdRe.exec(src)) !== null) collect(`"data-testid":"${m[1]}"`, "testid", m.index);
+
+    const strRe = re.stringLiteral();
+    while ((m = strRe.exec(src)) !== null) {
+        if (!seen.has(`"${m[1]}"`)) collect(m[1], "string", m.index);
+    }
+
+    if (includeTemplates) {
+        const tplRe = re.templateLiteral();
+        while ((m = tplRe.exec(src)) !== null) collect(m[1], "template", m.index);
+    }
+
+    if (includeJsx) {
+        const jsxRe = re.jsxComponent();
+        while ((m = jsxRe.exec(src)) !== null) collect(m[1], "jsx", m.index);
+    }
+
+    const propRe = re.propAccess(propMinLen);
+    while ((m = propRe.exec(src)) !== null) collect(m[1], "prop", m.index);
+
+    return raw;
 }
 
-export function clamp(value: number, min: number, max: number): number {
-    return Math.min(Math.max(value, min), max);
+export function extractSuggestAnchors(src: string, allSources: string[], maxCandidates: number): SuggestCandidate[] {
+    const raw = collectRawAnchors(src, { minLen: MODULE.SUGGEST_MIN_LEN, propMinLen: 5, includeTemplates: true });
+    const capped = raw.slice(0, maxCandidates * 3);
+    const candidates: SuggestCandidate[] = [];
+    let uniqueCount = 0;
+    for (const { text, type } of capped) {
+        if (uniqueCount >= maxCandidates) break;
+        const count = countInSources(allSources, text, 3);
+        const unique = count === 1;
+        if (unique) uniqueCount++;
+        candidates.push({ text, type, unique, count });
+    }
+    return sortAnchors(candidates).slice(0, maxCandidates);
+}
+
+export function extractContextAnchors(ctx: string, allSources: string[], maxAnchors: number): Anchor[] {
+    const raw = collectRawAnchors(ctx, { minLen: 4, propMinLen: 4, includeI18nNamespace: true, includeFlags: true, includeJsx: true });
+    const anchors: Anchor[] = [];
+    for (const { text, type, at } of raw) {
+        const globalCount = countInSources(allSources, text, 3);
+        anchors.push({ text, type, at, unique: globalCount === 1 });
+    }
+    return sortAnchors(anchors).slice(0, maxAnchors);
 }
