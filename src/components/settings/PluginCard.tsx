@@ -32,6 +32,7 @@ export default function PluginCard({ name, onSettings, onReload }: PluginCardPro
     const plugin = plugins[name];
     const forceUpdate = useForceUpdater();
     const enabled = isPluginEnabled(name);
+    const crashed = enabled && !plugin.started && !plugin.required;
     const hasPatches = !!plugin.patches?.length;
 
     const handleToggle = () => {
@@ -43,10 +44,20 @@ export default function PluginCard({ name, onSettings, onReload }: PluginCardPro
     };
 
     return (
-        <div className={classes(cl("root"), plugin.required && cl("required"))}>
+        <div className={classes(cl("root"), plugin.required && cl("required"), crashed && cl("crashed"))}>
             <div className={cl("body")}>
                 <span className={cl("name")}>
                     {name}
+                    {crashed && (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <span className={cl("crashed-icon")}>
+                                    <TriangleAlert />
+                                </span>
+                            </TooltipTrigger>
+                            <TooltipContent>This plugin failed to start</TooltipContent>
+                        </Tooltip>
+                    )}
                     {plugin.required && (
                         <Tooltip>
                             <TooltipTrigger asChild>

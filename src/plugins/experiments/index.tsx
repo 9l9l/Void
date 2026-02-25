@@ -6,14 +6,66 @@
 
 import "./styles.css";
 
-import { Button, Card, Flex, Input, Paragraph, SettingsDescription, SettingsRow, SettingsTitle, Switch, Text } from "@components";
+import { definePluginSettings } from "@api/Settings";
+import { Button, Card, Chip, Flex, Input, Paragraph, SettingsDescription, SettingsRow, SettingsTitle, Switch, Text } from "@components";
 import { ErrorBoundary } from "@components/ErrorBoundary";
+import type { FeatureStoreState } from "@grok-types";
 import { React, useCallback, useMemo, useState } from "@turbopack/common/react";
 import { FeatureStore } from "@turbopack/common/stores";
 import { classNameFactory } from "@utils/css";
-import definePlugin from "@utils/types";
+import { Logger } from "@utils/Logger";
+import definePlugin, { StartAt } from "@utils/types";
+
+const logger = new Logger("Experiments", "#a6d189");
 
 const cl = classNameFactory("void-experiments-");
+
+const NEW_FLAG_TTL = 24 * 60 * 60 * 1000;
+
+interface PrivateSettings {
+    knownFlags: Record<string, number>;
+}
+
+const settings = definePluginSettings({}).withPrivateSettings<PrivateSettings>();
+
+function getBooleanKeys(config: FeatureStoreState["config"]): string[] {
+    return Object.keys(config).filter(k => typeof config[k] === "boolean");
+}
+
+function syncKnownFlags(config: FeatureStoreState["config"]) {
+    const booleanKeys = getBooleanKeys(config);
+    const existing = settings.plain.knownFlags;
+    const firstRun = existing == null;
+    const known: Record<string, number> = existing ?? {};
+    const now = Date.now();
+    let changed = false;
+
+    for (const key of booleanKeys) {
+        if (!(key in known)) {
+            known[key] = firstRun ? 0 : now;
+            changed = true;
+        }
+    }
+
+    const currentSet = new Set(booleanKeys);
+    for (const key of Object.keys(known)) {
+        if (!currentSet.has(key)) {
+            delete known[key];
+            changed = true;
+        }
+    }
+
+    if (changed) {
+        settings.store.knownFlags = { ...known };
+        logger.info(`Synced known flags (${booleanKeys.length} total)`);
+    }
+}
+
+function isNewFlag(key: string): boolean {
+    const seen = settings.plain.knownFlags?.[key];
+    if (seen == null) return false;
+    return Date.now() - seen < NEW_FLAG_TTL;
+}
 
 function prettifyKey(key: string): string {
     return key
@@ -32,7 +84,7 @@ function prettifyKey(key: string): string {
         .replace(/\bId\b/g, "ID");
 }
 
-function ExperimentRow({ flagKey }: { flagKey: string }) {
+function ExperimentRow({ flagKey, isNew }: { flagKey: string; isNew: boolean }) {
     const config = FeatureStore.useFeatureStore(s => s.config[flagKey]);
     const override = FeatureStore.useFeatureStore(s => s.overrides[flagKey]);
 
@@ -52,8 +104,9 @@ function ExperimentRow({ flagKey }: { flagKey: string }) {
         <SettingsRow action={<Switch checked={checked} onCheckedChange={handleToggle} />}>
             <SettingsTitle>
                 {prettifyKey(flagKey)}
+                {isNew && <Chip className={cl("new-chip")}>NEW</Chip>}
                 {isOverridden && (
-                    <Text size="xs" color="muted" as="span" style={{ marginLeft: 6, color: "hsl(var(--fg-warning))" }}>
+                    <Text size="xs" as="span" className={cl("modified")}>
                         (modified)
                     </Text>
                 )}
@@ -68,13 +121,7 @@ function ExperimentsTab() {
     const config = FeatureStore.useFeatureStore(s => s.config);
     const overrides = FeatureStore.useFeatureStore(s => s.overrides);
 
-    const booleanKeys = useMemo(
-        () =>
-            Object.keys(config)
-                .filter(k => typeof config[k] === "boolean")
-                .sort(),
-        [config],
-    );
+    const booleanKeys = useMemo(() => getBooleanKeys(config).sort(), [config]);
 
     const filtered = useMemo(() => {
         const query = search.toLowerCase().trim();
@@ -84,13 +131,9 @@ function ExperimentsTab() {
 
     const overrideCount = Object.keys(overrides).length;
 
-    const handleSearch = useCallback((e: any) => {
-        setSearch(e.target.value);
-    }, []);
-
     return (
         <Flex flexDirection="column" gap="1rem">
-            <Flex flexDirection="column" gap="0" style={{ padding: "0 0.75rem" }}>
+            <Flex flexDirection="column" gap="0" className={cl("section")}>
                 <Text size="sm" weight="medium">
                     Experiments
                 </Text>
@@ -98,13 +141,13 @@ function ExperimentsTab() {
                     Toggle unreleased Grok features. These are experimental and may break things.
                 </Text>
             </Flex>
-            <Card variant="ghost" className={cl("warning")} style={{ margin: "0 0.75rem" }}>
-                <Text size="xs" style={{ color: "inherit", lineHeight: 1.5 }}>
+            <Card variant="ghost" className={cl("warning")}>
+                <Text size="xs" className={cl("warning-text")}>
                     Only enable flags you understand. Changing the wrong setting can break Grok or cause unexpected behavior.
                 </Text>
             </Card>
-            <Flex alignItems="center" gap="0.5rem" style={{ padding: "0 0.75rem" }}>
-                <Input placeholder={`Search ${booleanKeys.length} flags...`} value={search} onChange={handleSearch} style={{ flex: 1 }} />
+            <Flex alignItems="center" gap="0.5rem" className={cl("section")}>
+                <Input placeholder={`Search ${booleanKeys.length} flags...`} value={search} onChange={e => setSearch(e.target.value)} className="flex-1" />
                 {overrideCount > 0 && (
                     <Button variant="outline" size="sm" onClick={() => FeatureStore.useFeatureStore.getState().clearAllOverrides()}>
                         Clear {overrideCount} override{overrideCount !== 1 ? "s" : ""}
@@ -113,11 +156,11 @@ function ExperimentsTab() {
             </Flex>
             {filtered.map(key => (
                 <ErrorBoundary key={key} fallback={null}>
-                    <ExperimentRow flagKey={key} />
+                    <ExperimentRow flagKey={key} isNew={isNewFlag(key)} />
                 </ErrorBoundary>
             ))}
             {!filtered.length && (
-                <Paragraph color="muted" style={{ textAlign: "center", padding: "2rem" }}>
+                <Paragraph color="muted" className={cl("empty")}>
                     No flags matching "{search}"
                 </Paragraph>
             )}
@@ -131,6 +174,22 @@ export default definePlugin({
     name: "Experiments",
     description: "Unlock and toggle unreleased Grok features.",
     authors: ["Prism"],
+    settings,
+    startAt: StartAt.TurbopackReady,
+
+    start() {
+        const state = FeatureStore.useFeatureStore.getState();
+        if (state.status === "ready") {
+            syncKnownFlags(state.config);
+            return;
+        }
+
+        const unsub = FeatureStore.useFeatureStore.subscribe(current => {
+            if (current.status !== "ready") return;
+            unsub();
+            syncKnownFlags(current.config);
+        });
+    },
 
     patches: [
         {

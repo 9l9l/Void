@@ -1,7 +1,32 @@
+.void-experiments-section {
+    padding: 0 0.75rem;
+}
+
+.void-experiments-modified {
+    margin-left: 6px;
+    color: hsl(var(--fg-warning));
+}
+
+.void-experiments-new-chip {
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
 .void-experiments-warning {
+    margin: 0 0.75rem;
     padding: 0.625rem 0.75rem;
     border-radius: 0.375rem;
     background: rgb(249 188 96 / 10%);
     border-color: rgb(249 188 96 / 25%);
     color: hsl(var(--fg-warning));
+}
+
+.void-experiments-warning-text {
+    color: inherit;
+    line-height: 1.5;
+}
+
+.void-experiments-empty {
+    text-align: center;
+    padding: 2rem;
 }

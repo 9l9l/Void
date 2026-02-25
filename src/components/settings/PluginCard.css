@@ -98,3 +98,22 @@
 .void-plugin-card-required {
     opacity: 0.5;
 }
+
+.void-plugin-card-crashed {
+    opacity: 0.6;
+    border-color: hsl(var(--fg-danger) / 40%);
+}
+
+.void-plugin-card-crashed-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: hsl(var(--fg-danger));
+    flex-shrink: 0;
+    line-height: 0;
+}
+
+.void-plugin-card-crashed-icon svg {
+    width: 1em;
+    height: 1em;
+}
