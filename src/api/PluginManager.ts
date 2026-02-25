@@ -54,7 +54,7 @@ export function addPatch(newPatch: Omit<Patch, "plugin">, pluginName: string) {
     patches.push(patch);
 }
 
-function startDependenciesRecursive(plugin: Plugin): boolean {
+function startDependenciesRecursive(plugin: Plugin, visiting = new Set<string>()): boolean {
     if (!plugin.dependencies) return true;
 
     for (const depName of plugin.dependencies) {
@@ -66,10 +66,16 @@ function startDependenciesRecursive(plugin: Plugin): boolean {
 
         if (dep.started) continue;
 
+        if (visiting.has(depName)) {
+            logger.error(`Circular dependency detected: ${plugin.name} -> ${depName}`);
+            return false;
+        }
+
         dep.isDependency = true;
         Settings.plugins[depName] = { ...Settings.plugins[depName], enabled: true };
 
-        if (!startDependenciesRecursive(dep)) return false;
+        visiting.add(depName);
+        if (!startDependenciesRecursive(dep, visiting)) return false;
         if (!startPlugin(dep)) return false;
     }
 

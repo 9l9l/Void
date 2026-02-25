@@ -81,16 +81,18 @@ export function getModuleCache(): Map<number, any> {
 export function getRuntimeModuleCache(): Record<number, TurbopackModule> | null {
     return runtimeModuleCache;
 }
-let lazySynced = false;
+let lastSyncSize = 0;
 export function syncLazyModules(): void {
-    if (lazySynced || !runtimeModuleCache) return;
+    if (!runtimeModuleCache) return;
+    const currentSize = moduleCache.size;
+    if (currentSize === lastSyncSize) return;
     for (const id in runtimeModuleCache) {
         const mod = runtimeModuleCache[id];
         if (mod?.exports == null) continue;
         const numId = Number(id);
         if (!moduleCache.has(numId)) notifyModuleLoaded(mod.exports, numId);
     }
-    lazySynced = true;
+    lastSyncSize = moduleCache.size;
 }
 export function getRuntimeFactoryRegistry(): Map<number, ModuleFactory> | null {
     return runtimeFactoryRegistry;
@@ -185,7 +187,6 @@ function notifyModuleLoaded(exports: any, id: number) {
     if (exports == null) return;
     if (moduleCache.get(id) === exports) return;
     moduleCache.set(id, exports);
-    lazySynced = false;
 
     if (waitForSubscriptions.size) {
         for (const [filter, callback] of waitForSubscriptions) {
@@ -447,9 +448,11 @@ function captureFactoryRegistry(): Map<number, ModuleFactory> | null {
         return origMapSet.call(this, key, value);
     };
 
-    originalPush!(["void-factory-probe", FACTORY_PROBE_ID, () => {}]);
-
-    Map.prototype.set = origMapSet;
+    try {
+        originalPush!(["void-factory-probe", FACTORY_PROBE_ID, () => {}]);
+    } finally {
+        Map.prototype.set = origMapSet;
+    }
 
     (captured as Map<number, unknown> | null)?.delete(FACTORY_PROBE_ID);
     return captured as Map<number, ModuleFactory> | null;

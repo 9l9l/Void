@@ -6,6 +6,7 @@
 
 export function mergeDefaults<T extends object>(target: T, defaults: T): T {
     for (const key in defaults) {
+        if (key === "__proto__" || key === "constructor" || key === "prototype") continue;
         const value = target[key];
         if (isObject(value)) {
             mergeDefaults(value as Record<string, unknown>, defaults[key] as Record<string, unknown>);

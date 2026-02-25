@@ -5,7 +5,7 @@
  */
 
 import { initPluginManager, isPluginEnabled, plugins, registerPlugin, startAllPlugins, startPlugin } from "@api/PluginManager";
-import { _resolveReady, blacklistBadModules, getModuleCache, onCacheDiscovery, onModuleLoad, patchTurbopack, reportOrphanedPatches, rescanRuntimeModules } from "@turbopack/patchTurbopack";
+import { _resolveReady, blacklistBadModules, getModuleCache, onCacheDiscovery, onModuleLoad, patches, patchTurbopack, reportOrphanedPatches, rescanRuntimeModules } from "@turbopack/patchTurbopack";
 import { Logger } from "@utils/Logger";
 import { type Plugin, StartAt } from "@utils/types";
 
@@ -29,8 +29,26 @@ export { default as definePlugin, OptionType, StartAt } from "@utils/types";
 const logger = new Logger("TurbopackPatcher", "#8caaee");
 
 const SETTLE_MS = 300;
+const MIN_MODULES_BEFORE_SETTLE = 50;
 const FALLBACK_MS = 8000;
 const RETRY_TIMEOUT_MS = 15000;
+const ORPHAN_REPORT_DELAY_MS = 5000;
+
+function deferOrphanReport() {
+    const hasNonGlobal = patches.some(p => !p.all);
+    if (!hasNonGlobal) return;
+
+    const unsub = onModuleLoad(() => {
+        if (!patches.some(p => !p.all)) {
+            unsub();
+            clearTimeout(timeout);
+        }
+    });
+    const timeout = setTimeout(() => {
+        unsub();
+        reportOrphanedPatches();
+    }, ORPHAN_REPORT_DELAY_MS);
+}
 
 function retryFailedPlugins() {
     const getFailed = () =>
@@ -40,22 +58,34 @@ function retryFailedPlugins() {
 
     if (!getFailed().length) return;
 
-    const unsub = onModuleLoad(() => {
-        rescanRuntimeModules();
-        for (const p of getFailed()) startPlugin(p, true);
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
-        if (!getFailed().length) {
-            unsub();
-            clearTimeout(timeout);
-            logger.info("All previously failed plugins started after late module load");
-        }
-    });
+    const tryRetry = () => {
+        if (retryTimer) clearTimeout(retryTimer);
+        retryTimer = setTimeout(() => {
+            retryTimer = null;
+            rescanRuntimeModules();
+            for (const p of getFailed()) startPlugin(p, true);
+
+            if (!getFailed().length) {
+                unsub();
+                clearTimeout(timeout);
+                logger.info("All previously failed plugins started after late module load");
+            }
+        }, 200);
+    };
+
+    const unsub = onModuleLoad(tryRetry);
 
     const timeout = setTimeout(() => {
         unsub();
+        if (retryTimer) clearTimeout(retryTimer);
+        rescanRuntimeModules();
         const remaining = getFailed();
-        if (remaining.length) {
-            logger.warn(`${remaining.length} plugin(s) still failed after retry window: ${remaining.map(p => p.name).join(", ")}`);
+        for (const p of remaining) startPlugin(p, true);
+        const stillFailed = getFailed();
+        if (stillFailed.length) {
+            logger.warn(`${stillFailed.length} plugin(s) still failed after retry window: ${stillFailed.map(p => p.name).join(", ")}`);
         }
     }, RETRY_TIMEOUT_MS);
 }
@@ -76,15 +106,15 @@ function waitForModulesStable() {
         blacklistBadModules();
         _resolveReady();
         startAllPlugins(StartAt.TurbopackReady);
-        reportOrphanedPatches();
         logger.info(`${getModuleCache().size} modules loaded, ready`);
         retryFailedPlugins();
+        deferOrphanReport();
     };
 
     const bump = () => {
         if (fired) return;
         if (settleTimer) clearTimeout(settleTimer);
-        settleTimer = setTimeout(fire, SETTLE_MS);
+        if (getModuleCache().size >= MIN_MODULES_BEFORE_SETTLE) settleTimer = setTimeout(fire, SETTLE_MS);
     };
 
     const unsubLoad = onModuleLoad(bump);
