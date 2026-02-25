@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import { initPluginManager, registerPlugin, startAllPlugins } from "@api/PluginManager";
+import { initPluginManager, isPluginEnabled, plugins, registerPlugin, startAllPlugins, startPlugin } from "@api/PluginManager";
 import { _resolveReady, blacklistBadModules, getModuleCache, onCacheDiscovery, onModuleLoad, patchTurbopack, reportOrphanedPatches, rescanRuntimeModules } from "@turbopack/patchTurbopack";
 import { Logger } from "@utils/Logger";
 import { type Plugin, StartAt } from "@utils/types";
@@ -30,6 +30,35 @@ const logger = new Logger("TurbopackPatcher", "#8caaee");
 
 const SETTLE_MS = 300;
 const FALLBACK_MS = 8000;
+const RETRY_TIMEOUT_MS = 15000;
+
+function retryFailedPlugins() {
+    const getFailed = () =>
+        Object.values(plugins).filter(
+            p => !p.started && isPluginEnabled(p.name) && (p.startAt ?? StartAt.Init) === StartAt.TurbopackReady,
+        );
+
+    if (!getFailed().length) return;
+
+    const unsub = onModuleLoad(() => {
+        rescanRuntimeModules();
+        for (const p of getFailed()) startPlugin(p, true);
+
+        if (!getFailed().length) {
+            unsub();
+            clearTimeout(timeout);
+            logger.info("All previously failed plugins started after late module load");
+        }
+    });
+
+    const timeout = setTimeout(() => {
+        unsub();
+        const remaining = getFailed();
+        if (remaining.length) {
+            logger.warn(`${remaining.length} plugin(s) still failed after retry window: ${remaining.map(p => p.name).join(", ")}`);
+        }
+    }, RETRY_TIMEOUT_MS);
+}
 
 function waitForModulesStable() {
     let settleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -49,6 +78,7 @@ function waitForModulesStable() {
         startAllPlugins(StartAt.TurbopackReady);
         reportOrphanedPatches();
         logger.info(`${getModuleCache().size} modules loaded, ready`);
+        retryFailedPlugins();
     };
 
     const bump = () => {
