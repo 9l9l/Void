@@ -19,6 +19,7 @@ import {
     SelectItem,
     SelectTrigger,
     SelectValue,
+    Separator,
     Text,
 } from "@components";
 import { React, useCallback, useMemo, useState } from "@turbopack/common/react";
@@ -142,11 +143,14 @@ export default function PluginsTab() {
                 </Grid>
             )}
             {filteredRequired.length > 0 && (
-                <Grid columns="repeat(2, 1fr)" style={{ padding: "0 0.75rem" }}>
-                    {filteredRequired.map(n => (
-                        <PluginCard key={n} name={n} onSettings={setDialogName} onReload={onReload} />
-                    ))}
-                </Grid>
+                <>
+                    <Separator style={{ margin: "0 0.75rem", width: "auto" }} />
+                    <Grid columns="repeat(2, 1fr)" style={{ padding: "0 0.75rem" }}>
+                        {filteredRequired.map(n => (
+                            <PluginCard key={n} name={n} onSettings={setDialogName} onReload={onReload} />
+                        ))}
+                    </Grid>
+                </>
             )}
             {!hasResults && (
                 <Paragraph color="secondary" style={{ textAlign: "center", padding: "2rem 0" }}>

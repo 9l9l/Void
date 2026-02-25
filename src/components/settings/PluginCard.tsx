@@ -8,30 +8,21 @@ import { dispatch } from "@api/Events";
 import { isPluginEnabled, plugins, startPlugin, stopPlugin } from "@api/PluginManager";
 import { Settings } from "@api/Settings";
 import { Button, Switch, Tooltip, TooltipContent, TooltipTrigger } from "@components";
+import { CircleAlertIcon } from "@components/icons";
 import { React } from "@turbopack/common/react";
 import { findExportedComponentLazy } from "@turbopack/turbopack";
 import { classes, classNameFactory } from "@utils/css";
 import { useForceUpdater } from "@utils/react";
 
+import { PluginBadges } from "./pluginBadges";
 import { hasVisibleSettings } from "./utils";
 
 const EllipsisVertical = findExportedComponentLazy("EllipsisVertical");
-const GhostFilledIcon = findExportedComponentLazy("GhostFilledIcon");
 const TriangleAlert = findExportedComponentLazy("TriangleAlert");
 
 import "./PluginCard.css";
 
 const cl = classNameFactory("void-plugin-card-");
-
-const ChromiumIcon = () => (
-    <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M10.88 21.94 15.46 14" />
-        <path d="M21.17 8H12" />
-        <path d="M3.95 6.06 8.54 14" />
-        <circle cx="12" cy="12" r="10" />
-        <circle cx="12" cy="12" r="4" />
-    </svg>
-);
 
 interface PluginCardProps {
     name: string;
@@ -74,32 +65,13 @@ export default function PluginCard({ name, onSettings, onReload }: PluginCardPro
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <span className={cl("required-icon")}>
-                                    <TriangleAlert />
+                                    <CircleAlertIcon />
                                 </span>
                             </TooltipTrigger>
                             <TooltipContent>This plugin is required for Void to work</TooltipContent>
                         </Tooltip>
                     )}
-                    {plugin.dev && (
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <span className={cl("dev-icon")}>
-                                    <GhostFilledIcon />
-                                </span>
-                            </TooltipTrigger>
-                            <TooltipContent>Dev Only</TooltipContent>
-                        </Tooltip>
-                    )}
-                    {plugin.chrome && (
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <span className={cl("chrome-icon")}>
-                                    <ChromiumIcon />
-                                </span>
-                            </TooltipTrigger>
-                            <TooltipContent>Chromium Only</TooltipContent>
-                        </Tooltip>
-                    )}
+                    <PluginBadges plugin={plugin} className={cl("badge")} />
                 </span>
                 {plugin.description && <div className={cl("desc")}>{plugin.description}</div>}
                 <div className={cl("controls")}>

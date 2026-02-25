@@ -6,6 +6,7 @@
 
 import type { ChatBarButtonRenderProps } from "@api/ChatBarButtons";
 import { ChatBarButton, Text } from "@components";
+import { GaugeIcon } from "@components/icons";
 import type { EffortRateLimits, RateLimitResponse } from "@grok-types";
 import type { ModelId, ModelMode, RequestKind } from "@grok-types/enums";
 import { React, useEffect, useRef, useState } from "@turbopack/common/react";
@@ -20,12 +21,6 @@ import definePlugin from "@utils/types";
 const logger = new Logger("RateLimitDisplay", "#ef9f76");
 
 const ClockIcon = findExportedComponentLazy("ClockIcon");
-
-const GaugeIcon = ({ size = 18, className }: { size?: number; className?: string }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <path d="m12 14 4-4" /><path d="M3.34 19a10 10 0 1 1 17.32 0" />
-    </svg>
-);
 
 interface Usage {
     remaining: number;

@@ -30,13 +30,26 @@ const USERSCRIPT_HEADER = `// ==UserScript==
 
 const pluginDir = resolve("src/plugins");
 
+interface FolderConvention {
+    suffix: string;
+    skip?: boolean;
+    mutations(varName: string): string;
+}
+
+const FOLDER_CONVENTIONS: FolderConvention[] = [
+    { suffix: ".dev", skip: !isDev, mutations: v => `${v}.dev=true;` },
+    { suffix: ".chrome", mutations: v => `${v}.chrome=true;${v}.hidden=!window.chrome;` },
+];
+
 function scanPluginDir(baseDir: string, imports: string[], exports: string[], mutations: string[], counter: { i: number }) {
     if (!existsSync(baseDir)) return;
     const entries = readdirSync(baseDir, { withFileTypes: true });
 
     for (const entry of entries) {
         if (!entry.isDirectory() || entry.name.startsWith("_") || entry.name.startsWith(".")) continue;
-        if (!isDev && entry.name.endsWith(".dev")) continue;
+
+        const convention = FOLDER_CONVENTIONS.find(c => entry.name.endsWith(c.suffix));
+        if (convention?.skip) continue;
 
         const pluginDir = `${baseDir}/${entry.name}`;
         if (!existsSync(`${pluginDir}/index.ts`) && !existsSync(`${pluginDir}/index.tsx`)) continue;
@@ -45,9 +58,7 @@ function scanPluginDir(baseDir: string, imports: string[], exports: string[], mu
         imports.push(`import ${varName} from "${resolve(baseDir, entry.name).replaceAll("\\", "/")}";`);
         exports.push(`[${varName}.name]: ${varName}`);
 
-        if (entry.name.endsWith(".chrome")) {
-            mutations.push(`${varName}.chrome=true;${varName}.hidden=!window.chrome;`);
-        }
+        if (convention) mutations.push(convention.mutations(varName));
     }
 }
 
