@@ -10,6 +10,7 @@ import type { GrokConversation, GrokResponse } from "@grok-types";
 import { React } from "@turbopack/common/react";
 import { ConversationStore, ResponseStore } from "@turbopack/common/stores";
 import { findExportedComponentLazy } from "@turbopack/turbopack";
+import { Devs } from "@utils/constants";
 import definePlugin from "@utils/types";
 
 const DownloadIcon = findExportedComponentLazy("DownloadIcon");
@@ -74,7 +75,7 @@ function ExportItem({ conversationId }: ContextMenuLocationMap["conversation"]) 
 export default definePlugin({
     name: "ExportChat",
     description: "Adds an Export option to the conversation context menu.",
-    authors: ["Prism"],
+    authors: [Devs.Prism],
 
     contextMenuItems: {
         conversation: {

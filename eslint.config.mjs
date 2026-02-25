@@ -143,5 +143,12 @@ export default defineConfig(
             "simple-import-sort/exports": "error",
             "unused-imports/no-unused-imports": "error"
         }
+    },
+    {
+        files: ["src/plugins/oneko/**"],
+        rules: {
+            "simple-header/header": "off",
+            "no-eval": "off"
+        }
     }
 );

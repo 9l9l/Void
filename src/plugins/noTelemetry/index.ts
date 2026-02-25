@@ -4,12 +4,13 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import { Devs } from "@utils/constants";
 import definePlugin from "@utils/types";
 
 export default definePlugin({
     name: "NoTelemetry",
     description: "Blocks analytics, metrics, and error reporting sent to Grok servers.",
-    authors: ["Prism"],
+    authors: [Devs.Prism],
     required: true,
 
     patches: [

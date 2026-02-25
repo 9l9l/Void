@@ -10,6 +10,7 @@ import type { SessionTierId, SubscriptionTier } from "@grok-types/enums";
 import { SidebarComponents } from "@turbopack/common/components";
 import { React } from "@turbopack/common/react";
 import { SessionStore, SubscriptionsStore } from "@turbopack/common/stores";
+import { Devs } from "@utils/constants";
 import definePlugin from "@utils/types";
 
 const TIER_DISPLAY: Record<SubscriptionTier, string> = {
@@ -54,7 +55,7 @@ function UserInfo() {
 export default definePlugin({
     name: "BetterSidebar",
     description: "Shows your name and plan in the sidebar footer.",
-    authors: ["Prism"],
+    authors: [Devs.Prism],
 
     renderUserInfo() {
         return <UserInfo />;

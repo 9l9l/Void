@@ -5,6 +5,7 @@
  */
 
 import { definePluginSettings } from "@api/Settings";
+import { Devs } from "@utils/constants";
 import { Logger } from "@utils/Logger";
 import definePlugin, { OptionType } from "@utils/types";
 
@@ -185,7 +186,7 @@ function disconnect() {
 export default definePlugin({
     name: "MCP",
     description: "Connects AI coding agents to Grok via WebSocket for live inspection.",
-    authors: ["Prism"],
+    authors: [Devs.Prism],
     dev: true,
     settings,
     start() {

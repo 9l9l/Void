@@ -12,6 +12,7 @@ import { ErrorBoundary } from "@components/ErrorBoundary";
 import type { FeatureStoreState } from "@grok-types";
 import { React, useCallback, useMemo, useState } from "@turbopack/common/react";
 import { FeatureStore } from "@turbopack/common/stores";
+import { Devs } from "@utils/constants";
 import { classNameFactory } from "@utils/css";
 import { Logger } from "@utils/Logger";
 import definePlugin, { StartAt } from "@utils/types";
@@ -173,7 +174,7 @@ export const Tab = ErrorBoundary.wrap(ExperimentsTab);
 export default definePlugin({
     name: "Experiments",
     description: "Unlock and toggle unreleased Grok features.",
-    authors: ["Prism"],
+    authors: [Devs.Prism],
     settings,
     startAt: StartAt.TurbopackReady,
 

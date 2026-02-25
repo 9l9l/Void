@@ -4,12 +4,13 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import { Devs } from "@utils/constants";
 import definePlugin from "@utils/types";
 
 export default definePlugin({
     name: "ConsoleJanitor",
     description: "Cleans up the browser developer console.",
-    authors: ["Prism"],
+    authors: [Devs.Prism],
 
     patches: [
         {

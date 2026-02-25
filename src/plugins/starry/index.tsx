@@ -6,6 +6,7 @@
 
 import { React } from "@turbopack/common/react";
 import { findExportedComponentLazy } from "@turbopack/turbopack";
+import { Devs } from "@utils/constants";
 import definePlugin from "@utils/types";
 
 const StarsBackground = findExportedComponentLazy("StarsBackground");
@@ -13,7 +14,7 @@ const StarsBackground = findExportedComponentLazy("StarsBackground");
 export default definePlugin({
     name: "Starry",
     description: "Adds an always-visible starry background animation.",
-    authors: ["Prism"],
+    authors: [Devs.Prism],
 
     _stars() {
         return <StarsBackground key="void-starry" className="fixed inset-0 z-0 pointer-events-none" />;

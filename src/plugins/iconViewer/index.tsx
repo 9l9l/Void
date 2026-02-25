@@ -10,6 +10,7 @@ import { ErrorBoundary, Flex, Grid, Input, Paragraph, Text } from "@components";
 import { React, useMemo, useState } from "@turbopack/common/react";
 import { ClipboardUtils } from "@turbopack/common/utils";
 import { getModuleCache, isBlacklisted } from "@turbopack/patchTurbopack";
+import { Devs } from "@utils/constants";
 import { classNameFactory } from "@utils/css";
 import { useIntersection, useModuleLoadEffect } from "@utils/react";
 import definePlugin from "@utils/types";
@@ -142,5 +143,5 @@ export const Tab = ErrorBoundary.wrap(IconsTab);
 export default definePlugin({
     name: "IconViewer",
     description: "Browse and search all Grok icons.",
-    authors: ["Prism"],
+    authors: [Devs.Prism],
 });

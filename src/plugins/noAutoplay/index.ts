@@ -5,6 +5,7 @@
  */
 
 import { definePluginSettings } from "@api/Settings";
+import { Devs } from "@utils/constants";
 import definePlugin, { OptionType } from "@utils/types";
 
 const settings = definePluginSettings({
@@ -24,7 +25,7 @@ const onMouseLeave = (e: { target: HTMLVideoElement }) => {
 export default definePlugin({
     name: "NoAutoplay",
     description: "Stops video thumbnails from autoplaying on the Imagine page.",
-    authors: ["Prism"],
+    authors: [Devs.Prism],
     settings,
 
     _hoverProps() {

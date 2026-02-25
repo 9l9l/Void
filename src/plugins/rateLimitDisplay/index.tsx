@@ -13,6 +13,7 @@ import { React, useEffect, useRef, useState } from "@turbopack/common/react";
 import { ChatPageStore, ModelsStore } from "@turbopack/common/stores";
 import { ApiClients, ReasoningModeUtils } from "@turbopack/common/utils";
 import { findExportedComponentLazy } from "@turbopack/turbopack";
+import { Devs } from "@utils/constants";
 import { Logger } from "@utils/Logger";
 import { formatCountdown, formatDuration } from "@utils/misc";
 import definePlugin from "@utils/types";
@@ -207,6 +208,6 @@ function RateLimitIndicator({ iconOnly }: ChatBarButtonRenderProps) {
 export default definePlugin({
     name: "RateLimitDisplay",
     description: "Shows rate limit usage next to the chat input.",
-    authors: ["Prism"],
+    authors: [Devs.Prism],
     chatBarButton: { render: RateLimitIndicator },
 });
