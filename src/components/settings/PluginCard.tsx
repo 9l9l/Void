@@ -38,7 +38,7 @@ export default function PluginCard({ name, onSettings, onReload }: PluginCardPro
 
     const handleToggle = () => {
         Settings.plugins[name] = { ...Settings.plugins[name], enabled: !enabled };
-        if (!enabled) startPlugin(plugin);
+        if (!enabled) startPlugin(plugin, true);
         else stopPlugin(plugin);
         forceUpdate();
         dispatch("pluginToggle");

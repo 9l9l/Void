@@ -92,7 +92,7 @@ function resolveStoreHook(storeName: string): { subscribe: Function } | null {
     return null;
 }
 
-export function startPlugin(plugin: Plugin): boolean {
+export function startPlugin(plugin: Plugin, silent = false): boolean {
     if (plugin.started) return true;
 
     try {
@@ -103,7 +103,7 @@ export function startPlugin(plugin: Plugin): boolean {
 
         if (plugin.managedStyle) enableStyle(plugin.managedStyle);
 
-        if (!plugin.hidden) logger.info(`Starting plugin ${plugin.name}`);
+        if (!plugin.hidden && !silent) logger.info(`Starting plugin ${plugin.name}`);
         plugin.start?.();
 
         if (plugin.chatBarButton) {
