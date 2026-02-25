@@ -35,7 +35,6 @@ export function ChatBarButton({ icon, children, tooltip, onClick, style, iconOnl
 
     React.useEffect(() => {
         if (showText) setMounted(true);
-        return () => {};
     }, [showText]);
 
     const button = (

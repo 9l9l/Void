@@ -7,12 +7,12 @@
 import "./styles.css";
 
 import { ErrorBoundary, Flex, Grid, Input, Paragraph, Text } from "@components";
-import { React, useMemo, useState } from "@turbopack/common/react";
+import { React, useCallback, useState } from "@turbopack/common/react";
 import { ClipboardUtils } from "@turbopack/common/utils";
 import { getModuleCache, isBlacklisted } from "@turbopack/patchTurbopack";
 import { Devs } from "@utils/constants";
 import { classNameFactory } from "@utils/css";
-import { useIntersection, useModuleLoadEffect } from "@utils/react";
+import { useFiltered, useIntersection, useModuleLoadEffect } from "@utils/react";
 import definePlugin from "@utils/types";
 import type { ComponentType } from "react";
 
@@ -104,12 +104,8 @@ function IconsTab() {
     useModuleLoadEffect();
 
     const allIcons = collectIcons();
-
-    const filtered = useMemo(() => {
-        if (!search) return allIcons;
-        const q = search.toLowerCase();
-        return allIcons.filter(e => e.name.toLowerCase().includes(q));
-    }, [search, allIcons]);
+    const getIconName = useCallback((e: IconEntry) => e.name, []);
+    const filtered = useFiltered(allIcons, search, getIconName);
 
     return (
         <Flex flexDirection="column" gap="1rem">

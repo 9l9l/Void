@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import { useEffect, useReducer } from "@turbopack/common/react";
 import { Logger } from "@utils/Logger";
 import { mergeDefaults } from "@utils/misc";
 import { SettingsStore as SettingsStoreClass } from "@utils/SettingsStore";
@@ -104,28 +103,6 @@ export function definePluginSettings<Def extends SettingsDefinition, Checks exte
                 const setting = def[key];
                 return setting ? resolveDefault(setting) : undefined;
             });
-        },
-        use(keys?: string[]) {
-            const [, rerender] = useReducer((x: number) => x + 1, 0);
-            const prefix = `plugins.${_pluginName}`;
-
-            useEffect(() => {
-                if (keys?.length) {
-                    const listeners = keys.map(key => {
-                        const path = `${prefix}.${key}`;
-                        SettingsStore.addChangeListener(path, rerender);
-                        return () => SettingsStore.removeChangeListener(path, rerender);
-                    });
-                    return () => {
-                        for (const unsub of listeners) unsub();
-                    };
-                }
-
-                SettingsStore.addPrefixChangeListener(prefix, rerender);
-                return () => SettingsStore.removePrefixChangeListener(prefix, rerender);
-            }, []);
-
-            return definedSettings.store;
         },
         withPrivateSettings<T extends object>() {
             return this as DefinedSettings<Def, Checks, T>;

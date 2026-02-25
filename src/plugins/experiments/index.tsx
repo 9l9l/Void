@@ -15,6 +15,7 @@ import { FeatureStore } from "@turbopack/common/stores";
 import { Devs } from "@utils/constants";
 import { classNameFactory } from "@utils/css";
 import { Logger } from "@utils/Logger";
+import { useFiltered } from "@utils/react";
 import definePlugin, { StartAt } from "@utils/types";
 
 const logger = new Logger("Experiments", "#a6d189");
@@ -123,12 +124,8 @@ function ExperimentsTab() {
     const overrides = FeatureStore.useFeatureStore(s => s.overrides);
 
     const booleanKeys = useMemo(() => getBooleanKeys(config).sort(), [config]);
-
-    const filtered = useMemo(() => {
-        const query = search.toLowerCase().trim();
-        if (!query) return booleanKeys;
-        return booleanKeys.filter(k => k.toLowerCase().includes(query) || prettifyKey(k).toLowerCase().includes(query));
-    }, [search, booleanKeys]);
+    const getFlagSearchText = useCallback((k: string) => `${k} ${prettifyKey(k)}`, []);
+    const filtered = useFiltered(booleanKeys, search, getFlagSearchText);
 
     const overrideCount = Object.keys(overrides).length;
 

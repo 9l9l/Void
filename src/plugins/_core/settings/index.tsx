@@ -6,7 +6,6 @@
 
 import "./styles.css";
 
-import { subscribe } from "@api/Events";
 import { isPluginEnabled } from "@api/PluginManager";
 import { definePluginSettings } from "@api/Settings";
 import { Flex, Text } from "@components";
@@ -15,10 +14,10 @@ import { UnplugIcon } from "@components/icons/UnplugIcon";
 import { CustomCSSTab, loadSavedCSS, PluginsTab } from "@components/settings/tabs";
 import { Tab as ExperimentsTab } from "@plugins/experiments";
 import { Tab as IconsTab } from "@plugins/iconViewer";
-import { createElement, Fragment, React, useEffect } from "@turbopack/common/react";
+import { createElement, Fragment, React } from "@turbopack/common/react";
 import { findExportedComponentLazy } from "@turbopack/turbopack";
 import { classes, classNameFactory, registerStyle } from "@utils/css";
-import { useForceUpdater } from "@utils/react";
+import { useEventSubscription, useForceUpdater } from "@utils/react";
 import definePlugin, { OptionType } from "@utils/types";
 import type { ComponentType, ReactNode } from "react";
 
@@ -106,8 +105,7 @@ interface WrapperProps {
 
 function VoidTabs({ jsx, TabButton }: { jsx: typeof createElement; TabButton: ComponentType<TabButtonProps> }) {
     const forceUpdate = useForceUpdater();
-
-    useEffect(() => subscribe("pluginToggle", forceUpdate), [forceUpdate]);
+    useEventSubscription("pluginToggle", forceUpdate);
 
     return (
         <Fragment>
@@ -118,8 +116,7 @@ function VoidTabs({ jsx, TabButton }: { jsx: typeof createElement; TabButton: Co
 
 function VoidPanels({ jsx, activeTab, Wrapper }: { jsx: typeof createElement; activeTab: string; Wrapper: ComponentType<WrapperProps> }) {
     const forceUpdate = useForceUpdater();
-
-    useEffect(() => subscribe("pluginToggle", forceUpdate), [forceUpdate]);
+    useEventSubscription("pluginToggle", forceUpdate);
 
     const tab = getVisibleTabs().find(t => t.id === activeTab);
     if (!tab) return null;

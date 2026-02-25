@@ -4,24 +4,21 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import { type React, useEffect, useReducer, useRef, useState } from "@turbopack/common/react";
+import { subscribe } from "@api/Events";
+import { type React, useEffect, useMemo, useReducer, useRef, useState } from "@turbopack/common/react";
 import { onModuleLoad } from "@turbopack/patchTurbopack";
 import { debounce } from "@utils/misc";
 
 export const NoopComponent = () => null;
 
-export function useForceUpdater(): () => void;
-export function useForceUpdater(withDep: true): [number, () => void];
-export function useForceUpdater(withDep?: true) {
-    const r = useReducer((x: number) => x + 1, 0);
-    return withDep ? r : r[1];
+export function useForceUpdater() {
+    return useReducer((x: number) => x + 1, 0)[1];
 }
 
 export function usePrevious<T>(value: T): T | undefined {
     const ref = useRef<T | undefined>(undefined);
     useEffect(() => {
         ref.current = value;
-        return () => {};
     });
     return ref.current;
 }
@@ -82,6 +79,18 @@ export function useModuleLoadEffect(ms = 500) {
             invalidate.cancel();
         };
     }, [update, ms]);
+}
+
+export function useEventSubscription(event: string, handler: () => void) {
+    useEffect(() => subscribe(event, handler), [event, handler]);
+}
+
+export function useFiltered<T>(list: T[], search: string, getKey: (item: T) => string): T[] {
+    return useMemo(() => {
+        const q = search.toLowerCase().trim();
+        if (!q) return list;
+        return list.filter(item => getKey(item).toLowerCase().includes(q));
+    }, [list, search, getKey]);
 }
 
 interface AwaiterOpts<T> {

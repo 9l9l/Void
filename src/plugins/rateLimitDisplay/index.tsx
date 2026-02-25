@@ -84,7 +84,7 @@ function useCountdown(seconds: number | null): number | null {
     }
 
     useEffect(() => {
-        if (value == null || value <= 0) return () => {};
+        if (value == null || value <= 0) return;
         const id = setInterval(() => setValue(p => (p != null && p > 1 ? p - 1 : null)), 1000);
         return () => clearInterval(id);
     }, [value != null && value > 0]);
@@ -150,7 +150,7 @@ function RateLimitIndicator({ iconOnly }: ChatBarButtonRenderProps) {
     const [single, setSingle] = useState(EMPTY);
 
     useEffect(() => {
-        if (modelMode === "auto" && streaming) return () => {};
+        if (modelMode === "auto" && streaming) return;
 
         const requestKind: RequestKind = ReasoningModeUtils.reasoningModeToRequestKind?.(reasoningMode) ?? "DEFAULT";
         let cancelled = false;
@@ -158,7 +158,7 @@ function RateLimitIndicator({ iconOnly }: ChatBarButtonRenderProps) {
         if (modelMode === "auto") {
             const fastId = modelByMode?.fast?.modelId;
             const expertId = modelByMode?.expert?.modelId;
-            if (!fastId && !expertId) return () => {};
+            if (!fastId && !expertId) return;
 
             const sharedModel = fastId === expertId;
             const targetId = fastId ?? expertId;
@@ -184,7 +184,7 @@ function RateLimitIndicator({ iconOnly }: ChatBarButtonRenderProps) {
             }
         } else {
             const modelId = modelByMode?.[modelMode]?.modelId;
-            if (!modelId) return () => {};
+            if (!modelId) return;
 
             fetchForModel(modelId, requestKind)
                 .then(result => {

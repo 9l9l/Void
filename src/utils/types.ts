@@ -200,6 +200,5 @@ export interface DefinedSettings<Def extends SettingsDefinition = SettingsDefini
     def: Def;
     checks: Checks;
     pluginName: string;
-    use(keys?: (string & keyof Def)[]): SettingsStore<Def> & PrivateSettings;
     withPrivateSettings<T extends object>(): DefinedSettings<Def, Checks, T>;
 }
