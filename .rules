@@ -158,15 +158,16 @@ reference:
   components:
     layout: Flex, Grid
     text: Text, Paragraph
-    form: Button, ButtonWithTooltip, Switch, Checkbox, Input, Textarea, Select, SelectTrigger, SelectContent, SelectItem, SelectValue, Label
-    feedback: ErrorCard, ErrorBoundary, ConfirmDialog
-    overlay: Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger, Popover, PopoverContent, PopoverTrigger, Tooltip, TooltipContent, TooltipTrigger, TooltipProvider, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
-    display: Card, CardHeader, CardTitle, CardContent, Separator, ChatBarButton, Chip
+    form: Button, ButtonWithTooltip, Switch, Checkbox, Input, Textarea, Select, SelectTrigger, SelectContent, SelectItem, SelectValue, Label, ToggleGroup, ToggleGroupItem
+    feedback: ErrorCard, ErrorBoundary, ConfirmDialog, Spinner
+    overlay: Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger, Popover, PopoverContent, PopoverTrigger, Tooltip, TooltipContent, TooltipTrigger, TooltipProvider, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, HoverCard, HoverCardTrigger, HoverCardContent
+    display: Card, CardHeader, CardTitle, CardContent, Separator, ChatBarButton, Chip, Tabs, TabsList, TabsTrigger, TabsContent, Accordion, AccordionItem, AccordionTrigger, AccordionContent, Markdown
     motion: MotionDiv, MotionSpan, MotionButton
     settings: SettingsRow, SettingsTitle, SettingsDescription
+    toast: toast (sonner) — toast("msg"), toast.success(), toast.error(), toast.warning(), toast.info(), toast.loading(), toast.promise(), toast.dismiss()
   utilities:
     css: classNameFactory, classes, registerStyle, enableStyle, disableStyle from @utils/css
-    misc: sleep, debounce, onlyOnce, copyToClipboard, mergeDefaults, isObject, isTruthy, isNonNullish, formatCountdown, formatDuration from @utils/misc
+    misc: sleep, debounce, onlyOnce, copyToClipboard, fetchExternal, mergeDefaults, isObject, isTruthy, isNonNullish, formatCountdown, formatDuration from @utils/misc
     react: NoopComponent, useForceUpdater, usePrevious, useIntersection, useModuleLoadEffect, useAwaiter from @utils/react
     lazy: proxyLazy, makeLazy from @utils/lazy
     logger: Logger from @utils/Logger
@@ -181,9 +182,9 @@ reference:
   types: definePlugin from @utils/types
   turbopackCommon:
     react: React, useState, useEffect, useLayoutEffect, useMemo, useRef, useReducer, useCallback, useContext, createElement, Fragment, LazyComponent, waitForComponent, waitForComponentByName
-    stores: SessionStore, SettingsStore, SettingsDialogStore, FeatureStore, FileStore, ConversationStore, ResponseStore, RoutingStore, ModelsStore, ChatPageStore, TabsManagerStore, SubscriptionsStore, NotificationsStore, MediaStore, SubscriptionUtils
-    utils: Router, GrokRouter, Transport, QueryClient, CreateClientQuery, ApiClients, StoreUtils, ZustandMiddleware, Zustand, LocalStorage, I18n, FeatureFlags, Environment, Os, BrowserUtils, Toaster, ClipboardUtils, ThemeUtils, CommandMenu, Mobile, Hotkeys, KeyboardShortcuts, ErrorUtils, DateTime, FormatUtils, DateHooks, ClassNames, CVA, UrlUtils, ImageUtils, WorkspaceActions, AssetUtils, FileSpecs, DebouncedValue, PreviousValue, IntersectionObserver, DeepCompare, ReasoningModeUtils, ReactQuery, ReactQueryInfinite, ReactQueryMutation, RateLimits, SubscriptionDetails, FeatureControls, RequestErrorToast
-    components: all Grok native wrappers (Button, Card, Dialog, Select, Switch, Tooltip, etc.), SidebarComponents, DrawerComponents, Avatar, Presence, Icon, AnimatePresence
+    stores: Session, Settings, SettingsDialog, Feature, File, Conversation, Response, Routing, Models, ChatPage, TabsManager, Subscriptions, Notifications, Media, Modes, CommandMenu, Upsell, Share, SourcesSelector, TourGuide, DevModels, Workspace, MentionMenu, Asset, Personality, Report, TextToSpeech, Tasks, Artifact, WorkspaceCollections, WorkspaceConnectors
+    utils: Router, GrokRouter, Transport, QueryClient, CreateClientQuery, ApiClients, StoreUtils, ZustandMiddleware, Zustand, LocalStorage, I18n, FeatureFlags, Environment, Os, BrowserUtils, Toaster, ClipboardUtils, ThemeUtils, CommandMenu, Mobile, Hotkeys, KeyboardShortcuts, ErrorUtils, DateTime, FormatUtils, DateHooks, ClassNames, CVA, UrlUtils, ImageUtils, WorkspaceActions, AssetUtils, FileSpecs, DebouncedValue, PreviousValue, IntersectionObserver, DeepCompare, ReasoningModeUtils, ReactQuery, ReactQueryInfinite, ReactQueryMutation, RateLimits, SubscriptionDetails, SubscriptionUtils, FeatureControls, RequestErrorToast
+    components: all Grok native wrappers (Button, Card, Dialog, Select, Switch, Tooltip, Tabs, Accordion, Spinner, ToggleGroup, HoverCard, Markdown, toast, etc.), SidebarComponents, DrawerComponents, Avatar, Presence, Icon, AnimatePresence
   finders: filters, find, findAll, findLazy, findByProps, findByPropsLazy, findByCode, findByCodeLazy, findComponentByCode, findComponentByCodeLazy, findExportedComponent, findExportedComponentLazy, findStore, findStoreLazy, findCssClasses, findCssClassesLazy, findBulk, findModuleFactory, findModuleId, mapMangledModule, mapMangledModuleLazy, search, waitFor, requireModule, importModule, extractAndLoadChunks, extractAndLoadChunksLazy
   neverHardcode:
     console: console.log/warn/error ⟹ Logger from @utils/Logger
