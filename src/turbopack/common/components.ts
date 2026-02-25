@@ -5,6 +5,10 @@
  */
 
 import type {
+    AccordionContentProps,
+    AccordionItemProps,
+    AccordionProps,
+    AccordionTriggerProps,
     ButtonProps,
     ButtonWithTooltipProps,
     CardContentProps,
@@ -19,8 +23,12 @@ import type {
     DropdownMenuItemProps,
     DropdownMenuProps,
     DropdownMenuTriggerProps,
+    HoverCardContentProps,
+    HoverCardProps,
+    HoverCardTriggerProps,
     InputProps,
     LabelProps,
+    MarkdownProps,
     MotionButtonProps,
     MotionProps,
     PopoverContentProps,
@@ -36,8 +44,15 @@ import type {
     SettingsDescriptionProps,
     SettingsRowProps,
     SettingsTitleProps,
+    SpinnerProps,
     SwitchProps,
+    TabsContentProps,
+    TabsListProps,
+    TabsProps,
+    TabsTriggerProps,
     TextareaProps,
+    ToggleGroupItemProps,
+    ToggleGroupProps,
     TooltipContentProps,
     TooltipProps,
     TooltipProviderProps,
@@ -49,6 +64,10 @@ import { filters, findByProps, findByPropsLazy, findExportedComponent, waitFor }
 import { LazyComponent } from "./react";
 
 export type {
+    AccordionContentProps,
+    AccordionItemProps,
+    AccordionProps,
+    AccordionTriggerProps,
     ButtonProps,
     ButtonSize,
     ButtonVariant,
@@ -71,8 +90,12 @@ export type {
     DropdownMenuItemProps,
     DropdownMenuProps,
     DropdownMenuTriggerProps,
+    HoverCardContentProps,
+    HoverCardProps,
+    HoverCardTriggerProps,
     InputProps,
     LabelProps,
+    MarkdownProps,
     MotionButtonProps,
     MotionProps,
     PopoverContentProps,
@@ -90,9 +113,20 @@ export type {
     SettingsDescriptionProps,
     SettingsRowProps,
     SettingsTitleProps,
+    SpinnerProps,
+    SpinnerSize,
     SwitchProps,
     SwitchSize,
+    TabsContentProps,
+    TabsListProps,
+    TabsProps,
+    TabsTriggerProps,
+    TabsTriggerVariant,
     TextareaProps,
+    ToastFn,
+    ToastOptions,
+    ToggleGroupItemProps,
+    ToggleGroupProps,
     TooltipContentProps,
     TooltipProps,
     TooltipProviderProps,
@@ -165,6 +199,45 @@ export const Tooltip: ComponentType<TooltipProps> = LazyComponent("Tooltip", () 
 export const TooltipTrigger: ComponentType<TooltipTriggerProps> = LazyComponent("TooltipTrigger", () => findExportedComponent("TooltipTrigger"));
 export const TooltipContent: ComponentType<TooltipContentProps> = LazyComponent("TooltipContent", () => findExportedComponent("TooltipContent"));
 export const TooltipProvider: ComponentType<TooltipProviderProps> = LazyComponent("TooltipProvider", () => findExportedComponent("TooltipProvider"));
+
+let tabsModule: Record<string, ComponentType> | null = null;
+
+waitFor(filters.byProps("Tabs", "TabsList", "TabsTrigger", "TabsContent"), m => {
+    tabsModule = m;
+});
+
+const tabsLazy = <T extends ComponentType<any>>(name: string) => LazyComponent(name, () => (tabsModule?.[name] ?? findExportedComponent(name)) as any) as T;
+
+export const Tabs = tabsLazy<ComponentType<TabsProps>>("Tabs");
+export const TabsList = tabsLazy<ComponentType<TabsListProps>>("TabsList");
+export const TabsTrigger = tabsLazy<ComponentType<TabsTriggerProps>>("TabsTrigger");
+export const TabsContent = tabsLazy<ComponentType<TabsContentProps>>("TabsContent");
+
+let accordionModule: Record<string, ComponentType> | null = null;
+
+waitFor(filters.byProps("Accordion", "AccordionContent", "AccordionItem", "AccordionTrigger"), m => {
+    accordionModule = m;
+});
+
+const accordionLazy = <T extends ComponentType<any>>(name: string) => LazyComponent(name, () => (accordionModule?.[name] ?? findExportedComponent(name)) as any) as T;
+
+export const Accordion = accordionLazy<ComponentType<AccordionProps>>("Accordion");
+export const AccordionItem = accordionLazy<ComponentType<AccordionItemProps>>("AccordionItem");
+export const AccordionTrigger = accordionLazy<ComponentType<AccordionTriggerProps>>("AccordionTrigger");
+export const AccordionContent = accordionLazy<ComponentType<AccordionContentProps>>("AccordionContent");
+
+export const Spinner: ComponentType<SpinnerProps> = LazyComponent("Spinner", () => findExportedComponent("Spinner"));
+
+export const ToggleGroup: ComponentType<ToggleGroupProps> = LazyComponent("ToggleGroup", () => findExportedComponent("ToggleGroup"));
+export const ToggleGroupItem: ComponentType<ToggleGroupItemProps> = LazyComponent("ToggleGroupItem", () => findExportedComponent("ToggleGroupItem"));
+
+export const HoverCard: ComponentType<HoverCardProps> = LazyComponent("HoverCard", () => findExportedComponent("HoverCard"));
+export const HoverCardTrigger: ComponentType<HoverCardTriggerProps> = LazyComponent("HoverCardTrigger", () => findExportedComponent("HoverCardTrigger"));
+export const HoverCardContent: ComponentType<HoverCardContentProps> = LazyComponent("HoverCardContent", () => findExportedComponent("HoverCardContent"));
+
+export const Markdown: ComponentType<MarkdownProps> = LazyComponent("Markdown", () => findExportedComponent("Markdown"));
+
+export const { toast } = findByPropsLazy("toast", "Toaster");
 
 export const SidebarComponents = findByPropsLazy("Sidebar", "SidebarContent", "SidebarProvider");
 export const DrawerComponents = findByPropsLazy("Drawer", "DrawerContent");

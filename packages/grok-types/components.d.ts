@@ -651,6 +651,242 @@ export type SidebarTrigger = ComponentType<SidebarTriggerProps>;
 
 // #endregion
 
+// #region Tabs (Radix Tabs)
+
+export type TabsTriggerVariant = "default" | "underline";
+
+export interface TabsProps {
+    value?: string;
+    defaultValue?: string;
+    onValueChange?: (value: string) => void;
+    orientation?: "horizontal" | "vertical";
+    dir?: "ltr" | "rtl";
+    activationMode?: "automatic" | "manual";
+    children?: ReactNode;
+    [key: string]: any;
+}
+
+export interface TabsListProps {
+    loop?: boolean;
+    className?: string;
+    children?: ReactNode;
+    [key: string]: any;
+}
+
+export interface TabsTriggerProps {
+    value: string;
+    disabled?: boolean;
+    variant?: TabsTriggerVariant;
+    className?: string;
+    children?: ReactNode;
+    [key: string]: any;
+}
+
+export interface TabsContentProps {
+    value: string;
+    forceMount?: boolean;
+    className?: string;
+    children?: ReactNode;
+    [key: string]: any;
+}
+
+export type Tabs = ComponentType<TabsProps>;
+export type TabsList = ComponentType<TabsListProps>;
+export type TabsTrigger = ComponentType<TabsTriggerProps>;
+export type TabsContent = ComponentType<TabsContentProps>;
+
+// #endregion
+
+// #region Accordion (Radix Accordion)
+
+export interface AccordionSingleProps {
+    type: "single";
+    value?: string;
+    defaultValue?: string;
+    onValueChange?: (value: string) => void;
+    collapsible?: boolean;
+    disabled?: boolean;
+    dir?: "ltr" | "rtl";
+    orientation?: "horizontal" | "vertical";
+    className?: string;
+    children?: ReactNode;
+    [key: string]: any;
+}
+
+export interface AccordionMultipleProps {
+    type: "multiple";
+    value?: string[];
+    defaultValue?: string[];
+    onValueChange?: (value: string[]) => void;
+    disabled?: boolean;
+    dir?: "ltr" | "rtl";
+    orientation?: "horizontal" | "vertical";
+    className?: string;
+    children?: ReactNode;
+    [key: string]: any;
+}
+
+export type AccordionProps = AccordionSingleProps | AccordionMultipleProps;
+
+export interface AccordionItemProps {
+    value: string;
+    disabled?: boolean;
+    className?: string;
+    children?: ReactNode;
+    [key: string]: any;
+}
+
+export interface AccordionTriggerProps {
+    className?: string;
+    children?: ReactNode;
+    [key: string]: any;
+}
+
+export interface AccordionContentProps {
+    forceMount?: boolean;
+    className?: string;
+    children?: ReactNode;
+    [key: string]: any;
+}
+
+export type Accordion = ComponentType<AccordionProps>;
+export type AccordionItem = ComponentType<AccordionItemProps>;
+export type AccordionTrigger = ComponentType<AccordionTriggerProps>;
+export type AccordionContent = ComponentType<AccordionContentProps>;
+
+// #endregion
+
+// #region Spinner
+
+export type SpinnerSize = "default" | "xxs" | "xs" | "sm" | "lg";
+
+export interface SpinnerProps {
+    size?: SpinnerSize;
+    className?: string;
+    testId?: string;
+    [key: string]: any;
+}
+
+export type Spinner = ComponentType<SpinnerProps>;
+
+// #endregion
+
+// #region ToggleGroup (Radix ToggleGroup)
+
+export interface ToggleGroupSingleProps {
+    type: "single";
+    value?: string;
+    defaultValue?: string;
+    onValueChange?: (value: string) => void;
+    disabled?: boolean;
+    rovingFocus?: boolean;
+    orientation?: "horizontal" | "vertical";
+    dir?: "ltr" | "rtl";
+    loop?: boolean;
+    className?: string;
+    children?: ReactNode;
+    [key: string]: any;
+}
+
+export interface ToggleGroupMultipleProps {
+    type: "multiple";
+    value?: string[];
+    defaultValue?: string[];
+    onValueChange?: (value: string[]) => void;
+    disabled?: boolean;
+    rovingFocus?: boolean;
+    orientation?: "horizontal" | "vertical";
+    dir?: "ltr" | "rtl";
+    loop?: boolean;
+    className?: string;
+    children?: ReactNode;
+    [key: string]: any;
+}
+
+export type ToggleGroupProps = ToggleGroupSingleProps | ToggleGroupMultipleProps;
+
+export interface ToggleGroupItemProps {
+    value: string;
+    disabled?: boolean;
+    className?: string;
+    children?: ReactNode;
+    [key: string]: any;
+}
+
+export type ToggleGroup = ComponentType<ToggleGroupProps>;
+export type ToggleGroupItem = ComponentType<ToggleGroupItemProps>;
+
+// #endregion
+
+// #region HoverCard (Radix HoverCard)
+
+export interface HoverCardProps {
+    open?: boolean;
+    defaultOpen?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    openDelay?: number;
+    closeDelay?: number;
+    children?: ReactNode;
+    [key: string]: any;
+}
+
+export interface HoverCardTriggerProps extends RadixTriggerProps {}
+
+export interface HoverCardContentProps extends RadixContentProps {
+    avoidCollisions?: boolean;
+    collisionPadding?: number | Partial<Record<Side, number>>;
+}
+
+export type HoverCard = ComponentType<HoverCardProps>;
+export type HoverCardTrigger = ComponentType<HoverCardTriggerProps>;
+export type HoverCardContent = ComponentType<HoverCardContentProps>;
+
+// #endregion
+
+// #region Markdown
+
+export interface MarkdownProps {
+    children?: string;
+    className?: string;
+    [key: string]: any;
+}
+
+export type Markdown = ComponentType<MarkdownProps>;
+
+// #endregion
+
+// #region Toast (sonner)
+
+export interface ToastOptions {
+    id?: string | number;
+    description?: ReactNode;
+    duration?: number;
+    icon?: ReactNode;
+    action?: { label: string; onClick: () => void };
+    cancel?: { label: string; onClick?: () => void };
+    dismissible?: boolean;
+    onDismiss?: (toast: any) => void;
+    onAutoClose?: (toast: any) => void;
+    className?: string;
+    style?: CSSProperties;
+    position?: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "top-center" | "bottom-center";
+    [key: string]: any;
+}
+
+export interface ToastFn {
+    (message: ReactNode, options?: ToastOptions): string | number;
+    success(message: ReactNode, options?: ToastOptions): string | number;
+    error(message: ReactNode, options?: ToastOptions): string | number;
+    warning(message: ReactNode, options?: ToastOptions): string | number;
+    info(message: ReactNode, options?: ToastOptions): string | number;
+    loading(message: ReactNode, options?: ToastOptions): string | number;
+    promise<T>(promise: Promise<T> | (() => Promise<T>), options?: { loading?: ReactNode; success?: ReactNode | ((data: T) => ReactNode); error?: ReactNode | ((error: any) => ReactNode) }): string | number;
+    dismiss(id?: string | number): void;
+    custom(jsx: (id: string | number) => ReactNode, options?: ToastOptions): string | number;
+}
+
+// #endregion
+
 // #region Motion (framer-motion)
 
 export interface MotionProps {
