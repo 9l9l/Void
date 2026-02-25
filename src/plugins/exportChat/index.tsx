@@ -6,59 +6,60 @@
 
 import type { ContextMenuLocationMap } from "@api/ContextMenus";
 import { DropdownMenuItem } from "@components";
-import type { GrokResponse } from "@grok-types/stores/ResponseStore";
+import type { GrokConversation, GrokResponse } from "@grok-types";
 import { React } from "@turbopack/common/react";
 import { ConversationStore, ResponseStore } from "@turbopack/common/stores";
 import { findExportedComponentLazy } from "@turbopack/turbopack";
-import { Logger } from "@utils/Logger";
 import definePlugin from "@utils/types";
 
 const DownloadIcon = findExportedComponentLazy("DownloadIcon");
 
-const logger = new Logger("ExportChat", "#60a5fa");
+const SANITIZE_PATTERN = /[^a-zA-Z0-9 ]/g;
+const WHITESPACE_PATTERN = /\s+/g;
 
-async function exportChat(conversationId: string) {
-    const responses: GrokResponse[] = await ResponseStore.useResponseStore.getState().loadInitialResponses(conversationId, true);
-    if (!responses?.length) {
-        logger.warn("No responses found for conversation", conversationId);
-        return;
-    }
+function sanitizeFilename(title: string): string {
+    return title.replace(SANITIZE_PATTERN, "").trim().replace(WHITESPACE_PATTERN, "-") || "chat";
+}
 
-    const conversation = ConversationStore.useConversationStore.getState().byId[conversationId];
-
-    const data = {
-        conversationId,
-        title: conversation?.title ?? "Untitled Chat",
-        exportedAt: new Date().toISOString(),
-        messages: responses.map(r => ({
-            id: r.responseId,
-            sender: r.sender,
-            message: r.message,
-            query: r.query,
-            createTime: r.createTime,
-            model: r.requestMetadata?.model ?? r.model,
-            ...(r.thinkingTrace && { thinkingTrace: r.thinkingTrace }),
-            ...(r.webSearchResults?.length && { webSearchResults: r.webSearchResults }),
-            ...(r.generatedImageUrls?.length && { generatedImageUrls: r.generatedImageUrls }),
-            ...(r.fileAttachments?.length && { fileAttachments: r.fileAttachments }),
-            ...(r.steps?.length && { steps: r.steps }),
-        })),
+function buildExportMessage(r: GrokResponse) {
+    return {
+        id: r.responseId,
+        sender: r.sender,
+        message: r.message,
+        query: r.query,
+        createTime: r.createTime,
+        model: r.requestMetadata?.model ?? r.model,
+        ...(r.thinkingTrace && { thinkingTrace: r.thinkingTrace }),
+        ...(r.webSearchResults?.length && { webSearchResults: r.webSearchResults }),
+        ...(r.generatedImageUrls?.length && { generatedImageUrls: r.generatedImageUrls }),
+        ...(r.fileAttachments?.length && { fileAttachments: r.fileAttachments }),
+        ...(r.steps?.length && { steps: r.steps }),
     };
+}
 
-    const title =
-        (conversation?.title ?? "chat")
-            .replace(/[^a-zA-Z0-9 ]/g, "")
-            .trim()
-            .replace(/\s+/g, "-") || "chat";
+function downloadJson(filename: string, data: unknown) {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${title}.json`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+}
 
-    logger.info(`Exported ${responses.length} messages from "${conversation?.title ?? conversationId}"`);
+async function exportChat(conversationId: string) {
+    const responses: GrokResponse[] = await ResponseStore.useResponseStore.getState().loadInitialResponses(conversationId, true);
+    if (!responses?.length) return;
+
+    const conversation: GrokConversation | undefined = ConversationStore.useConversationStore.getState().byId[conversationId];
+    const title = conversation?.title ?? "Untitled Chat";
+
+    downloadJson(`${sanitizeFilename(title)}.json`, {
+        conversationId,
+        title,
+        exportedAt: new Date().toISOString(),
+        messages: responses.map(buildExportMessage),
+    });
 }
 
 function ExportItem({ conversationId }: ContextMenuLocationMap["conversation"]) {
