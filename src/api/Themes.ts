@@ -126,23 +126,12 @@ export function removeTheme(url: string) {
 }
 
 export function enableTheme(url: string) {
-    const themes = getThemes();
-    const theme = themes.find(t => t.url === url);
-    if (!theme) return;
-
-    theme.enabled = true;
-    saveThemes([...themes]);
-
+    saveThemes(getThemes().map(t => (t.url === url ? { ...t, enabled: true } : t)));
     if (isThemesEnabled()) enableStyle(themeStyleId(url));
 }
 
 export function disableTheme(url: string) {
-    const themes = getThemes();
-    const theme = themes.find(t => t.url === url);
-    if (!theme) return;
-
-    theme.enabled = false;
-    saveThemes([...themes]);
+    saveThemes(getThemes().map(t => (t.url === url ? { ...t, enabled: false } : t)));
     disableStyle(themeStyleId(url));
 }
 

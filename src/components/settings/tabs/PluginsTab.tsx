@@ -22,7 +22,7 @@ import {
     Separator,
     Text,
 } from "@components";
-import { React, useCallback, useMemo, useState } from "@turbopack/common/react";
+import { React, useCallback, useEffect, useMemo, useRef, useState } from "@turbopack/common/react";
 import { classNameFactory } from "@utils/css";
 
 import PluginCard from "../PluginCard";
@@ -30,9 +30,11 @@ import PluginDialog from "./PluginDialog";
 
 const cl = classNameFactory("void-plugins-");
 
-const initialStates = new Map<string, boolean>();
-const changedPlugins = new Set<string>();
-let dismissed = false;
+interface TabState {
+    initialStates: Map<string, boolean>;
+    changedPlugins: Set<string>;
+    dismissed: boolean;
+}
 
 type Filter = "all" | "enabled" | "disabled";
 
@@ -50,8 +52,9 @@ export default function PluginsTab() {
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState<Filter>("all");
     const [dialogName, setDialogName] = useState<string | null>(null);
-    const [showReload, setShowReload] = useState(!dismissed && changedPlugins.size > 0);
-    const needsReload = changedPlugins.size > 0;
+    const [showReload, setShowReload] = useState(false);
+
+    const stateRef = useRef<TabState | null>(null);
 
     const { userPlugins, requiredPlugins } = useMemo(() => {
         const user: string[] = [];
@@ -64,6 +67,13 @@ export default function PluginsTab() {
         return { userPlugins: user, requiredPlugins: required };
     }, []);
 
+    useEffect(() => {
+        const initial = new Map<string, boolean>();
+        for (const n of [...userPlugins, ...requiredPlugins])
+            initial.set(n, isPluginEnabled(n));
+        stateRef.current = { initialStates: initial, changedPlugins: new Set(), dismissed: false };
+    }, [userPlugins, requiredPlugins]);
+
     const totalVisible = userPlugins.length + requiredPlugins.length;
 
     const filteredUser = useMemo(() => filterPlugins(userPlugins, search, filter), [search, filter, userPlugins]);
@@ -71,28 +81,26 @@ export default function PluginsTab() {
 
     const dialogPlugin = dialogName ? plugins[dialogName] : null;
     const hasResults = filteredUser.length > 0 || filteredRequired.length > 0;
-
-    if (!initialStates.size) {
-        for (const n of [...userPlugins, ...requiredPlugins])
-            initialStates.set(n, isPluginEnabled(n));
-    }
+    const needsReload = (stateRef.current?.changedPlugins.size ?? 0) > 0;
 
     const onReload = useCallback((pluginName: string) => {
-        const initial = initialStates.get(pluginName);
+        const s = stateRef.current;
+        if (!s) return;
+        const initial = s.initialStates.get(pluginName);
         const current = isPluginEnabled(pluginName);
-        if (current === initial) changedPlugins.delete(pluginName);
-        else changedPlugins.add(pluginName);
+        if (current === initial) s.changedPlugins.delete(pluginName);
+        else s.changedPlugins.add(pluginName);
 
-        if (changedPlugins.size > 0) {
-            if (!dismissed) setShowReload(true);
+        if (s.changedPlugins.size > 0) {
+            if (!s.dismissed) setShowReload(true);
         } else {
             setShowReload(false);
-            dismissed = false;
+            s.dismissed = false;
         }
     }, []);
 
     const onDismiss = useCallback(() => {
-        dismissed = true;
+        if (stateRef.current) stateRef.current.dismissed = true;
         setShowReload(false);
     }, []);
 

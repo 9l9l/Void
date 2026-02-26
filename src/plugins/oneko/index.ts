@@ -25,16 +25,21 @@ import definePlugin from "@utils/types";
 const ONEKO_SCRIPT = "https://raw.githubusercontent.com/adryd325/oneko.js/c4ee66353b11a44e4a5b7e914a81f8d33111555e/oneko.js";
 const ONEKO_GIF = "https://raw.githubusercontent.com/adryd325/oneko.js/14bab15a755d0e35cd4ae19c931d96d306f99f42/oneko.gif";
 
+let stopped = false;
+
 export default definePlugin({
     name: "Oneko",
     description: "Cat follows your mouse cursor.",
     authors: [Devs.adryd],
 
     start() {
+        stopped = false;
+
         fetchExternal(ONEKO_SCRIPT)
             .then(r => r.text())
             .then(s => s.replace("./oneko.gif", ONEKO_GIF).replace("(isReducedMotion)", "(false)"))
             .then(s => {
+                if (stopped) return;
                 const blob = new Blob([s], { type: "text/javascript" });
                 const el = document.createElement("script");
                 el.src = URL.createObjectURL(blob);
@@ -47,6 +52,7 @@ export default definePlugin({
     },
 
     stop() {
+        stopped = true;
         document.getElementById("oneko")?.remove();
     },
 });

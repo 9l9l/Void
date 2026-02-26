@@ -19,6 +19,8 @@ import definePlugin, { StartAt } from "@utils/types";
 
 const cl = classNameFactory("void-experiments-");
 
+let storeUnsub: (() => void) | undefined;
+
 const NEW_FLAG_TTL = 24 * 60 * 60 * 1000;
 
 interface PrivateSettings {
@@ -206,11 +208,17 @@ export default definePlugin({
             return;
         }
 
-        const unsub = FeatureStore.useFeatureStore.subscribe(current => {
+        storeUnsub = FeatureStore.useFeatureStore.subscribe(current => {
             if (current.status !== "ready") return;
-            unsub();
+            storeUnsub?.();
+            storeUnsub = undefined;
             syncKnownFlags(current.config);
         });
+    },
+
+    stop() {
+        storeUnsub?.();
+        storeUnsub = undefined;
     },
 
     patches: [
