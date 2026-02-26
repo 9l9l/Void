@@ -64,7 +64,7 @@ export default function PluginDialog({ plugin, open, onClose }: PluginDialogProp
                         Settings
                     </Text>
                     {entries.length ? (
-                        <Flex flexDirection="column" gap="0.75rem" style={{ marginTop: "0.5rem" }}>
+                        <Flex flexDirection="column" gap="0.75rem" className="mt-2">
                             {entries.map(([key, setting]) => (
                                 <SettingField key={key} id={key} setting={setting} pluginName={plugin.name} />
                             ))}

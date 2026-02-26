@@ -104,7 +104,7 @@ export default function ThemesTab() {
                         value={url}
                         onChange={(e: { target: { value: string } }) => { setUrl(e.target.value); setError(""); }}
                         onKeyDown={(e: { key: string }) => { if (e.key === "Enter") handleAdd(); }}
-                        style={{ flex: 1, minWidth: 0 }}
+                        className="flex-1 min-w-0"
                     />
                     <Button variant="primary" onClick={handleAdd} disabled={loading || !url.trim()}>
                         {loading ? "Importing..." : "Import"}
@@ -132,10 +132,10 @@ export default function ThemesTab() {
                         placeholder={`Search ${themes.length} themes...`}
                         value={search}
                         onChange={(e: { target: { value: string } }) => setSearch(e.target.value)}
-                        style={{ flex: 1, minWidth: 0 }}
+                        className="flex-1 min-w-0"
                     />
                     <Select value={filter} onValueChange={(v: string) => setFilter(v as Filter)}>
-                        <SelectTrigger style={{ width: "7rem" }}>
+                        <SelectTrigger className="w-28">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -154,12 +154,12 @@ export default function ThemesTab() {
                 </Grid>
             )}
             {themes.length > 0 && !filtered.length && (
-                <Paragraph color="secondary" style={{ textAlign: "center", padding: "2rem 0" }}>
+                <Paragraph color="secondary" className="text-center py-8">
                     No themes match your search.
                 </Paragraph>
             )}
             {!themes.length && (
-                <Paragraph color="secondary" style={{ textAlign: "center", padding: "2rem 0" }}>
+                <Paragraph color="secondary" className="text-center py-8">
                     No themes added yet. Paste a URL above to add one.
                 </Paragraph>
             )}

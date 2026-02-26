@@ -24,8 +24,8 @@ rules:
     performance: Map/Set over object lookups, .some/.find over .filter[0], no spread in loops, Promise.all for parallel async
     logger: use Logger from @utils/Logger, NEVER raw console.log/warn/error
     classNames: import classNameFactory from @utils/css, prefix MUST end with `-` (e.g. `classNameFactory("void-foo-")`), use `cl("bar")` not `cl("-bar")` or `cl("")`, use `cl("root")` for root element
-    classJoin: use `classes()` from @utils/css, not template strings like `${a} ${b}`
-    useExisting: use utilities from @utils/, @api/, @components/, @turbopack/common/
+    classJoin: use `classes()` from @utils/css to combine cl() with Tailwind or other classes, not template strings like `${a} ${b}`
+    useExisting: use utilities from @utils/, @api/, @components/, @turbopack/common/. Check barrel exports (components/index.ts) before creating new finders
   typescript:
     prefer: optional chaining (?.), nullish coalescing (??), const, arrow functions, satisfies over as
     use: destructuring, template literals, object shorthand, array methods, readonly where immutable
@@ -42,7 +42,8 @@ rules:
     forbidden: React.cloneElement, React.isValidElement, React.memo(), React.lazy, React.Children
   css:
     componentsFirst: use Flex/Grid for layout, Text/Paragraph for text, Tailwind className for the rest
-    noInlineStyles: NEVER use React.CSSProperties, style={{}}, or CSSProperties consts in .tsx. Use Tailwind or styles.css with cl()
+    noInlineStyles: NEVER use style={{}}, React.CSSProperties, or CSSProperties consts in .tsx. Use Tailwind className or styles.css with cl(). Exceptions: Flex/Grid component internals (they ARE the layout abstraction), settingsTabs section padding
+    tailwindWithCl: when combining cl() classes with Tailwind, use `classes(cl("foo"), "tailwind-class")`. Never pass raw Tailwind into cl() since it prefixes everything
     pluginCSS: always name styles.css
     runtimeCSS: registerStyle(name, css) for runtime injection
   forbidden:
@@ -51,6 +52,17 @@ rules:
     settingsArrays: NEVER use settings.use() with arrays, mutate then reassign
     nestedTernaries: NEVER nest ternaries, use early returns or variables
     mutateParams: NEVER mutate function parameters, clone or return new
+  neverHardcode:
+    console: console.log/warn/error ⟹ Logger from @utils/Logger
+    classConcat: "`${a} ${b}`" ⟹ classes(a, b) from @utils/css
+    perFileFinders: findByPropsLazy for common modules ⟹ import from @turbopack/common/*
+    perFileStores: findByPropsLazy("useXxxStore") ⟹ typed import from @turbopack/common/stores
+    setTimeout: ⟹ debounce from @utils/misc
+    nullGuards: ⟹ isTruthy, isNonNullish from @utils/misc
+    clipboard: navigator.clipboard ⟹ copyToClipboard from @utils/misc
+    divLayout: bare `<div>` ⟹ Flex or Grid from @components/
+    spanText: bare `<p>`/`<span>` ⟹ Paragraph or Text from @components/
+    inlineStyles: style={{}} ⟹ Tailwind className or styles.css with cl()
   antiPatterns:
     "value !== null && value !== undefined" ⟹ "value != null"
     "array && array.length > 0" ⟹ "array.length"
@@ -64,12 +76,7 @@ rules:
     "[...arr1, ...arr2] in loops" ⟹ "arr1.concat(arr2) or push(...arr2)"
 
 settingsTabs:
-  layout: Wrapper div handles flex-1, w-full, h-full, padding, overflow-scroll. Tab components NEVER set width/height/overflow/flex:1 or create inner scroll containers. Root = bare `<Flex flexDirection="column" gap="...">`. Use `style={{ padding: "0 0.75rem" }}` on sections
-  header: |
-    <Flex flexDirection="column" gap="0" style={{ padding: "0 0.75rem" }}>
-        <Text size="sm" weight="medium">Tab Name</Text>
-        <Text size="xs" color="secondary">Description.</Text>
-    </Flex>
+  layout: Wrapper div handles flex-1, w-full, h-full, padding, overflow-scroll. Tab components NEVER set width/height/overflow/flex:1 or create inner scroll containers. Root = bare `<Flex flexDirection="column" gap="...">`. Use `style={{ padding: "0 0.75rem" }}` on sections. All other sizing/spacing uses Tailwind className
   consistency: verify against Grok's native settings appearance using MCP tools
 
 structure:
@@ -79,11 +86,15 @@ structure:
   grokComponents: src/turbopack/common/components.ts — all Grok native wrappers via LazyComponent + findExportedComponent
   addingGrokComponent: 1. type in packages/grok-types/components.d.ts → 2. LazyComponent wrapper in common/components.ts → 3. re-export from components/index.ts
   grokTypes: packages/grok-types/ — TypeScript type definitions for Grok runtime (stores, components, enums). No runtime code
+  plugins: |
+    src/plugins/<name>/index.ts(x) — plugin entry, uses definePlugin
+    Folder suffix conventions: .dev (dev builds only), .chrome (Chromium only, hidden otherwise)
+    Load order: _core/ → _api/ → regular plugins
 
 patching:
   core:
     surgical: minimum code touched, one patch per concern, shortest regex wins
-    verify: ALWAYS use MCP patch test before finalizing, NEVER guess module structure
+    verify: ALWAYS use MCP patch test before finalizing, NEVER guess module structure (if using MCP)
     iterate: try multiple approaches, keep simplifying until you find the cleanest solution
     minimize: if removing a token still gives one match, remove it
     anchor: every match MUST contain a stable string literal (component name, i18n key, prop name). Pure \i chains break
@@ -119,31 +130,6 @@ patching:
     captureReassembly: ($1)($2)($3) ⟹ $& append, lookbehind, or group:true
     deepNesting: ]\}\)\]\}\) as capture groups ⟹ match up to anchor, use $&
     massiveRegex: split multi-step into group:true replacements
-  examples:
-    append: |
-      find: '"AvatarDropdownMenu",()=>'
-      match: /"Sign Out"\)\]\}\)/
-      replace: '$&,$self.renderItems("user")'
-    guard: |
-      find: "pressed_cmd_settings"
-      match: /\i\.user&&\(0,\i\.jsx\)\("div",.{0,120}:\i\.userId\}\)/
-      replace: "!$self._hideUserId()&&$&"
-    lookbehind: |
-      find: "group/model-mode-select-upsell"
-      match: /(?<=useCheckSubscriptionOffer\)\(\);).{0,30}return null;/
-      replace: "return null;"
-    lookahead: |
-      find: '"user-dropdown.upgrade","Upgrade plan"'
-      match: /\i(?:\|\|\i)+(?=\?null:.{0,160}"user-dropdown\.upgrade")/
-      replace: "true"
-    capture: |
-      find: "handleIsolateClick,children:[i&&"
-      match: /onSaveEdit:(\i)\}\)/
-      replace: "onSaveEdit:$1,id:arguments[0].id})"
-    nullify: |
-      find: '"UpsellCard",()=>'
-      match: /"UpsellCard",\(\)=>\i/
-      replace: '"UpsellCard",()=>()=>null'
 
 finding:
   core: ALWAYS verify finders match exactly 1 module via MCP. Use 2+ props. NEVER single-char/common prop names. Use @turbopack/common/* over per-file findByPropsLazy
@@ -153,47 +139,3 @@ finding:
 pluginInterop:
   checkEnabled: isPluginEnabled(name) from @api/PluginManager
   settings: use definePluginSettings from @api/Settings, not inline settings object
-
-reference:
-  components:
-    layout: Flex, Grid
-    text: Text, Paragraph
-    form: Button, ButtonWithTooltip, Switch, Checkbox, Input, Textarea, Select, SelectTrigger, SelectContent, SelectItem, SelectValue, Label, ToggleGroup, ToggleGroupItem
-    feedback: ErrorCard, ErrorBoundary, ConfirmDialog, Spinner
-    overlay: Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger, Popover, PopoverContent, PopoverTrigger, Tooltip, TooltipContent, TooltipTrigger, TooltipProvider, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, HoverCard, HoverCardTrigger, HoverCardContent
-    display: Card, CardHeader, CardTitle, CardContent, Separator, ChatBarButton, Chip, Tabs, TabsList, TabsTrigger, TabsContent, Accordion, AccordionItem, AccordionTrigger, AccordionContent, Markdown
-    motion: MotionDiv, MotionSpan, MotionButton
-    settings: SettingsRow, SettingsTitle, SettingsDescription
-    toast: toast (sonner) — toast("msg"), toast.success(), toast.error(), toast.warning(), toast.info(), toast.loading(), toast.promise(), toast.dismiss()
-  utilities:
-    css: classNameFactory, classes, registerStyle, enableStyle, disableStyle from @utils/css
-    misc: sleep, debounce, onlyOnce, copyToClipboard, fetchExternal, mergeDefaults, isObject, isTruthy, isNonNullish, formatCountdown, formatDuration from @utils/misc
-    react: NoopComponent, useForceUpdater, usePrevious, useIntersection, useModuleLoadEffect, useAwaiter from @utils/react
-    lazy: proxyLazy, makeLazy from @utils/lazy
-    logger: Logger from @utils/Logger
-  apis:
-    Settings: definePluginSettings, Settings, SettingsStore, PlainSettings
-    PluginManager: plugins, isPluginEnabled, registerPlugin, addPatch
-    Events: subscribe, dispatch
-    Notifications: showToast, ToastType
-    ChatBarButtons: addChatBarButton, removeChatBarButton, ChatBarButtonDef
-    ContextMenus: addContextMenuItem, removeContextMenuItem, ContextMenuLocation, ContextMenuItemDef
-    Modals: openModal, closeModal, closeAllModals, confirm, ModalProps, ConfirmOptions
-  types: definePlugin from @utils/types
-  turbopackCommon:
-    react: React, useState, useEffect, useLayoutEffect, useMemo, useRef, useReducer, useCallback, useContext, createElement, Fragment, LazyComponent, waitForComponent, waitForComponentByName
-    stores: Session, Settings, SettingsDialog, Feature, File, Conversation, Response, Routing, Models, ChatPage, TabsManager, Subscriptions, Notifications, Media, Modes, CommandMenu, Upsell, Share, SourcesSelector, TourGuide, DevModels, Workspace, MentionMenu, Asset, Personality, Report, TextToSpeech, Tasks, Artifact, WorkspaceCollections, WorkspaceConnectors
-    utils: Router, GrokRouter, Transport, QueryClient, CreateClientQuery, ApiClients, StoreUtils, ZustandMiddleware, Zustand, LocalStorage, I18n, FeatureFlags, Environment, Os, BrowserUtils, Toaster, ClipboardUtils, ThemeUtils, CommandMenu, Mobile, Hotkeys, KeyboardShortcuts, ErrorUtils, DateTime, FormatUtils, DateHooks, ClassNames, CVA, UrlUtils, ImageUtils, WorkspaceActions, AssetUtils, FileSpecs, DebouncedValue, PreviousValue, IntersectionObserver, DeepCompare, ReasoningModeUtils, ReactQuery, ReactQueryInfinite, ReactQueryMutation, RateLimits, SubscriptionDetails, SubscriptionUtils, FeatureControls, RequestErrorToast
-    components: all Grok native wrappers (Button, Card, Dialog, Select, Switch, Tooltip, Tabs, Accordion, Spinner, ToggleGroup, HoverCard, Markdown, toast, etc.), SidebarComponents, DrawerComponents, Avatar, Presence, Icon, AnimatePresence
-  finders: filters, find, findAll, findLazy, findByProps, findByPropsLazy, findByCode, findByCodeLazy, findComponentByCode, findComponentByCodeLazy, findExportedComponent, findExportedComponentLazy, findStore, findStoreLazy, findCssClasses, findCssClassesLazy, findBulk, findModuleFactory, findModuleId, mapMangledModule, mapMangledModuleLazy, search, waitFor, requireModule, importModule, extractAndLoadChunks, extractAndLoadChunksLazy
-  neverHardcode:
-    console: console.log/warn/error ⟹ Logger from @utils/Logger
-    classConcat: "`${a} ${b}`" ⟹ classes(a, b) from @utils/css
-    perFileFinders: findByPropsLazy for common modules ⟹ import from @turbopack/common/*
-    perFileStores: findByPropsLazy("useXxxStore") ⟹ typed import from @turbopack/common/stores
-    setTimeout: ⟹ debounce from @utils/misc
-    nullGuards: ⟹ isTruthy, isNonNullish from @utils/misc
-    clipboard: navigator.clipboard ⟹ copyToClipboard from @utils/misc
-    divLayout: bare `<div>` ⟹ Flex or Grid from @components/
-    spanText: bare `<p>`/`<span>` ⟹ Paragraph or Text from @components/
-    inlineStyles: style={{}} ⟹ Tailwind className or styles.css with cl()

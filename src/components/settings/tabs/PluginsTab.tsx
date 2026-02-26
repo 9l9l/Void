@@ -23,7 +23,7 @@ import {
     Text,
 } from "@components";
 import { React, useCallback, useEffect, useMemo, useRef, useState } from "@turbopack/common/react";
-import { classNameFactory } from "@utils/css";
+import { classes, classNameFactory } from "@utils/css";
 
 import PluginCard from "../PluginCard";
 import PluginDialog from "./PluginDialog";
@@ -115,8 +115,8 @@ export default function PluginsTab() {
                 </Text>
             </Flex>
             {needsReload && !showReload && (
-                <Flex alignItems="center" className={cl("reload-banner")} style={{ margin: "0 0.75rem" }}>
-                    <Text size="xs" style={{ color: "inherit", flex: 1 }}>
+                <Flex alignItems="center" className={classes(cl("reload-banner"), "mx-3")}>
+                    <Text size="xs" className="text-inherit flex-1">
                         Plugin changes require a page reload to take effect.
                     </Text>
                     <Button variant="outline" size="sm" onClick={() => location.reload()}>
@@ -130,10 +130,10 @@ export default function PluginsTab() {
                     placeholder={`Search ${totalVisible} plugins...`}
                     value={search}
                     onChange={(e: { target: { value: string } }) => setSearch(e.target.value)}
-                    style={{ flex: 1, minWidth: 0 }}
+                    className="flex-1 min-w-0"
                 />
                 <Select value={filter} onValueChange={(v: string) => setFilter(v as Filter)}>
-                    <SelectTrigger style={{ width: "7rem" }}>
+                    <SelectTrigger className="w-28">
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -152,7 +152,7 @@ export default function PluginsTab() {
             )}
             {filteredRequired.length > 0 && (
                 <>
-                    <Separator style={{ margin: "0 0.75rem", width: "auto" }} />
+                    <Separator className="mx-3 w-auto" />
                     <Grid columns="repeat(2, 1fr)" style={{ padding: "0 0.75rem" }}>
                         {filteredRequired.map(n => (
                             <PluginCard key={n} name={n} onSettings={setDialogName} onReload={onReload} />
@@ -161,7 +161,7 @@ export default function PluginsTab() {
                 </>
             )}
             {!hasResults && (
-                <Paragraph color="secondary" style={{ textAlign: "center", padding: "2rem 0" }}>
+                <Paragraph color="secondary" className="text-center py-8">
                     {search ? "No plugins match your search." : "No plugins available."}
                 </Paragraph>
             )}

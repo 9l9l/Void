@@ -5,7 +5,7 @@
  */
 
 import { Settings } from "@api/Settings";
-import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SettingsDescription, SettingsRow, SettingsTitle, Switch } from "@components";
+import { Flex, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SettingsDescription, SettingsRow, SettingsTitle, Switch } from "@components";
 import { React, useCallback, useState } from "@turbopack/common/react";
 import { OptionType, type PluginSettingDef, type PluginSettingSelectOption } from "@utils/types";
 
@@ -34,10 +34,10 @@ function usePluginSetting(pluginName: string, id: string, setting: PluginSetting
 
 function SettingLabel({ id, setting }: { id: string; setting: PluginSettingDef }) {
     return (
-        <div>
+        <Flex flexDirection="column" gap="0">
             <SettingsTitle>{camelToTitle(id)}</SettingsTitle>
             {"description" in setting && setting.description && <SettingsDescription>{setting.description}</SettingsDescription>}
-        </div>
+        </Flex>
     );
 }
 
@@ -95,7 +95,7 @@ function SliderField({ id, setting, pluginName }: SettingFieldProps) {
                         if (stickToMarkers) v = markers.reduce((p, c) => (Math.abs(c - v) < Math.abs(p - v) ? c : p));
                         update(v);
                     }}
-                    style={{ width: "96px" }}
+                    className="w-24"
                 />
             }
         >
@@ -124,7 +124,7 @@ function NumberField({ id, setting, pluginName }: SettingFieldProps) {
                         const n = Number(e.target.value);
                         if (!isNaN(n)) update(n);
                     }}
-                    style={{ width: "6rem" }}
+                    className="w-24"
                 />
             }
         >
@@ -143,7 +143,7 @@ function StringField({ id, setting, pluginName }: SettingFieldProps) {
                     value={(value as string) ?? ""}
                     onChange={(e: { target: { value: string } }) => update(e.target.value)}
                     placeholder={"placeholder" in setting ? (setting as { placeholder?: string }).placeholder : undefined}
-                    style={{ width: "10rem" }}
+                    className="w-40"
                 />
             }
         >
