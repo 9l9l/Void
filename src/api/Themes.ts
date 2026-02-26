@@ -108,12 +108,11 @@ export async function addTheme(url: string): Promise<ThemeData> {
         name: meta.name || urlToName(url),
         author: meta.author,
         description: meta.description,
-        enabled: true,
+        enabled: false,
     };
 
-    const id = themeStyleId(url);
-    registerStyle(id, css);
-    if (!isThemesEnabled()) disableStyle(id);
+    registerStyle(themeStyleId(url), css);
+    disableStyle(themeStyleId(url));
 
     saveThemes([...existing, theme]);
     logger.info(`Added theme "${theme.name}" from ${url}`);
@@ -125,9 +124,17 @@ export function removeTheme(url: string) {
     saveThemes(getThemes().filter(t => t.url !== url));
 }
 
-export function enableTheme(url: string) {
+export async function enableTheme(url: string) {
     saveThemes(getThemes().map(t => (t.url === url ? { ...t, enabled: true } : t)));
-    if (isThemesEnabled()) enableStyle(themeStyleId(url));
+    if (!isThemesEnabled()) return;
+
+    const id = themeStyleId(url);
+    if (enableStyle(id)) return;
+
+    const resp = await fetchExternal(url);
+    if (!resp.ok) return;
+    const css = await resp.text();
+    registerStyle(id, css);
 }
 
 export function disableTheme(url: string) {

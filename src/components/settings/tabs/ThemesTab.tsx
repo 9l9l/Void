@@ -144,7 +144,7 @@ export default function ThemesTab() {
             {filtered.length > 0 && (
                 <Grid columns="repeat(2, 1fr)" style={{ padding: "0 0.75rem" }}>
                     {filtered.map(t => (
-                        <ThemeCard key={t.url} theme={t} globalEnabled={enabled} onRemove={setRemoveUrl} />
+                        <ThemeCard key={t.url} theme={t} globalEnabled={enabled} onRemove={setRemoveUrl} onToggle={() => setThemes(getThemes())} />
                     ))}
                 </Grid>
             )}

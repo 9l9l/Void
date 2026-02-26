@@ -11,7 +11,6 @@ import { Button, Flex, Switch } from "@components";
 import { React } from "@turbopack/common/react";
 import { findExportedComponentLazy } from "@turbopack/turbopack";
 import { classNameFactory } from "@utils/css";
-import { useForceUpdater } from "@utils/react";
 
 const Trash2 = findExportedComponentLazy("Trash2");
 
@@ -21,15 +20,14 @@ interface ThemeCardProps {
     theme: ThemeData;
     globalEnabled: boolean;
     onRemove(url: string): void;
+    onToggle(): void;
 }
 
-export default function ThemeCard({ theme, globalEnabled, onRemove }: ThemeCardProps) {
-    const forceUpdate = useForceUpdater();
-
+export default function ThemeCard({ theme, globalEnabled, onRemove, onToggle }: ThemeCardProps) {
     const handleToggle = () => {
         if (theme.enabled) disableTheme(theme.url);
         else enableTheme(theme.url);
-        forceUpdate();
+        onToggle();
     };
 
     return (
