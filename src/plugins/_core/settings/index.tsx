@@ -10,10 +10,9 @@ import { isPluginEnabled } from "@api/PluginManager";
 import { definePluginSettings } from "@api/Settings";
 import { loadSavedThemes } from "@api/Themes";
 import { Flex, Text } from "@components";
-import { BracesIcon, PaletteIcon, SearchIcon, TestTubeIcon, UnplugIcon } from "@components/icons";
+import { BracesIcon, PaletteIcon, TestTubeIcon, UnplugIcon } from "@components/icons";
 import { CustomCSSTab, loadSavedCSS, PluginsTab, ThemesTab } from "@components/settings/tabs";
 import { Tab as ExperimentsTab } from "@plugins/experiments";
-import { Tab as IconsTab } from "@plugins/iconViewer";
 import { createElement, Fragment, React } from "@turbopack/common/react";
 import { classes, classNameFactory, registerStyle } from "@utils/css";
 import { useEventSubscription, useForceUpdater } from "@utils/react";
@@ -43,7 +42,6 @@ const allTabs: SettingsTab[] = [
     { id: "void_themes_tab", name: "Themes", icon: PaletteIcon, component: ThemesTab },
     { id: "void_css_tab", name: "Quick CSS", icon: BracesIcon, component: CustomCSSTab },
     { id: "void_experiments_tab", name: "Experiments", icon: TestTubeIcon, component: ExperimentsTab, plugin: "Experiments" },
-    { id: "void_icons_tab", name: "Icons", icon: SearchIcon, component: IconsTab, plugin: "IconViewer" },
 ];
 
 function getVisibleTabs() {
