@@ -7,7 +7,7 @@
 import "./styles.css";
 
 import { definePluginSettings } from "@api/Settings";
-import { Button, Card, Chip, Flex, Input, Paragraph, SettingsDescription, SettingsRow, SettingsTitle, Switch, Text } from "@components";
+import { Button, Card, Chip, Flex, Input, Paragraph, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SettingsDescription, SettingsRow, SettingsTitle, Switch, Text } from "@components";
 import { ErrorBoundary } from "@components/ErrorBoundary";
 import type { FeatureStoreState } from "@grok-types";
 import { React, useCallback, useMemo, useState } from "@turbopack/common/react";
@@ -114,14 +114,30 @@ function ExperimentRow({ flagKey, isNew }: { flagKey: string; isNew: boolean }) 
     );
 }
 
+type Filter = "all" | "enabled" | "disabled" | "new" | "modified";
+
 function ExperimentsTab() {
     const [search, setSearch] = useState("");
+    const [filter, setFilter] = useState<Filter>("all");
     const config = FeatureStore.useFeatureStore(s => s.config);
     const overrides = FeatureStore.useFeatureStore(s => s.overrides);
 
     const booleanKeys = useMemo(() => getBooleanKeys(config).sort(), [config]);
     const getFlagSearchText = useCallback((k: string) => `${k} ${prettifyKey(k)}`, []);
-    const filtered = useFiltered(booleanKeys, search, getFlagSearchText);
+    const searched = useFiltered(booleanKeys, search, getFlagSearchText);
+
+    const filtered = useMemo(() => {
+        if (filter === "all") return searched;
+        return searched.filter(k => {
+            const override = overrides[k];
+            const enabled = override !== undefined ? !!override : !!config[k];
+            if (filter === "enabled") return enabled;
+            if (filter === "disabled") return !enabled;
+            if (filter === "new") return isNewFlag(k);
+            if (filter === "modified") return override !== undefined;
+            return true;
+        });
+    }, [searched, filter, config, overrides]);
 
     const overrideCount = Object.keys(overrides).length;
 
@@ -142,6 +158,18 @@ function ExperimentsTab() {
             </Card>
             <Flex alignItems="center" gap="0.5rem" className={cl("section")}>
                 <Input placeholder={`Search ${booleanKeys.length} flags...`} value={search} onChange={e => setSearch(e.target.value)} className="flex-1" />
+                <Select value={filter} onValueChange={(v: string) => setFilter(v as Filter)}>
+                    <SelectTrigger style={{ width: "7rem" }}>
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="enabled">Enabled</SelectItem>
+                        <SelectItem value="disabled">Disabled</SelectItem>
+                        <SelectItem value="new">New</SelectItem>
+                        <SelectItem value="modified">Modified</SelectItem>
+                    </SelectContent>
+                </Select>
                 {overrideCount > 0 && (
                     <Button variant="outline" size="sm" onClick={() => FeatureStore.useFeatureStore.getState().clearAllOverrides()}>
                         Clear {overrideCount} override{overrideCount !== 1 ? "s" : ""}
@@ -155,7 +183,7 @@ function ExperimentsTab() {
             ))}
             {!filtered.length && (
                 <Paragraph color="muted" className={cl("empty")}>
-                    No flags matching "{search}"
+                    {search ? `No flags matching "${search}"` : `No ${filter} flags`}
                 </Paragraph>
             )}
         </Flex>
