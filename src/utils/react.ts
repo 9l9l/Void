@@ -5,7 +5,7 @@
  */
 
 import { subscribe } from "@api/Events";
-import { type React, useEffect, useMemo, useReducer, useRef, useState } from "@turbopack/common/react";
+import { useEffect, useMemo, useReducer, useState } from "@turbopack/common/react";
 import { onModuleLoad } from "@turbopack/patchTurbopack";
 import { debounce } from "@utils/misc";
 
@@ -13,54 +13,6 @@ export const NoopComponent = () => null;
 
 export function useForceUpdater() {
     return useReducer((x: number) => x + 1, 0)[1];
-}
-
-export function usePrevious<T>(value: T): T | undefined {
-    const ref = useRef<T | undefined>(undefined);
-    useEffect(() => {
-        ref.current = value;
-    });
-    return ref.current;
-}
-
-/**
- * Check if an element is on screen.
- * @param intersectOnly If true, will only transition to visible once and never back to false
- * @returns [refCallback, isIntersecting]
- */
-export function useIntersection(intersectOnly = false): [refCallback: React.RefCallback<Element>, isIntersecting: boolean] {
-    const observerRef = useRef<IntersectionObserver | null>(null);
-    const [isIntersecting, setIntersecting] = useState(false);
-
-    const refCallback = (element: Element | null) => {
-        observerRef.current?.disconnect();
-        observerRef.current = null;
-
-        if (!element) return;
-
-        const rect = element.getBoundingClientRect();
-        const docHeight = Math.max(document.documentElement.clientHeight, window.innerHeight);
-        if (!(rect.bottom < 0 || rect.top - docHeight >= 0)) {
-            setIntersecting(true);
-            if (intersectOnly) return;
-        }
-
-        observerRef.current = new IntersectionObserver(entries => {
-            for (const entry of entries) {
-                if (entry.target !== element) continue;
-                if (entry.isIntersecting && intersectOnly) {
-                    setIntersecting(true);
-                    observerRef.current?.disconnect();
-                    observerRef.current = null;
-                } else {
-                    setIntersecting(entry.isIntersecting);
-                }
-            }
-        });
-        observerRef.current.observe(element);
-    };
-
-    return [refCallback, isIntersecting];
 }
 
 /**
