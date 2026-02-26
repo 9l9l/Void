@@ -8,9 +8,10 @@ import "./styles.css";
 
 import { isPluginEnabled } from "@api/PluginManager";
 import { definePluginSettings } from "@api/Settings";
+import { loadSavedThemes } from "@api/Themes";
 import { Flex, Text } from "@components";
-import { BracesIcon, SearchIcon, TestTubeIcon, UnplugIcon } from "@components/icons";
-import { CustomCSSTab, loadSavedCSS, PluginsTab } from "@components/settings/tabs";
+import { BracesIcon, PaletteIcon, SearchIcon, TestTubeIcon, UnplugIcon } from "@components/icons";
+import { CustomCSSTab, loadSavedCSS, PluginsTab, ThemesTab } from "@components/settings/tabs";
 import { Tab as ExperimentsTab } from "@plugins/experiments";
 import { Tab as IconsTab } from "@plugins/iconViewer";
 import { createElement, Fragment, React } from "@turbopack/common/react";
@@ -39,9 +40,10 @@ interface SettingsTab {
 
 const allTabs: SettingsTab[] = [
     { id: "void_plugins_tab", name: "Plugins", icon: UnplugIcon, component: PluginsTab },
+    { id: "void_themes_tab", name: "Themes", icon: PaletteIcon, component: ThemesTab },
+    { id: "void_css_tab", name: "Quick CSS", icon: BracesIcon, component: CustomCSSTab },
     { id: "void_experiments_tab", name: "Experiments", icon: TestTubeIcon, component: ExperimentsTab, plugin: "Experiments" },
     { id: "void_icons_tab", name: "Icons", icon: SearchIcon, component: IconsTab, plugin: "IconViewer" },
-    { id: "void_css_tab", name: "Quick CSS", icon: BracesIcon, component: CustomCSSTab },
 ];
 
 function getVisibleTabs() {
@@ -144,6 +146,7 @@ export default definePlugin({
         registerStyle("void-global", "[data-sonner-toast] [data-title]{font-weight:400}");
         if (document.head) loadSavedCSS();
         else document.addEventListener("DOMContentLoaded", loadSavedCSS, { once: true });
+        loadSavedThemes();
     },
 
     patches: [

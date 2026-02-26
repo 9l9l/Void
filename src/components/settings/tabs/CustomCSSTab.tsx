@@ -107,6 +107,8 @@ export default function CustomCSSTab() {
                 wordWrap: "on",
                 padding: { top: 8 },
                 renderLineHighlight: "none",
+                renderLineHighlightOnlyWhenFocus: true,
+                lineDecorationsWidth: 0,
                 readOnly: !enabled,
             });
 

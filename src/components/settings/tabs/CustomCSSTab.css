@@ -1,10 +1,9 @@
 .void-css-block {
     display: flex;
     flex-direction: column;
-    flex: 1;
     min-height: 400px;
     margin: 0 0.75rem;
-    border: 1px solid var(--border-l1);
+    border: 1px solid hsl(var(--neutral-900));
     border-radius: 0.75rem;
     overflow: hidden;
 }
@@ -14,7 +13,7 @@
     align-items: center;
     height: 2.5rem;
     padding: 0 1rem;
-    background: black;
+    background: hsl(0deg 0% 0%);
     border-radius: 0.75rem 0.75rem 0 0;
 }
 
@@ -28,6 +27,7 @@
 .void-css-editor {
     flex: 1;
     background: hsl(var(--surface-inset));
+    border-radius: 0 0 0.75rem 0.75rem;
 }
 
 .void-css-editor .monaco-editor,
@@ -45,4 +45,16 @@
 .void-css-editor .monaco-editor .inputarea {
     outline: none !important;
     box-shadow: none !important;
+}
+
+.void-css-editor .monaco-editor .cursors-layer > .cursor {
+    visibility: hidden !important;
+}
+
+.void-css-editor .monaco-editor.focused .cursors-layer > .cursor {
+    visibility: inherit !important;
+}
+
+.void-css-editor .monaco-editor .current-line-margin-both {
+    border: none !important;
 }

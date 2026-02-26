@@ -7,7 +7,7 @@
 import { dispatch } from "@api/Events";
 import { isPluginEnabled, plugins, startPlugin, stopPlugin } from "@api/PluginManager";
 import { Settings } from "@api/Settings";
-import { Button, Switch, Tooltip, TooltipContent, TooltipTrigger } from "@components";
+import { Button, Flex, Switch, Tooltip, TooltipContent, TooltipTrigger } from "@components";
 import { CircleAlertIcon } from "@components/icons";
 import { React } from "@turbopack/common/react";
 import { findExportedComponentLazy } from "@turbopack/turbopack";
@@ -49,39 +49,41 @@ export default function PluginCard({ name, onSettings, onReload }: PluginCardPro
     return (
         <div className={classes(cl("root"), plugin.required && cl("required"), crashed && cl("crashed"))}>
             <div className={cl("body")}>
-                <span className={cl("name")}>
-                    {name}
-                    {crashed && (
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <span className={cl("crashed-icon")}>
-                                    <TriangleAlert />
-                                </span>
-                            </TooltipTrigger>
-                            <TooltipContent>This plugin failed to start</TooltipContent>
-                        </Tooltip>
-                    )}
-                    {plugin.required && (
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <span className={cl("required-icon")}>
-                                    <CircleAlertIcon />
-                                </span>
-                            </TooltipTrigger>
-                            <TooltipContent>This plugin is required for Void to work</TooltipContent>
-                        </Tooltip>
-                    )}
-                    <PluginBadges plugin={plugin} className={cl("badge")} />
-                </span>
+                <Flex alignItems="center" justifyContent="space-between" gap="0.5rem">
+                    <span className={cl("name")}>
+                        {name}
+                        {crashed && (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <span className={cl("crashed-icon")}>
+                                        <TriangleAlert />
+                                    </span>
+                                </TooltipTrigger>
+                                <TooltipContent>This plugin failed to start</TooltipContent>
+                            </Tooltip>
+                        )}
+                        {plugin.required && (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <span className={cl("required-icon")}>
+                                        <CircleAlertIcon />
+                                    </span>
+                                </TooltipTrigger>
+                                <TooltipContent>This plugin is required for Void to work</TooltipContent>
+                            </Tooltip>
+                        )}
+                        <PluginBadges plugin={plugin} className={cl("badge")} />
+                    </span>
+                    <Flex alignItems="center" gap="0.375rem" className={cl("controls")}>
+                        {hasVisibleSettings(plugin) && (
+                            <Button variant="ghostSecondary" size="iconXs" onClick={() => onSettings(name)}>
+                                <EllipsisVertical size={16} />
+                            </Button>
+                        )}
+                        <Switch checked={enabled} disabled={plugin.required} onCheckedChange={handleToggle} />
+                    </Flex>
+                </Flex>
                 {plugin.description && <div className={cl("desc")}>{plugin.description}</div>}
-                <div className={cl("controls")}>
-                    {hasVisibleSettings(plugin) && (
-                        <Button variant="ghostSecondary" size="iconXs" onClick={() => onSettings(name)}>
-                            <EllipsisVertical size={16} />
-                        </Button>
-                    )}
-                    <Switch checked={enabled} disabled={plugin.required} onCheckedChange={handleToggle} />
-                </div>
             </div>
             <div className={cl("separator")} />
             <div className={cl("footer")}>

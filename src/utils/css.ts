@@ -33,7 +33,11 @@ function flushPending() {
 }
 
 function inject(root: HTMLElement, name: string, css: string) {
-    if (activeStyles.has(name)) return;
+    const existing = activeStyles.get(name);
+    if (existing) {
+        if (existing.textContent !== css) existing.textContent = css;
+        return;
+    }
 
     const el = document.createElement("style");
     el.dataset.void = name;
@@ -61,7 +65,14 @@ export function registerStyle(name: string, css: string) {
 }
 
 export function enableStyle(name: string) {
-    if (activeStyles.has(name)) return false;
+    const existing = activeStyles.get(name);
+    if (existing) {
+        if (existing.disabled) {
+            existing.disabled = false;
+            return true;
+        }
+        return false;
+    }
 
     const css = styleRegistry.get(name);
     if (!css) {
@@ -80,8 +91,7 @@ export function disableStyle(name: string) {
     const el = activeStyles.get(name);
     if (!el) return false;
 
-    el.remove();
-    activeStyles.delete(name);
+    el.disabled = true;
     return true;
 }
 

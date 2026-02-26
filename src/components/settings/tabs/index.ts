@@ -8,7 +8,9 @@ import { ErrorBoundary } from "@components/ErrorBoundary";
 
 import CustomCSSTabRaw, { loadSavedCSS } from "./CustomCSSTab";
 import PluginsTabRaw from "./PluginsTab";
+import ThemesTabRaw from "./ThemesTab";
 
 export { loadSavedCSS };
 export const CustomCSSTab = ErrorBoundary.wrap(CustomCSSTabRaw);
 export const PluginsTab = ErrorBoundary.wrap(PluginsTabRaw);
+export const ThemesTab = ErrorBoundary.wrap(ThemesTabRaw);
