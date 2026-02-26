@@ -3,7 +3,7 @@
     flex-direction: column;
     min-height: 400px;
     margin: 0 0.75rem;
-    border: 1px solid hsl(var(--neutral-900));
+    border: 1px solid var(--border-l1);
     border-radius: 0.75rem;
     overflow: hidden;
 }
@@ -13,7 +13,7 @@
     align-items: center;
     height: 2.5rem;
     padding: 0 1rem;
-    background: hsl(0deg 0% 0%);
+    background: hsl(var(--surface-base));
     border-radius: 0.75rem 0.75rem 0 0;
 }
 

@@ -1,9 +1,9 @@
 .void-error-card-root {
     padding: 1rem;
-    border-radius: 0.5rem;
-    background: rgb(231 130 132 / 10%);
-    border: 1px solid rgb(231 130 132 / 30%);
-    color: #e78284;
+    border-radius: var(--radius);
+    background: hsl(var(--red-800) / 60%);
+    border: 1px solid hsl(var(--red-700));
+    color: hsl(var(--fg-danger));
 }
 
 .void-error-card-header {
@@ -15,8 +15,8 @@
     display: block;
     margin-top: 0.5rem;
     padding: 0.5rem;
-    border-radius: 0.25rem;
-    background: rgb(0 0 0 / 20%);
+    border-radius: calc(var(--radius) / 2);
+    background: hsl(var(--black) / 20%);
     font-size: 0.85em;
     white-space: pre-wrap;
     overflow-wrap: break-word;

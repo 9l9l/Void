@@ -53,8 +53,7 @@
 
 .void-theme-card-author {
     font-size: 0.7rem;
-    color: hsl(var(--fg-secondary));
-    opacity: 0.6;
+    color: hsl(var(--fg-tertiary));
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;

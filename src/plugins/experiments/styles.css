@@ -15,9 +15,9 @@
 .void-experiments-warning {
     margin: 0 0.75rem;
     padding: 0.625rem 0.75rem;
-    border-radius: 0.375rem;
-    background: rgb(249 188 96 / 10%);
-    border-color: rgb(249 188 96 / 25%);
+    border-radius: var(--radius);
+    background: hsl(var(--yellow-800) / 60%);
+    border-color: hsl(var(--yellow-700));
     color: hsl(var(--fg-warning));
 }
 
