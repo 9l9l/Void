@@ -7,12 +7,11 @@
 import "./ThemeCard.css";
 
 import { disableTheme, enableTheme, type ThemeData } from "@api/Themes";
-import { Button, Flex, Switch } from "@components";
+import { ButtonWithTooltip, Flex, Switch } from "@components";
+import { CopyIcon, TrashIcon } from "@components/icons";
 import { React } from "@turbopack/common/react";
-import { findExportedComponentLazy } from "@turbopack/turbopack";
 import { classNameFactory } from "@utils/css";
-
-const Trash2 = findExportedComponentLazy("Trash2");
+import { copyToClipboard } from "@utils/misc";
 
 const cl = classNameFactory("void-theme-card-");
 
@@ -36,9 +35,12 @@ export default function ThemeCard({ theme, globalEnabled, onRemove, onToggle }: 
                 <Flex alignItems="center" justifyContent="space-between" gap="0.5rem">
                     <span className={cl("name")}>{theme.name || theme.url}</span>
                     <Flex alignItems="center" gap="0.375rem" className={cl("controls")}>
-                        <Button variant="ghostSecondary" size="iconXs" onClick={() => onRemove(theme.url)}>
-                            <Trash2 size={16} />
-                        </Button>
+                        <ButtonWithTooltip variant="ghostSecondary" size="iconXs" tooltipContent="Copy URL" onClick={() => copyToClipboard(theme.url)}>
+                            <CopyIcon size={16} />
+                        </ButtonWithTooltip>
+                        <ButtonWithTooltip variant="ghostSecondary" size="iconXs" tooltipContent="Remove" onClick={() => onRemove(theme.url)}>
+                            <TrashIcon size={16} />
+                        </ButtonWithTooltip>
                         <Switch checked={theme.enabled} disabled={!globalEnabled} onCheckedChange={handleToggle} />
                     </Flex>
                 </Flex>

@@ -84,7 +84,7 @@ export default function ThemesTab() {
     };
 
     return (
-        <Flex flexDirection="column" gap="1.5rem">
+        <Flex flexDirection="column" gap="2rem">
             <Flex alignItems="center" justifyContent="space-between" style={{ padding: "0 0.75rem" }}>
                 <Flex flexDirection="column" gap="0">
                     <Text size="sm" weight="medium">
@@ -106,15 +106,20 @@ export default function ThemesTab() {
                         onKeyDown={(e: { key: string }) => { if (e.key === "Enter") handleAdd(); }}
                         style={{ flex: 1, minWidth: 0 }}
                     />
-                    <Button variant="outline" onClick={handleAdd} disabled={loading || !url.trim()}>
-                        {loading ? "Adding..." : "Add"}
+                    <Button variant="primary" onClick={handleAdd} disabled={loading || !url.trim()}>
+                        {loading ? "Importing..." : "Import"}
                     </Button>
                 </Flex>
                 {error && <Text size="xs" className={cl("add-error")}>{error}</Text>}
             </Flex>
             {themes.length > 0 && (
-                <Flex flexDirection="column" gap="0" style={{ padding: "0 0.75rem" }}>
-                    <Text size="sm" weight="medium">Installed Themes</Text>
+                <Flex flexDirection="column" gap="0.375rem" style={{ padding: "0 0.75rem" }}>
+                    <Flex flexDirection="column" gap="0">
+                        <Text size="sm" weight="medium">Installed Themes</Text>
+                        <Text size="xs" color="secondary">
+                            Themes are fetched fresh on each page load. Toggle individual themes on or off, or use the global switch above to disable all at once.
+                        </Text>
+                    </Flex>
                     <Text size="xs" color="secondary">
                         {`${themes.length} theme${themes.length === 1 ? "" : "s"} installed \u00B7 ${themes.filter(t => t.enabled).length} enabled`}
                     </Text>
