@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import { useEffect, useReducer } from "@turbopack/common/react";
 import { Logger } from "@utils/Logger";
 import { mergeDefaults } from "@utils/misc";
 import { SettingsStore as SettingsStoreClass } from "@utils/SettingsStore";
@@ -70,6 +71,37 @@ export function migratePluginSettings(name: string, ...oldNames: string[]) {
     }
 }
 
+export function migratePluginSetting(pluginName: string, newKey: string, oldKey: string) {
+    const pluginSettings = SettingsStore.plain.plugins[pluginName];
+    if (!pluginSettings || !(oldKey in pluginSettings) || newKey in pluginSettings) return;
+
+    logger.info(`Migrating setting ${oldKey} -> ${newKey} in ${pluginName}`);
+    pluginSettings[newKey] = pluginSettings[oldKey];
+    delete pluginSettings[oldKey];
+    SettingsStore.markAsChanged();
+}
+
+export function migrateSettingsToPlugin(targetPlugin: string, sourcePlugin: string, ...settingKeys: string[]) {
+    const source = SettingsStore.plain.plugins[sourcePlugin];
+    if (!source) return;
+
+    const target = SettingsStore.plain.plugins[targetPlugin] ??= { enabled: false };
+    let changed = false;
+
+    for (const key of settingKeys) {
+        if (key in source && !(key in target)) {
+            target[key] = source[key];
+            delete source[key];
+            changed = true;
+        }
+    }
+
+    if (changed) {
+        logger.info(`Migrated settings [${settingKeys.join(", ")}] from ${sourcePlugin} to ${targetPlugin}`);
+        SettingsStore.markAsChanged();
+    }
+}
+
 function resolveDefault(setting: PluginSettingDef): unknown {
     if ("default" in setting) return setting.default;
     if (setting.type === OptionType.SELECT) return (setting as { options: readonly PluginSettingSelectOption[] }).options.find((o: PluginSettingSelectOption) => o.default)?.value;
@@ -103,6 +135,26 @@ export function definePluginSettings<Def extends SettingsDefinition, Checks exte
                 const setting = def[key];
                 return setting ? resolveDefault(setting) : undefined;
             });
+        },
+        use(keys) {
+            const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
+
+            useEffect(() => {
+                if (keys?.length) {
+                    const prefix = `plugins.${_pluginName}`;
+                    const paths = keys.map(k => `${prefix}.${String(k)}`);
+                    const listener = (path: string) => {
+                        if (paths.some(p => path.startsWith(p))) forceUpdate();
+                    };
+                    SettingsStore.addPrefixChangeListener(prefix, listener);
+                    return () => SettingsStore.removePrefixChangeListener(prefix, listener);
+                }
+                const prefix = `plugins.${_pluginName}`;
+                SettingsStore.addPrefixChangeListener(prefix, forceUpdate);
+                return () => SettingsStore.removePrefixChangeListener(prefix, forceUpdate);
+            }, []);
+
+            return definedSettings.store;
         },
         withPrivateSettings<T extends object>() {
             return this as DefinedSettings<Def, Checks, T>;

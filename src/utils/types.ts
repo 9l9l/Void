@@ -40,8 +40,15 @@ export interface StoreSubscription {
 }
 
 export interface ZustandSubscription {
-    selector?: (state: unknown) => unknown;
-    handler: (current: unknown, prev: unknown) => void;
+    selector?: (state: any) => any;
+    handler: (current: any, prev: any) => void;
+}
+
+export interface PluginEventListener {
+    target?: "document" | "window";
+    event: string;
+    handler: EventListener;
+    options?: AddEventListenerOptions;
 }
 
 export interface PluginDef {
@@ -67,6 +74,8 @@ export interface PluginDef {
     chatBarButton?: import("@api/ChatBarButtons").ChatBarButtonDef;
     contextMenuItems?: { [L in import("@api/ContextMenus").ContextMenuLocation]?: import("@api/ContextMenus").ContextMenuItemDef<L> };
     events?: Record<string, (data: unknown) => void>;
+    eventListeners?: PluginEventListener[];
+    cleanupSelectors?: string[];
 }
 
 export const enum StartAt {
@@ -201,5 +210,6 @@ export interface DefinedSettings<Def extends SettingsDefinition = SettingsDefini
     def: Def;
     checks: Checks;
     pluginName: string;
+    use<F extends (keyof Def | keyof PrivateSettings & string)>(settings?: F[]): SettingsStore<Def> & PrivateSettings;
     withPrivateSettings<T extends object>(): DefinedSettings<Def, Checks, T>;
 }

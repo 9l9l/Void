@@ -21,11 +21,7 @@ export default definePlugin({
     description: "Double-click your own messages to edit them.",
     authors: [Devs.Prism],
 
-    start() {
-        document.addEventListener("dblclick", onDblClick);
-    },
-
-    stop() {
-        document.removeEventListener("dblclick", onDblClick);
-    },
+    eventListeners: [
+        { event: "dblclick", handler: onDblClick as EventListener },
+    ],
 });

@@ -1,0 +1,12 @@
+.void-ratelimit-icon {
+    width: 18px;
+    height: 18px;
+}
+
+.void-ratelimit-limited {
+    color: hsl(var(--fg-danger));
+}
+
+.void-ratelimit-label {
+    line-height: 1;
+}

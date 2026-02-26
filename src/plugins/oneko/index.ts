@@ -31,6 +31,7 @@ export default definePlugin({
     name: "Oneko",
     description: "Cat follows your mouse cursor.",
     authors: [Devs.adryd],
+    cleanupSelectors: ["#oneko"],
 
     start() {
         stopped = false;
@@ -53,6 +54,5 @@ export default definePlugin({
 
     stop() {
         stopped = true;
-        document.getElementById("oneko")?.remove();
     },
 });

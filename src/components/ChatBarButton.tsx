@@ -9,8 +9,8 @@ import "./ChatBarButton.css";
 import { MotionButton, MotionDiv, Tooltip, TooltipContent, TooltipTrigger } from "@components";
 import { AnimatePresence } from "@turbopack/common/components";
 import { React, useState } from "@turbopack/common/react";
-import { classNameFactory } from "@utils/css";
-import type { CSSProperties, ReactNode } from "react";
+import { classes, classNameFactory } from "@utils/css";
+import type { ReactNode } from "react";
 
 const cl = classNameFactory("void-chatbar-btn-");
 
@@ -24,11 +24,11 @@ export interface ChatBarButtonProps {
     tooltip?: ReactNode;
     onClick?: () => void;
     "aria-label"?: string;
-    style?: CSSProperties;
+    className?: string;
     iconOnly?: boolean;
 }
 
-export function ChatBarButton({ icon, children, tooltip, onClick, style, iconOnly, "aria-label": ariaLabel }: ChatBarButtonProps) {
+export function ChatBarButton({ icon, children, tooltip, onClick, className, iconOnly, "aria-label": ariaLabel }: ChatBarButtonProps) {
     const label = typeof tooltip === "string" ? tooltip : ariaLabel;
     const [mounted, setMounted] = useState(false);
     const showText = !iconOnly && !!children;
@@ -39,7 +39,7 @@ export function ChatBarButton({ icon, children, tooltip, onClick, style, iconOnl
 
     const button = (
         <MotionButton type="button" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className={cl("root")} onClick={onClick} aria-label={label}>
-            <div className={cl("inner", { "has-text": showText })} style={style}>
+            <div className={classes(cl("inner", { "has-text": showText }), className)}>
                 {icon}
                 {iconOnly != null ? (
                     <AnimatePresence>

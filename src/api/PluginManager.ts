@@ -157,6 +157,14 @@ export function startPlugin(plugin: Plugin, silent = false): boolean {
             }
         }
 
+        if (plugin.eventListeners) {
+            for (const el of plugin.eventListeners) {
+                const target = el.target === "window" ? window : document;
+                target.addEventListener(el.event, el.handler, el.options);
+                unsubs.push(() => target.removeEventListener(el.event, el.handler, el.options));
+            }
+        }
+
         if (unsubs.length) pluginUnsubscribers.set(plugin.name, unsubs);
 
         plugin.started = true;
@@ -186,6 +194,12 @@ export function stopPlugin(plugin: Plugin): boolean {
         }
 
         if (plugin.managedStyle) disableStyle(plugin.managedStyle);
+
+        if (plugin.cleanupSelectors) {
+            for (const selector of plugin.cleanupSelectors) {
+                document.querySelectorAll(selector).forEach(el => el.remove());
+            }
+        }
 
         plugin.stop?.();
         plugin.started = false;
@@ -249,9 +263,20 @@ export function initPluginManager() {
 
     for (const name in plugins) {
         if (!isPluginEnabled(name)) continue;
-        const { patches: pluginPatches } = plugins[name];
-        if (pluginPatches) {
-            for (const patch of pluginPatches) addPatch(patch, name);
+        const plugin = plugins[name];
+
+        for (const key of Object.keys(plugin)) {
+            if (key === "start" || key === "stop") continue;
+            const val = (plugin as any)[key];
+            if (typeof val === "function" && !val.$$voidBound) {
+                const bound = val.bind(plugin);
+                bound.$$voidBound = true;
+                (plugin as any)[key] = bound;
+            }
+        }
+
+        if (plugin.patches) {
+            for (const patch of plugin.patches) addPatch(patch, name);
         }
     }
 

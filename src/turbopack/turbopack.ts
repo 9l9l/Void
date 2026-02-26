@@ -228,11 +228,34 @@ export function findStoreLazy(name: string): any {
 }
 
 export function findCssClasses(...classes: string[]): Record<string, string> {
-    return find(filters.byClassName(...classes));
+    const mod = searchCache(filters.byClassName(...classes), false, true);
+    if (!mod) return {} as Record<string, string>;
+    return mapMangledCssClasses(mod, classes);
 }
 
 export function findCssClassesLazy(...classes: string[]): Record<string, string> {
     return proxyLazy(() => findCssClasses(...classes));
+}
+
+function makeClassNameRegex(className: string): RegExp {
+    return new RegExp(`(?:\\b|_)${className.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:\\b|_)`);
+}
+
+export function mapMangledCssClasses<S extends string>(mod: Record<string, string>, classes: S[] | readonly S[]): Record<S, string> {
+    const result = {} as Record<S, string>;
+    for (const name of classes) {
+        const regex = makeClassNameRegex(name);
+        let found = false;
+        for (const key in mod) {
+            if (typeof mod[key] === "string" && regex.test(mod[key])) {
+                result[name] = mod[key];
+                found = true;
+                break;
+            }
+        }
+        if (!found) logger.warn(`mapMangledCssClasses: class "${name}" not found in module`);
+    }
+    return result;
 }
 
 export function findBulk(...filterFns: FilterFn[]): any[] {

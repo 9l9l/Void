@@ -19,8 +19,6 @@ import definePlugin, { StartAt } from "@utils/types";
 
 const cl = classNameFactory("void-experiments-");
 
-let storeUnsub: (() => void) | undefined;
-
 const NEW_FLAG_TTL = 24 * 60 * 60 * 1000;
 
 interface PrivateSettings {
@@ -161,7 +159,7 @@ function ExperimentsTab() {
             <Flex alignItems="center" gap="0.5rem" className={cl("section")}>
                 <Input placeholder={`Search ${booleanKeys.length} flags...`} value={search} onChange={e => setSearch(e.target.value)} className="flex-1" />
                 <Select value={filter} onValueChange={(v: string) => setFilter(v as Filter)}>
-                    <SelectTrigger style={{ width: "7rem" }}>
+                    <SelectTrigger className="w-28">
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -203,22 +201,16 @@ export default definePlugin({
 
     start() {
         const state = FeatureStore.useFeatureStore.getState();
-        if (state.status === "ready") {
-            syncKnownFlags(state.config);
-            return;
-        }
-
-        storeUnsub = FeatureStore.useFeatureStore.subscribe(current => {
-            if (current.status !== "ready") return;
-            storeUnsub?.();
-            storeUnsub = undefined;
-            syncKnownFlags(current.config);
-        });
+        if (state.status === "ready") syncKnownFlags(state.config);
     },
 
-    stop() {
-        storeUnsub?.();
-        storeUnsub = undefined;
+    zustand: {
+        FeatureStore: {
+            selector: (s: FeatureStoreState) => s.status === "ready" ? s.config : null,
+            handler(config: FeatureStoreState["config"] | null) {
+                if (config) syncKnownFlags(config);
+            },
+        },
     },
 
     patches: [

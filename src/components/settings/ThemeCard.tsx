@@ -7,7 +7,7 @@
 import "./ThemeCard.css";
 
 import { disableTheme, enableTheme, type ThemeData } from "@api/Themes";
-import { ButtonWithTooltip, Flex, Switch } from "@components";
+import { ButtonWithTooltip, Flex, Switch, Text } from "@components";
 import { CopyIcon, TrashIcon } from "@components/icons";
 import { React } from "@turbopack/common/react";
 import { classNameFactory } from "@utils/css";
@@ -33,7 +33,7 @@ export default function ThemeCard({ theme, globalEnabled, onRemove, onToggle }: 
         <div className={cl("root")}>
             <div className={cl("body")}>
                 <Flex alignItems="center" justifyContent="space-between" gap="0.5rem">
-                    <span className={cl("name")}>{theme.name || theme.url}</span>
+                    <Text as="span" className={cl("name")}>{theme.name ?? theme.url}</Text>
                     <Flex alignItems="center" gap="0.375rem" className={cl("controls")}>
                         <ButtonWithTooltip variant="ghostSecondary" size="iconXs" tooltipContent="Copy URL" onClick={() => copyToClipboard(theme.url)}>
                             <CopyIcon size={16} />
@@ -48,7 +48,7 @@ export default function ThemeCard({ theme, globalEnabled, onRemove, onToggle }: 
             </div>
             <div className={cl("separator")} />
             <div className={cl("footer")}>
-                <div className={cl("author")}>{theme.author || "\u00A0"}</div>
+                <div className={cl("author")}>{theme.author ?? "\u00A0"}</div>
             </div>
         </div>
     );

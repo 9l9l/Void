@@ -7,7 +7,7 @@
 import { dispatch } from "@api/Events";
 import { isPluginEnabled, plugins, startPlugin, stopPlugin } from "@api/PluginManager";
 import { Settings } from "@api/Settings";
-import { Button, Flex, Switch, Tooltip, TooltipContent, TooltipTrigger } from "@components";
+import { Button, Flex, Switch, Text, Tooltip, TooltipContent, TooltipTrigger } from "@components";
 import { CircleAlertIcon } from "@components/icons";
 import { React } from "@turbopack/common/react";
 import { findExportedComponentLazy } from "@turbopack/turbopack";
@@ -50,14 +50,14 @@ export default function PluginCard({ name, onSettings, onReload }: PluginCardPro
         <div className={classes(cl("root"), plugin.required && cl("required"), crashed && cl("crashed"))}>
             <div className={cl("body")}>
                 <Flex alignItems="center" justifyContent="space-between" gap="0.5rem">
-                    <span className={cl("name")}>
+                    <Text as="span" className={cl("name")}>
                         {name}
                         {crashed && (
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <span className={cl("crashed-icon")}>
+                                    <Text as="span" className={cl("crashed-icon")}>
                                         <TriangleAlert />
-                                    </span>
+                                    </Text>
                                 </TooltipTrigger>
                                 <TooltipContent>This plugin failed to start</TooltipContent>
                             </Tooltip>
@@ -65,15 +65,15 @@ export default function PluginCard({ name, onSettings, onReload }: PluginCardPro
                         {plugin.required && (
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <span className={cl("required-icon")}>
+                                    <Text as="span" className={cl("required-icon")}>
                                         <CircleAlertIcon />
-                                    </span>
+                                    </Text>
                                 </TooltipTrigger>
                                 <TooltipContent>This plugin is required for Void to work</TooltipContent>
                             </Tooltip>
                         )}
                         <PluginBadges plugin={plugin} className={cl("badge")} />
-                    </span>
+                    </Text>
                     <Flex alignItems="center" gap="0.375rem" className={cl("controls")}>
                         {hasVisibleSettings(plugin) && (
                             <Button variant="ghostSecondary" size="iconXs" onClick={() => onSettings(name)}>

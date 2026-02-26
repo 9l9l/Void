@@ -9,7 +9,7 @@ import { isObject } from "./misc";
 
 const logger = new Logger("SettingsStore");
 
-type Listener = () => void;
+type Listener = (path: string) => void;
 
 function getOrCreateSet<K, V>(map: Map<K, Set<V>>, key: K): Set<V> {
     let set = map.get(key);
@@ -82,13 +82,13 @@ export class SettingsStore<T extends object> {
     }
 
     private notifyListeners(path: string) {
-        for (const l of this.globalListeners) l();
+        for (const l of this.globalListeners) l(path);
 
         const listeners = this.pathListeners.get(path);
-        if (listeners) for (const l of listeners) l();
+        if (listeners) for (const l of listeners) l(path);
 
         for (const [prefix, set] of this.prefixListeners) {
-            if (path.startsWith(prefix)) for (const l of set) l();
+            if (path.startsWith(prefix)) for (const l of set) l(path);
         }
 
         this.scheduleSave();
