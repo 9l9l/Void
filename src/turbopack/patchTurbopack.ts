@@ -26,12 +26,20 @@ const motionSymbol = Symbol.for("motionComponentSymbol");
 
 let compileCounter = 0;
 
-const compileFactory: (code: string) => ModuleFactory = IS_EXTENSION
-    ? (code: string) => new Function(`return(${code})`)() as ModuleFactory
-    : (code: string) => {
+const compileFactory: (code: string, header?: string, sourceUrl?: string) => ModuleFactory = IS_EXTENSION
+    ? (code, header, sourceUrl) => {
+        let body = `return(${code})`;
+        if (header) body = `${header}\n${body}`;
+        if (sourceUrl) body += `\n${sourceUrl}`;
+        return new Function(body)() as ModuleFactory;
+    }
+    : (code, header, sourceUrl) => {
         const key = `__void_eval_${compileCounter++}`;
         const script = document.createElement("script");
-        script.textContent = `window["${key}"]=(${code});`;
+        let src = `window["${key}"]=(${code});`;
+        if (header) src = `${header}\n${src}`;
+        if (sourceUrl) src += `\n${sourceUrl}`;
+        script.textContent = src;
         (document.head ?? document.documentElement).appendChild(script);
         script.remove();
         const fn = (pageWindow as any)[key];
@@ -301,6 +309,19 @@ function patchFactory(moduleId: number, factory: ModuleFactory): PatchedModuleFa
         }
 
         if (!patch.all) patches.splice(i--, 1);
+    }
+
+    if (patchedBy.size) {
+        const plugins = [...patchedBy].join(", ");
+        patchedFactory = compileFactory(
+            code,
+            `// Turbopack Module ${moduleId} - Patched by ${plugins}`,
+            `//# sourceURL=file:///TurbopackModule${moduleId}`,
+        ) as PatchedModuleFactory;
+        patchedFactory[SYM_ORIGINAL] = factory;
+        patchedFactory[SYM_PATCHED] = true;
+        patchedFactory[SYM_PATCHED_CODE] = code;
+        patchedFactory[SYM_PATCHED_BY] = [...patchedBy];
     }
 
     return patchedFactory;
