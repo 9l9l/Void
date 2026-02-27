@@ -79,7 +79,7 @@ export function handleReact(args: ReactArgs): unknown {
         if (!root) return "No React root";
 
         const lower = componentName.toLowerCase();
-        const found: Array<{ name: string; d: number; props?: string[] }> = [];
+        const found: Array<{ name: string; d: number; props?: string[]; s?: boolean }> = [];
         const queue: Array<{ f: Fiber; d: number }> = [{ f: root, d: 0 }];
         let qi = 0;
 
@@ -87,11 +87,12 @@ export function handleReact(args: ReactArgs): unknown {
             const { f, d } = queue[qi++];
             const nm = fiberName(f);
             if (nm?.toLowerCase().includes(lower)) {
-                const entry: { name: string; d: number; props?: string[] } = { name: nm, d };
+                const entry: { name: string; d: number; props?: string[]; s?: boolean } = { name: nm, d };
                 if (f.memoizedProps) {
                     const pk = Object.keys(f.memoizedProps).filter(k => k !== "children");
                     if (pk.length) entry.props = pk.slice(0, REACT.PROP_KEYS_PREVIEW);
                 }
+                if (f.memoizedState) entry.s = true;
                 found.push(entry);
             }
             if (f.child) queue.push({ f: f.child, d: d + 1 });
@@ -111,7 +112,7 @@ export function handleReact(args: ReactArgs): unknown {
         while (qi < queue.length && qi < REACT.MAX_PROCESS) {
             const f = queue[qi++];
             const nm = fiberName(f);
-            if (nm && seen.size < REACT.MAX_NAMED) seen.add(nm);
+            if (nm && nm.length >= 3 && seen.size < REACT.MAX_NAMED) seen.add(nm);
             if (f.child) queue.push(f.child);
             if (f.sibling) queue.push(f.sibling);
         }

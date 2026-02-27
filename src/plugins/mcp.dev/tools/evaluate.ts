@@ -27,7 +27,7 @@ function autoReturn(code: string): string {
         return code;
     }
     const lastLine = code.slice(lastNewline + 1).trim();
-    if (!lastLine) return code;
+    if (!lastLine || /^[)\]},;]+$/.test(lastLine)) return code;
     const expr = lastLine.replace(/;$/, "").trim();
     if (expr && !STATEMENT_RE.test(expr)) return `${code.slice(0, lastNewline)}\nreturn ${expr};`;
     return code;

@@ -61,15 +61,16 @@ export function handleIntercept(args: InterceptArgs): unknown {
 
         holder[finalKey] = function (this: unknown, ...callArgs: unknown[]) {
             const elapsed = Date.now() - state.startTime;
+            const callStart = performance.now();
             try {
                 const ret = original.apply(this, callArgs);
                 if (state.captures.length < maxCaptures) {
-                    state.captures.push({ t: elapsed, args: serialize(callArgs, 2), ret: serialize(ret, 2) });
+                    state.captures.push({ t: elapsed, d: Math.round((performance.now() - callStart) * 100) / 100, args: serialize(callArgs, 2), ret: serialize(ret, 2) });
                 }
                 return ret;
             } catch (err: unknown) {
                 if (state.captures.length < maxCaptures) {
-                    state.captures.push({ t: elapsed, args: serialize(callArgs, 2), ret: null, err: errorMessage(err) });
+                    state.captures.push({ t: elapsed, d: Math.round((performance.now() - callStart) * 100) / 100, args: serialize(callArgs, 2), ret: null, err: errorMessage(err) });
                 }
                 throw err;
             }

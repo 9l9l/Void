@@ -93,7 +93,7 @@ export function handleStore(args: StoreArgs): unknown {
     const { action, query, path, depth = SERIALIZE.DEFAULT_DEPTH } = args;
 
     if (action === "list") {
-        return findStores().map(s => ({ id: s.id, n: s.name, k: s.keys.slice(0, 5) }));
+        return findStores().map(s => ({ id: s.id, n: s.name, k: s.keys.slice(0, 8) }));
     }
 
     if (action === "get") {

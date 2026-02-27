@@ -44,7 +44,7 @@ export function handleGrok(args: GrokArgs): unknown {
         if (!config || !Object.keys(config).length) return { status: state.status, count: 0 };
 
         const entries = Object.entries(config);
-        if (!filter) return { status: state.status, count: entries.length };
+        if (!filter) return { status: state.status, count: entries.length, keys: entries.map(([k]) => k).sort() };
 
         const lower = filter.toLowerCase();
         const matched = entries.filter(([k]) => k.toLowerCase().includes(lower));

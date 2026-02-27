@@ -44,10 +44,24 @@ export function handleSearch(args: SearchArgs): unknown {
     const ctx = Math.min(context, SEARCH.MAX_CONTEXT);
 
     if (andPatterns?.length) {
-        const allPatterns = pattern ? [pattern, ...andPatterns] : andPatterns;
-        const matches: SearchMatch[] = [];
+        const rawPatterns = pattern ? [pattern, ...andPatterns] : andPatterns;
+        const allPatterns: (string | RegExp)[] = rawPatterns.map(p => {
+            const { regex } = parseRegexPattern(p);
+            return regex ?? p;
+        });
         let moduleHits = 0;
 
+        if (args.count) {
+            for (const [id, src] of sources) {
+                if (targetId != null && id !== targetId) continue;
+                if (shouldSkipModule(id, filter, loadedCache)) continue;
+                if (matchesAllPatterns(src, allPatterns)) moduleHits++;
+            }
+            return { count: moduleHits, total: sources.size };
+        }
+
+        const matches: SearchMatch[] = [];
+        const firstPat = allPatterns[0];
         for (const [id, src] of sources) {
             if (targetId != null && id !== targetId) continue;
             if (shouldSkipModule(id, filter, loadedCache)) continue;
@@ -55,9 +69,19 @@ export function handleSearch(args: SearchArgs): unknown {
             moduleHits++;
             if (matches.length >= max) continue;
 
-            const idx = src.indexOf(allPatterns[0]);
+            let idx: number;
+            let matchLen: number;
+            if (typeof firstPat === "string") {
+                idx = src.indexOf(firstPat);
+                matchLen = firstPat.length;
+            } else {
+                firstPat.lastIndex = 0;
+                const m = firstPat.exec(src);
+                idx = m ? m.index : 0;
+                matchLen = m ? m[0].length : 0;
+            }
             const start = Math.max(0, idx - ctx);
-            const end = Math.min(src.length, idx + allPatterns[0].length + ctx);
+            const end = Math.min(src.length, idx + matchLen + ctx);
             const entry: SearchMatch = { id, at: idx, s: src.slice(start, end), len: src.length };
             if (isModulePatched(id)) entry.patched = true;
             matches.push(entry);
@@ -92,6 +116,7 @@ export function handleSearch(args: SearchArgs): unknown {
         if (shouldSkipModule(id, filter, loadedCache)) continue;
 
         if (targetId != null) {
+            const patched = isModulePatched(id);
             let startFrom = 0;
             while (matches.length < max && total < SEARCH.MAX_TOTAL) {
                 const hit = findMatch(src, pattern!, regex, startFrom);
@@ -100,7 +125,9 @@ export function handleSearch(args: SearchArgs): unknown {
                 const end = Math.min(src.length, hit.idx + hit.len + ctx);
                 const snippet = src.slice(start, end);
                 total += snippet.length;
-                matches.push({ id, at: hit.idx, s: snippet });
+                const entry: SearchMatch = { id, at: hit.idx, s: snippet, len: src.length };
+                if (patched) entry.patched = true;
+                matches.push(entry);
                 startFrom = hit.idx + Math.max(hit.len, 1);
             }
         } else {
@@ -121,7 +148,12 @@ export function handleSearch(args: SearchArgs): unknown {
             matches.push(entry);
         }
     }
-    const result: { matches: SearchMatch[]; totalModules?: number } = { matches };
+    const result: { matches: SearchMatch[]; totalModules?: number; hint?: string } = { matches };
     if (targetId == null && moduleHits > matches.length) result.totalModules = moduleHits;
+    if (!matches.length && !moduleHits) {
+        if (filter) result.hint = `No matches with filter "${filter}". Try without filter or check if pattern exists in ${filter === "loaded" ? "unloaded" : "loaded"} modules.`;
+        else if (targetId != null) result.hint = `Pattern not found in module ${targetId}. Use without id to search all modules.`;
+        else if (regex) result.hint = "No regex matches. Check syntax or try a simpler literal pattern.";
+    }
     return result;
 }

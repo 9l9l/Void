@@ -164,6 +164,7 @@ export interface Anchor {
     type: string;
     at: number;
     unique: boolean;
+    dist?: number;
 }
 
 export interface Fiber {
@@ -199,6 +200,7 @@ export interface StoreEntry {
 
 export interface Capture {
     t: number;
+    d: number;
     args: unknown;
     ret: unknown;
     err?: string;

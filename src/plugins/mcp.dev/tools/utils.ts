@@ -173,7 +173,7 @@ export function getFactorySourceCache(): Map<number, string> {
 }
 
 export function getAllFactorySources(): string[] {
-    return [...getFactorySourceCache().values()];
+    return [...new Set(getFactorySourceCache().values())];
 }
 
 export function countInSources(sources: string[], text: string, max: number): number {

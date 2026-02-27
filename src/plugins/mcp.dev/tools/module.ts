@@ -93,14 +93,34 @@ function buildWhereUsedIndex(): Map<number, Array<{ id: number; n: number }>> {
     return index;
 }
 
+function isFunctionBrace(src: string, braceIdx: number): boolean {
+    let j = braceIdx - 1;
+    while (j >= 0 && (src[j] === " " || src[j] === "\t")) j--;
+    if (j < 0) return false;
+    const ch = src[j];
+    if (ch === ")" || ch === ">") return true;
+    return ch !== "," && ch !== "(" && ch !== ":" && ch !== "[";
+}
+
 function extractFunctionAt(src: string, patternIdx: number): { start: number; end: number } | null {
     let openBrace = -1;
     let hitSemicolon = false;
     const forwardLimit = Math.min(src.length, patternIdx + 500);
     for (let i = patternIdx; i < forwardLimit; i++) {
         if (src[i] === "{") {
-            openBrace = i;
-            break;
+            if (isFunctionBrace(src, i)) {
+                openBrace = i;
+                break;
+            }
+            let depth = 1;
+            let k = i + 1;
+            while (k < src.length && depth > 0) {
+                if (src[k] === "{") depth++;
+                else if (src[k] === "}") depth--;
+                k++;
+            }
+            i = k - 1;
+            continue;
         }
         if (src[i] === "}" || src[i] === ";") {
             hitSemicolon = src[i] === ";";
@@ -323,6 +343,12 @@ export function handleModule(args: ModuleArgs): unknown {
         }
         const moduleId = findModuleId(mod);
         const result: Record<string, unknown> = { id: moduleId, exports: serialize(mod, 1) };
+        if (filterType === "storeName" && typeof (mod as Record<string, unknown>).getState === "function") {
+            try {
+                const state = (mod as { getState(): Record<string, unknown> }).getState();
+                if (state && typeof state === "object") result.stateKeys = Object.keys(state);
+            } catch {}
+        }
         if (moduleId != null) {
             const src = getFactorySource(moduleId);
             if (src) {
@@ -348,7 +374,11 @@ export function handleModule(args: ModuleArgs): unknown {
         const results = mods.slice(0, cap).map(m => {
             const moduleId = findModuleId(m);
             const result: Record<string, unknown> = { id: moduleId, exports: serialize(m, 1) };
-            if (moduleId != null) attachPatchInfo(result, moduleId);
+            if (moduleId != null) {
+                const src = getFactorySource(moduleId);
+                if (src) result.len = src.length;
+                attachPatchInfo(result, moduleId);
+            }
             return result;
         });
         if (mods.length > cap) results.push({ truncated: mods.length });
@@ -391,7 +421,11 @@ export function handleModule(args: ModuleArgs): unknown {
         const result: Record<string, unknown> = { id: moduleId, name: fn.displayName ?? fn.name ?? props?.[0] ?? null };
         if (moduleId != null) {
             const src = getFactorySource(moduleId);
-            if (src) result.len = src.length;
+            if (src) {
+                result.len = src.length;
+                const siblings = findSharedFactoryIds(moduleId, src);
+                if (siblings.length) result.sharedWith = siblings;
+            }
             const exports = getModuleCache().get(moduleId);
             if (exports && typeof exports === "object") result.keys = Object.keys(exports as object).slice(0, 10);
             attachPatchInfo(result, moduleId);
@@ -405,7 +439,11 @@ export function handleModule(args: ModuleArgs): unknown {
         if (foundId == null) return { error: `No factory matches [${code}]` };
         const result: Record<string, unknown> = { id: foundId, loaded: getModuleCache().has(foundId) };
         const src = getFactorySource(foundId);
-        if (src) result.len = src.length;
+        if (src) {
+            result.len = src.length;
+            const siblings = findSharedFactoryIds(foundId, src);
+            if (siblings.length) result.sharedWith = siblings;
+        }
         attachPatchInfo(result, foundId);
         return result;
     }
@@ -444,7 +482,16 @@ export function handleModule(args: ModuleArgs): unknown {
             start = Math.max(0, searchIdx - 200);
         }
         const result: Record<string, unknown> = { len: src.length, at: start, src: src.slice(start, start + cap) };
-        if (args.search) result.searchAt = searchIdx - start;
+        if (args.search) {
+            result.searchAt = searchIdx - start;
+            let occurrences = 0;
+            let pos = 0;
+            while ((pos = src.indexOf(args.search, pos)) !== -1) {
+                occurrences++;
+                pos += args.search.length || 1;
+            }
+            if (occurrences > 1) result.searchOccurrences = occurrences;
+        }
         if (patchedCode) result.patched = true;
         attachPatchInfo(result, id);
         const siblingIds = findSharedFactoryIds(id, src);
@@ -463,8 +510,14 @@ export function handleModule(args: ModuleArgs): unknown {
         let m;
         while ((m = syncRe.exec(src)) !== null) sync.add(Number(m[1]));
         while ((m = asyncRe.exec(src)) !== null) async.add(Number(m[1]));
-        const result: Record<string, unknown> = { id, sync: [...sync] };
-        if (async.size) result.async = [...async];
+        const cache = getModuleCache();
+        const syncArr = [...sync];
+        const result: Record<string, unknown> = { id, sync: syncArr, loaded: syncArr.filter(dep => cache.has(dep)).length };
+        if (async.size) {
+            const asyncArr = [...async];
+            result.async = asyncArr;
+            result.asyncLoaded = asyncArr.filter(dep => cache.has(dep)).length;
+        }
         return result;
     }
 
@@ -518,11 +571,16 @@ export function handleModule(args: ModuleArgs): unknown {
         if (!code?.length) return "Provide code strings";
         const found = findModuleFactory(...code);
         if (!found) return { error: `No factory matches [${code}]` };
-        const [factoryId, factory] = found;
+        const [factoryId] = found;
+        const src = getFactorySource(factoryId);
         const modCache = getModuleCache();
         const loaded = modCache.has(factoryId);
-        const result: Record<string, unknown> = { id: factoryId, len: String(factory).length, loaded };
+        const result: Record<string, unknown> = { id: factoryId, len: src?.length ?? 0, loaded };
         if (loaded) result.exports = serialize(modCache.get(factoryId), 1);
+        if (src) {
+            const siblings = findSharedFactoryIds(factoryId, src);
+            if (siblings.length) result.sharedWith = siblings;
+        }
         attachPatchInfo(result, factoryId);
         return result;
     }
@@ -573,20 +631,28 @@ export function handleModule(args: ModuleArgs): unknown {
         if (!props?.length) return "Provide CSS class names in props";
         const classes = findCssClasses(...props);
         if (!classes || !Object.keys(classes).length) return { error: `No module exports [${props}] as CSS classes` };
-        return { id: findModuleId(classes), classes };
+        const cssModuleId = findModuleId(classes);
+        const result: Record<string, unknown> = { id: cssModuleId, classes };
+        if (cssModuleId != null) {
+            const src = getFactorySource(cssModuleId);
+            if (src) result.len = src.length;
+        }
+        return result;
     }
 
     if (action === "unloaded") {
         const cache = getModuleCache();
         const registry = getRuntimeFactoryRegistry();
         if (!registry) return { error: "No factory registry" };
+        const sources = getFactorySourceCache();
         const unloaded: number[] = [];
         for (const [fid] of registry) {
             if (!cache.has(fid)) unloaded.push(fid);
         }
+        unloaded.sort((a, b) => (sources.get(b)?.length ?? 0) - (sources.get(a)?.length ?? 0));
         const maxPreview = clampDefault(args.limit, 20, 50);
         const previewed = unloaded.slice(0, maxPreview).map(uid => {
-            const src = getFactorySource(uid);
+            const src = sources.get(uid);
             if (!src) return { id: uid };
             return { id: uid, len: src.length, preview: src.slice(0, 120) };
         });
@@ -611,7 +677,8 @@ export function handleModule(args: ModuleArgs): unknown {
         const index = buildWhereUsedIndex();
         const importers = index.get(id) ?? [];
         const cap = clampDefault(args.limit, MODULE.WHERE_USED_LIMIT, MODULE.WHERE_USED_LIMIT);
-        return { id, total: importers.length, importers: importers.slice(0, cap) };
+        const cache = getModuleCache();
+        return { id, total: importers.length, importers: importers.slice(0, cap).map(i => ({ ...i, l: cache.has(i.id) })) };
     }
 
     if (action === "suggest") {

@@ -67,6 +67,38 @@ function lintMatchRegex(matchStr: string, replaceStr?: string): LintWarning[] {
     return warnings;
 }
 
+function longestLiteral(matchStr: string): string {
+    let best = "";
+    let current = "";
+    for (let i = 0; i < matchStr.length; i++) {
+        const ch = matchStr[i];
+        if (ch === "\\") {
+            if (i + 1 < matchStr.length) {
+                const next = matchStr[i + 1];
+                if (/[dDwWsSbBnrtfvie]/.test(next)) {
+                    if (current.length > best.length) best = current;
+                    current = "";
+                    i++;
+                    if (next === "e" && matchStr[i + 1] === "{") {
+                        const close = matchStr.indexOf("}", i + 2);
+                        if (close !== -1) i = close;
+                    }
+                } else {
+                    current += next;
+                    i++;
+                }
+            }
+        } else if (/[.*+?()[\]{}|^$]/.test(ch)) {
+            if (current.length > best.length) best = current;
+            current = "";
+        } else {
+            current += ch;
+        }
+    }
+    if (current.length > best.length) best = current;
+    return best;
+}
+
 function testMatchOnSource(src: string, id: number, findStr: string, matchStr: string, replaceStr: string, flags?: string, contextPad?: number) {
     let regex: RegExp;
     try {
@@ -88,14 +120,26 @@ function testMatchOnSource(src: string, id: number, findStr: string, matchStr: s
     }
 
     if (!matched) {
-        const literal = matchStr.replace(/[\\^$.*+?()[\]{}|]/g, "").slice(0, PATCH.HINT_LITERAL_SLICE);
-        const literalFound = src.includes(literal);
-        const hint = literalFound ? "Literal found but regex didn't match — check quantifiers and escaping" : "No literal match either — check find targets the right module";
+        const literal = longestLiteral(matchStr);
+        const literalIdx = literal.length >= 3 ? src.indexOf(literal) : -1;
+        const hint = literalIdx >= 0
+            ? `Longest literal "${literal.slice(0, PATCH.HINT_LITERAL_SLICE)}" found at ${literalIdx} but full regex didn't match — check quantifiers and escaping`
+            : literal.length >= 3
+                ? `Longest literal "${literal.slice(0, PATCH.HINT_LITERAL_SLICE)}" not found in source — verify find targets the right module`
+                : "No substantial literal in match pattern — add string anchors";
         const canonFindStr = canonicalizeMatch(findStr);
         const findIdx = typeof canonFindStr === "string" ? src.indexOf(canonFindStr) : src.search(canonFindStr);
         const nfPad = clampDefault(contextPad, PATCH.DEFAULT_CONTEXT_PAD, PATCH.MAX_CONTEXT_PAD);
         const nearFind = findIdx >= 0 ? src.slice(Math.max(0, findIdx - nfPad), Math.min(src.length, findIdx + nfPad * 2)) : undefined;
-        return { status: "MATCH_FAILED", id, len: src.length, hint, ...(nearFind && { nearFind }), ...(warnings.length && { warnings }) };
+        const result: Record<string, unknown> = { status: "MATCH_FAILED", id, len: src.length, hint };
+        if (literalIdx >= 0) {
+            const partialStart = Math.max(0, literalIdx - nfPad);
+            result.partialAt = literalIdx;
+            result.partialCtx = src.slice(partialStart, Math.min(src.length, literalIdx + literal.length + nfPad));
+        }
+        if (nearFind) result.nearFind = nearFind;
+        if (warnings.length) result.warnings = warnings;
+        return result;
     }
 
     const replaceGroups = replaceStr.match(/\$(\d+)/g)?.map((g: string) => Number(g.slice(1))) ?? [];
@@ -130,6 +174,7 @@ function testMatchOnSource(src: string, id: number, findStr: string, matchStr: s
         before: src.slice(cs, ce),
         after: patchedSrc.slice(cs, ce + (patchedSrc.length - src.length)),
     };
+    if (/\\[ie]/.test(matchStr)) result.canonicalRegex = regex.source;
     if (matched.length > 1) result.groups = matched.slice(1).map((g: string) => g?.slice(0, PATCH.GROUP_SLICE));
     if (warnings.length) result.warnings = warnings;
     return result;
@@ -185,6 +230,7 @@ export function handlePatch(args: PatchArgs): unknown {
                     return rep;
                 }),
             };
+            if (p.group) entry.group = true;
             if (result) entry.moduleId = result.moduleId;
             return entry;
         });
@@ -240,7 +286,10 @@ export function handlePatch(args: PatchArgs): unknown {
         const canonFind = canonicalizeMatch(findStr);
         const results = search(canonFind);
         const ids = Object.keys(results).map(Number);
-        if (!ids.length) return { status: "FIND_NO_MATCH" };
+        if (!ids.length) {
+            const registry = getRuntimeFactoryRegistry();
+            return { status: "FIND_NO_MATCH", hint: "No modules match this find string. Verify the string exists in module source or use search tool.", factories: registry?.size ?? 0 };
+        }
 
         const id = ids[0];
         const src = String(results[id]);
@@ -280,10 +329,10 @@ export function handlePatch(args: PatchArgs): unknown {
     if (action === "broken") {
         const orphaned = patches.map(diagnoseOrphaned).filter(Boolean);
         const noEffect = patchResults.flatMap(r =>
-            r.replacements.filter(rep => rep.status === "noEffect").map(rep => ({ plugin: r.plugin, moduleId: r.moduleId, match: rep.match.slice(0, PATCH.MATCH_SLICE) })),
+            r.replacements.filter(rep => rep.status === "noEffect").map(rep => ({ plugin: r.plugin, find: r.find.slice(0, PATCH.FIND_SLICE), moduleId: r.moduleId, match: rep.match.slice(0, PATCH.MATCH_SLICE) })),
         );
         const errors = patchResults.flatMap(r =>
-            r.replacements.filter(rep => rep.status === "error").map(rep => ({ plugin: r.plugin, moduleId: r.moduleId, match: rep.match.slice(0, PATCH.MATCH_SLICE) })),
+            r.replacements.filter(rep => rep.status === "error").map(rep => ({ plugin: r.plugin, find: r.find.slice(0, PATCH.FIND_SLICE), moduleId: r.moduleId, match: rep.match.slice(0, PATCH.MATCH_SLICE) })),
         );
         return {
             orphaned,
@@ -325,6 +374,8 @@ export function handlePatch(args: PatchArgs): unknown {
         const ctx = src.slice(ctxStart, ctxEnd);
 
         const anchors = extractContextAnchors(ctx, getAllFactorySources(), PATCH.CONTEXT_MAX_ANCHORS);
+        const findRelative = findIdx - ctxStart;
+        for (const anchor of anchors) anchor.dist = Math.abs(anchor.at - findRelative);
 
         const result: Record<string, unknown> = {
             id,
