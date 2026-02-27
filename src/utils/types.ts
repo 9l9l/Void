@@ -63,6 +63,7 @@ export interface PluginDef {
     required?: boolean;
     hidden?: boolean;
     dev?: boolean;
+    preview?: boolean;
     enabledByDefault?: boolean;
     requiresRestart?: boolean;
     startAt?: StartAt;
