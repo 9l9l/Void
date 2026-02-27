@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+    paths: [src/**, eslint.config.mjs, .stylelintrc.json, tsconfig.json, package.json, build.ts]
+  pull_request:
+    branches: [main, dev]
+    paths: [src/**, eslint.config.mjs, .stylelintrc.json, tsconfig.json, package.json, build.ts]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  eslint:
+    name: ESLint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - run: bun run lint
+
+  stylelint:
+    name: Stylelint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - run: bun run lint:styles
+
+  typecheck:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - run: bun run tsc
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - run: bun run build
