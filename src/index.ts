@@ -15,5 +15,5 @@ if (!(target as any).Void) {
         configurable: true,
     });
 
-    Void.init();
+    Void.initSettings().then(() => Void.init());
 }

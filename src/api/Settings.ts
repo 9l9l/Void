@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useReducer } from "@turbopack/common/react";
+import { idbGet, idbSet } from "@utils/idb";
 import { Logger } from "@utils/Logger";
 import { mergeDefaults } from "@utils/misc";
 import { SettingsStore as SettingsStoreClass } from "@utils/SettingsStore";
@@ -33,28 +34,63 @@ const DefaultSettings: Settings = {
     },
 };
 
-function loadSettings(): Settings {
-    try {
-        let raw: string | null = null;
-        if (typeof GM_getValue === "function") {
-            raw = GM_getValue("VoidSettings", null);
-        } else {
-            raw = localStorage.getItem("VoidSettings");
-        }
-        if (raw) return JSON.parse(raw);
-    } catch (e) {
-        logger.error("Failed to load settings:", e);
-    }
-    return {} as Settings;
-}
-
-const settings = loadSettings();
+const settings = {} as Settings;
 mergeDefaults(settings, DefaultSettings);
 
 export const SettingsStore = new SettingsStoreClass(settings);
 
 export const PlainSettings = settings;
 export const Settings = SettingsStore.store;
+
+export async function initSettings(): Promise<void> {
+    if (typeof GM_getValue === "function") {
+        try {
+            const raw = GM_getValue("VoidSettings", null);
+            if (raw) Object.assign(settings, JSON.parse(raw));
+        } catch (e) {
+            logger.error("Failed to load settings:", e);
+        }
+        mergeDefaults(settings, DefaultSettings);
+        return;
+    }
+
+    let raw: string | null = null;
+
+    try {
+        raw = await idbGet("VoidSettings") as string | null;
+    } catch (e) {
+        logger.warn("Failed to read IndexedDB:", e);
+    }
+
+    if (!raw) {
+        raw = migrateFromLocalStorage();
+        if (raw) idbSet("VoidSettings", raw).catch(() => {});
+    }
+
+    if (raw) {
+        try {
+            Object.assign(settings, JSON.parse(raw));
+        } catch (e) {
+            logger.error("Failed to parse settings:", e);
+        }
+    }
+
+    mergeDefaults(settings, DefaultSettings);
+}
+
+function migrateFromLocalStorage(): string | null {
+    try {
+        const raw = localStorage.getItem("VoidSettings");
+        if (raw) {
+            localStorage.removeItem("VoidSettings");
+            logger.info("Migrated settings from localStorage to IndexedDB");
+            return raw;
+        }
+    } catch (e) {
+        logger.warn("Failed to read localStorage:", e);
+    }
+    return null;
+}
 
 export function migratePluginSettings(name: string, ...oldNames: string[]) {
     const { plugins } = SettingsStore.plain;

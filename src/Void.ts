@@ -17,7 +17,7 @@ export { dispatch, subscribe } from "@api/Events";
 export { closeAllModals, closeModal, confirm, openModal } from "@api/Modals";
 export { showToast, ToastType } from "@api/Notifications";
 export { addPatch, isPluginEnabled, plugins, registerPlugin, startPlugin, stopPlugin } from "@api/PluginManager";
-export { definePluginSettings, migratePluginSetting, migratePluginSettings, migrateSettingsToPlugin, PlainSettings, Settings, SettingsStore } from "@api/Settings";
+export { definePluginSettings, initSettings, migratePluginSetting, migratePluginSettings, migrateSettingsToPlugin, PlainSettings, Settings, SettingsStore } from "@api/Settings";
 export * as common from "@turbopack/common";
 export { getModuleCache, getRuntimeFactoryRegistry, getRuntimeModuleCache, getTurbopackHelpers, isBlacklisted, onceReady, patches, patchReport, patchResults, patchStats, syncLazyModules } from "@turbopack/patchTurbopack";
 export * from "@turbopack/turbopack";

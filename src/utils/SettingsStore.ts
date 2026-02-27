@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import { idbSet } from "./idb";
 import { Logger } from "./Logger";
 import { isObject } from "./misc";
 
@@ -104,10 +105,11 @@ export class SettingsStore<T extends object> {
 
     private save() {
         try {
+            const json = JSON.stringify(this.plain);
             if (typeof GM_setValue === "function") {
-                GM_setValue("VoidSettings", JSON.stringify(this.plain));
+                GM_setValue("VoidSettings", json);
             } else {
-                localStorage.setItem("VoidSettings", JSON.stringify(this.plain));
+                idbSet("VoidSettings", json).catch(() => {});
             }
         } catch (e) {
             logger.error("Failed to save settings:", e);
