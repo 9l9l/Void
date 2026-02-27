@@ -31,6 +31,7 @@ export const BrowserUtils = findByPropsLazy("isBrowser", "noop", "on", "off");
 
 export const Toaster = findByPropsLazy("Toaster", "toast");
 export const ClipboardUtils = findByPropsLazy("copyAndToast");
+export const ClipboardMarkdown = findByPropsLazy("copyMarkdown");
 export const ThemeUtils = findByPropsLazy("ThemeProvider", "useTheme");
 export const CommandMenu = findByPropsLazy("useCommandMenuStore", "createSelection");
 export const Mobile = findByPropsLazy("useMobile", "useMobileSize");
@@ -116,6 +117,7 @@ export const FileSpecs: {
     useFileSpecs: () => Record<string, any>;
 } = findByPropsLazy("FILE_DESCRIPTIONS", "getFileCategoryForAsset");
 
+export const Debounce = findByPropsLazy("useDebounce");
 export const DebouncedValue = findByPropsLazy("useDebouncedValue");
 export const PreviousValue = findByPropsLazy("usePrevious");
 export const IntersectionObserver = findByPropsLazy("useIntersectionObserver");
@@ -143,3 +145,10 @@ export const SubscriptionUtils: {
 export const FeatureControls = findByPropsLazy("useFeatureControls", "useOrganizationControls");
 
 export const RequestErrorToast = findByPropsLazy("useRequestErrorToast", "useRequestErrorToastFn");
+
+export const Marked = findByPropsLazy("marked");
+export const HtmlUtils = findByPropsLazy("escapeHtml", "unescapeMd");
+export const CloneDeep = findByPropsLazy("cloneDeep");
+export const IndexBy = findByPropsLazy("indexBy");
+export const DOMPurify = findByPropsLazy("sanitize", "isSupported");
+export const FormatBytes = findByPropsLazy("formatBytes");
