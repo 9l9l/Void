@@ -26,6 +26,12 @@
     line-height: 1.5;
 }
 
+.void-experiments-clear-btn {
+    flex-shrink: 0;
+    border-color: hsl(var(--yellow-700));
+    color: hsl(var(--fg-warning));
+}
+
 .void-experiments-empty {
     text-align: center;
     padding: 2rem;

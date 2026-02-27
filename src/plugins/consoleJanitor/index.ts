@@ -20,5 +20,13 @@ export default definePlugin({
                 replace: "void 0",
             },
         },
+        {
+            find: "DialogDescriptionWarning",
+            all: true,
+            replacement: {
+                match: /console\.warn\(\i\)/,
+                replace: "void 0",
+            },
+        },
     ],
 });

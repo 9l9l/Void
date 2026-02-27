@@ -152,9 +152,16 @@ function ExperimentsTab() {
                 </Text>
             </Flex>
             <Card variant="ghost" className={cl("warning")}>
-                <Text size="xs" className={cl("warning-text")}>
-                    Only enable flags you understand. Changing the wrong setting can break Grok or cause unexpected behavior.
-                </Text>
+                <Flex alignItems="center" justifyContent="space-between" gap="0.75rem">
+                    <Text size="xs" className={cl("warning-text")}>
+                        Only enable flags you understand. Changing the wrong setting can break Grok or cause unexpected behavior.
+                    </Text>
+                    {overrideCount > 0 && (
+                        <Button variant="outline" size="sm" className={cl("clear-btn")} onClick={() => FeatureStore.useFeatureStore.getState().clearAllOverrides()}>
+                            Clear {overrideCount} override{overrideCount !== 1 ? "s" : ""}
+                        </Button>
+                    )}
+                </Flex>
             </Card>
             <Flex alignItems="center" gap="0.5rem" className={cl("section")}>
                 <Input placeholder={`Search ${booleanKeys.length} flags...`} value={search} onChange={e => setSearch(e.target.value)} className="flex-1" />
@@ -170,11 +177,6 @@ function ExperimentsTab() {
                         <SelectItem value="modified">Modified</SelectItem>
                     </SelectContent>
                 </Select>
-                {overrideCount > 0 && (
-                    <Button variant="outline" size="sm" onClick={() => FeatureStore.useFeatureStore.getState().clearAllOverrides()}>
-                        Clear {overrideCount} override{overrideCount !== 1 ? "s" : ""}
-                    </Button>
-                )}
             </Flex>
             {filtered.map(key => (
                 <ErrorBoundary key={key} fallback={null}>
