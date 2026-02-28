@@ -9,7 +9,7 @@ import definePlugin from "@utils/types";
 
 export default definePlugin({
     name: "NoTelemetry",
-    description: "Disables Sentry, Mixpanel, and metric logging.",
+    description: "Disables all tracking, telemetry, and event logging.",
     authors: [Devs.Prism],
     required: true,
 
@@ -43,6 +43,24 @@ export default definePlugin({
                 {
                     match: /"\/api\/log_metric",\i\)/,
                     replace: '"/api/log_metric",[])',
+                },
+            ],
+        },
+        {
+            find: "feature-store-set-override",
+            all: true,
+            replacement: [
+                {
+                    match: /\(0,\i\.\i\)\("feature-store-set-override".{0,65}\)/,
+                    replace: "void 0",
+                },
+                {
+                    match: /\(0,\i\.\i\)\("feature-store-clear-override".{0,45}\)/,
+                    replace: "void 0",
+                },
+                {
+                    match: /\(0,\i\.\i\)\("feature-store-clear-all-overrides".{0,40}\)/,
+                    replace: "void 0",
                 },
             ],
         },
