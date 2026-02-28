@@ -11,13 +11,24 @@ import { Logger } from "./Logger";
 
 const logger = new Logger("UpdateChecker", "#85c1dc");
 
+function isNewer(remote: string, local: string): boolean {
+    const r = remote.split(".").map(Number);
+    const l = local.split(".").map(Number);
+    for (let i = 0; i < Math.max(r.length, l.length); i++) {
+        const a = r[i] ?? 0, b = l[i] ?? 0;
+        if (a > b) return true;
+        if (a < b) return false;
+    }
+    return false;
+}
+
 export async function checkForUpdates() {
     try {
         const resp = await fetchExternal(`${REPO_RAW_URL}/main/package.json`);
         if (!resp.ok) return;
 
         const { version: latest } = await resp.json() as { version: string };
-        if (!latest || latest === VERSION) {
+        if (!latest || !isNewer(latest, VERSION)) {
             logger.info(`Up to date (${VERSION})`);
             return;
         }
