@@ -10,7 +10,7 @@ import { Settings } from "@api/Settings";
 import { Flex, Switch, Text } from "@components";
 import { React, useEffect, useRef, useState } from "@turbopack/common/react";
 import { findByPropsLazy, findLazy } from "@turbopack/turbopack";
-import { classNameFactory, disableStyle, enableStyle, registerStyle } from "@utils/css";
+import { classNameFactory, disableStyle, registerStyle } from "@utils/css";
 
 const cl = classNameFactory("void-css-");
 const STYLE_ID = "void-custom-css";
