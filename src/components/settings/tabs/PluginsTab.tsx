@@ -63,8 +63,6 @@ export default function PluginsTab() {
         for (const n of requiredPlugins) initialStates.set(n, isPluginEnabled(n));
     }, [userPlugins, requiredPlugins]);
 
-    const totalVisible = userPlugins.length + requiredPlugins.length;
-
     const visibleUser = useMemo(() => {
         if (filter === "all") return userPlugins;
         const enabled = filter === "enabled";
@@ -126,7 +124,7 @@ export default function PluginsTab() {
             <Flex alignItems="center" gap="0.75rem" style={{ padding: "0 0.75rem" }}>
                 <Input
                     type="text"
-                    placeholder={`Search ${totalVisible} plugins...`}
+                    placeholder={`Search ${visibleUser.length + visibleRequired.length} plugins...`}
                     value={search}
                     onChange={(e: { target: { value: string } }) => setSearch(e.target.value)}
                     className="flex-1 min-w-0"
