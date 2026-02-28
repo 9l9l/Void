@@ -25,6 +25,7 @@ const USERSCRIPT_HEADER = `// ==UserScript==
 // @grant        GM_setValue
 // @grant        GM_deleteValue
 // @grant        GM_listValues
+// @license      GPL-3.0-or-later
 // @downloadURL  ${repoRawUrl}/main/userscript/Void.user.js
 // @updateURL    ${repoRawUrl}/main/userscript/Void.user.js
 // ==/UserScript==
