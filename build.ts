@@ -11,12 +11,15 @@ const pkg = JSON.parse(readFileSync("package.json", "utf-8"));
 const repoUrl: string = pkg.repository.url.replace(/^git\+/, "").replace(/\.git$/, "");
 const repoRawUrl = repoUrl.replace("github.com", "raw.githubusercontent.com");
 
+const environment = isDev ? "Development" : "Production";
+
 const USERSCRIPT_HEADER = `// ==UserScript==
 // @name         Void
 // @namespace    ${repoUrl}
 // @version      ${pkg.version}
 // @description  A modification for grok.com
-// @author       Void Contributors
+// @author       ${pkg.author} & Void Contributors
+// @environment  ${environment}
 // @match        *://grok.com/*
 // @run-at       document-start
 // @grant        unsafeWindow
@@ -127,7 +130,7 @@ async function buildCore(outfile: string, isExt: boolean) {
         outdir: "dist",
         target: "browser",
         format: "iife",
-        minify: !isDev,
+        minify: true,
         sourcemap: isDev ? "inline" : "none",
         define: {
             IS_DEV: JSON.stringify(isDev),
