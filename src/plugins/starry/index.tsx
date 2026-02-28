@@ -4,33 +4,25 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import { ErrorBoundary } from "@components/ErrorBoundary";
-import { React } from "@turbopack/common/react";
-import { findExportedComponentLazy } from "@turbopack/turbopack";
 import { Devs } from "@utils/constants";
 import definePlugin from "@utils/types";
 
-const StarsBackground = findExportedComponentLazy("StarsBackground");
-
 export default definePlugin({
     name: "Starry",
-    description: "Always-on starry background animation.",
+    description: "Enables Grok's native starry idle background with shooting stars.",
     authors: [Devs.Prism],
-
-    _stars: ErrorBoundary.wrap(() => <StarsBackground key="void-starry" className="fixed inset-0 z-0 pointer-events-none" />),
 
     patches: [
         {
-            find: '"drop-container"',
-            group: true,
+            find: "inactivityDelay:1e4,fadeInDuration:1e4",
             replacement: [
                 {
-                    match: /\(0,(\i)\.jsx\)(\("div",.{0,80}"drop-container")/,
-                    replace: "(0,$1.jsxs)$2",
+                    match: /\i\.SHOW_STARRY_IDLE&&!\i&&\i&&"main"===\i\.page&&/,
+                    replace: "true&&",
                 },
                 {
-                    match: /"drop-container",children:(\(0,\i\.jsx\)\(\i,\{backend:\i,.{0,120}children:\i\}\)\}\))\}\)/,
-                    replace: '"drop-container",children:[$self._stars(),$1]})',
+                    match: /inactivityDelay:1e4,fadeInDuration:1e4/,
+                    replace: "inactivityDelay:0,fadeInDuration:0",
                 },
             ],
         },
