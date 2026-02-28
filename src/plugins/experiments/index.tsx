@@ -33,11 +33,21 @@ function getBooleanKeys(config: FeatureStoreState["config"]): string[] {
 
 function syncKnownFlags(config: FeatureStoreState["config"]) {
     const booleanKeys = getBooleanKeys(config);
+    if (!booleanKeys.length) return;
+
     const existing = settings.plain.knownFlags;
     const firstRun = existing == null;
     const known: Record<string, number> = existing ?? {};
     const now = Date.now();
-    let changed = false;
+    let changed = firstRun;
+
+    if (!firstRun) {
+        const timestamps = Object.values(known);
+        if (timestamps.length > 1 && timestamps.every(t => t === timestamps[0] && t !== 0)) {
+            for (const key of Object.keys(known)) known[key] = 0;
+            changed = true;
+        }
+    }
 
     for (const key of booleanKeys) {
         if (!(key in known)) {
