@@ -15,6 +15,7 @@ import { FeatureStore } from "@turbopack/common/stores";
 import { Devs } from "@utils/constants";
 import { classNameFactory } from "@utils/css";
 import { useFiltered } from "@utils/react";
+import { humanizeKey, pluralize } from "@utils/text";
 import definePlugin, { StartAt } from "@utils/types";
 
 const cl = classNameFactory("void-experiments-");
@@ -75,22 +76,13 @@ function isNewFlag(key: string): boolean {
     return Date.now() - seen < NEW_FLAG_TTL;
 }
 
-function prettifyKey(key: string): string {
-    return key
-        .replace(/[-_]/g, " ")
-        .replace(/\b\w/g, c => c.toUpperCase())
-        .replace(/\bMcp\b/g, "MCP")
-        .replace(/\bUi\b/g, "UI")
-        .replace(/\bApi\b/g, "API")
-        .replace(/\bUrl\b/g, "URL")
-        .replace(/\bGcal\b/g, "GCal")
-        .replace(/\bMie\b/g, "MIE")
-        .replace(/\bXlsx\b/g, "XLSX")
-        .replace(/\bNux\b/g, "NUX")
-        .replace(/\bXai\b/g, "xAI")
-        .replace(/\bGrok\b/gi, "Grok")
-        .replace(/\bId\b/g, "ID");
-}
+const FLAG_ACRONYMS: Record<string, string> = {
+    Mcp: "MCP", Ui: "UI", Api: "API", Url: "URL",
+    Gcal: "GCal", Mie: "MIE", Xlsx: "XLSX", Nux: "NUX",
+    Xai: "xAI", Grok: "Grok", Id: "ID",
+};
+
+const prettifyKey = (key: string) => humanizeKey(key, FLAG_ACRONYMS);
 
 function ExperimentRow({ flagKey, isNew }: { flagKey: string; isNew: boolean }) {
     const config = FeatureStore.useFeatureStore(s => s.config[flagKey]);
@@ -168,7 +160,7 @@ function ExperimentsTab() {
                     </Text>
                     {overrideCount > 0 && (
                         <Button variant="secondary" size="sm" className={cl("clear-btn")} onClick={() => FeatureStore.useFeatureStore.getState().clearAllOverrides()}>
-                            Clear {overrideCount} override{overrideCount !== 1 ? "s" : ""}
+                            Clear {pluralize(overrideCount, "override")}
                         </Button>
                     )}
                 </Flex>

@@ -10,13 +10,14 @@ import { ChatBarButton, Separator } from "@components";
 import { GaugeIcon } from "@components/icons";
 import type { EffortRateLimits, RateLimitResponse } from "@grok-types";
 import type { ModelId, ModelMode, RequestKind } from "@grok-types/enums";
-import { React, useEffect, useRef, useState } from "@turbopack/common/react";
+import { React, useEffect, useState } from "@turbopack/common/react";
 import { ChatPageStore, ModelsStore } from "@turbopack/common/stores";
 import { ApiClients, ReasoningModeUtils } from "@turbopack/common/utils";
 import { findExportedComponentLazy } from "@turbopack/turbopack";
 import { Devs } from "@utils/constants";
 import { Logger } from "@utils/Logger";
 import { formatCountdown, formatDuration } from "@utils/misc";
+import { useCountdown } from "@utils/react";
 import definePlugin, { OptionType } from "@utils/types";
 
 const logger = new Logger("RateLimitDisplay", "#ef9f76");
@@ -81,24 +82,6 @@ function formatLabel(u: Usage, short?: boolean): string {
     if (u.total < 0) return "...";
     if (u.total === 0) return "\u221e";
     return short || !settings.store.showMaxCount ? `${u.remaining}` : `${u.remaining}/${u.total}`;
-}
-
-function useCountdown(seconds: number | null): number | null {
-    const [value, setValue] = useState(seconds);
-    const prevRef = useRef(seconds);
-
-    if (prevRef.current !== seconds) {
-        prevRef.current = seconds;
-        setValue(seconds);
-    }
-
-    useEffect(() => {
-        if (value == null || value <= 0) return;
-        const id = setInterval(() => setValue(p => (p != null && p > 1 ? p - 1 : null)), 1000);
-        return () => clearInterval(id);
-    }, [value != null && value > 0]);
-
-    return value;
 }
 
 function SingleDisplay({ usage, iconOnly }: { usage: Usage; iconOnly: boolean }) {

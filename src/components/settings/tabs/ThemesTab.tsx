@@ -24,6 +24,9 @@ import {
 } from "@components";
 import { React, useMemo, useState } from "@turbopack/common/react";
 import { classNameFactory } from "@utils/css";
+import { errorMessage } from "@utils/misc";
+import { useFiltered } from "@utils/react";
+import { pluralize } from "@utils/text";
 
 import ThemeCard from "../ThemeCard";
 
@@ -31,15 +34,7 @@ const cl = classNameFactory("void-themes-");
 
 type Filter = "all" | "enabled" | "disabled";
 
-function filterThemes(themes: ThemeData[], search: string, filter: Filter): ThemeData[] {
-    const q = search.toLowerCase();
-    return themes.filter(t => {
-        if (q && !t.name.toLowerCase().includes(q) && !t.author.toLowerCase().includes(q) && !t.description.toLowerCase().includes(q)) return false;
-        if (filter === "enabled") return t.enabled;
-        if (filter === "disabled") return !t.enabled;
-        return true;
-    });
-}
+const getThemeKey = (t: ThemeData) => `${t.name} ${t.description} ${t.author}`;
 
 export default function ThemesTab() {
     const [search, setSearch] = useState("");
@@ -50,7 +45,13 @@ export default function ThemesTab() {
     const [enabled, setEnabled] = useState(isThemesEnabled);
     const [themes, setThemes] = useState(getThemes);
 
-    const filtered = useMemo(() => filterThemes(themes, search, filter), [themes, search, filter]);
+    const visible = useMemo(() => {
+        if (filter === "all") return themes;
+        const enabled = filter === "enabled";
+        return themes.filter(t => t.enabled === enabled);
+    }, [themes, filter]);
+
+    const filtered = useFiltered(visible, search, getThemeKey);
 
     const handleToggle = (checked: boolean) => {
         setEnabled(checked);
@@ -67,7 +68,7 @@ export default function ThemesTab() {
             setUrl("");
             setThemes(getThemes());
         } catch (e: unknown) {
-            setError(e instanceof Error ? e.message : "Failed to add theme.");
+            setError(errorMessage(e));
         } finally {
             setLoading(false);
         }
@@ -121,7 +122,7 @@ export default function ThemesTab() {
                         </Text>
                     </Flex>
                     <Text size="xs" color="secondary">
-                        {`${themes.length} theme${themes.length === 1 ? "" : "s"} installed \u00B7 ${themes.filter(t => t.enabled).length} enabled`}
+                        {`${pluralize(themes.length, "theme")} installed \u00B7 ${themes.filter(t => t.enabled).length} enabled`}
                     </Text>
                 </Flex>
             )}

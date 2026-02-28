@@ -11,16 +11,10 @@ import { React } from "@turbopack/common/react";
 import { ConversationStore, ResponseStore } from "@turbopack/common/stores";
 import { findExportedComponentLazy } from "@turbopack/turbopack";
 import { Devs } from "@utils/constants";
+import { downloadFile, sanitizeFilename } from "@utils/misc";
 import definePlugin from "@utils/types";
 
 const DownloadIcon = findExportedComponentLazy("DownloadIcon");
-
-const SANITIZE_PATTERN = /[^a-zA-Z0-9 ]/g;
-const WHITESPACE_PATTERN = /\s+/g;
-
-function sanitizeFilename(title: string): string {
-    return title.replace(SANITIZE_PATTERN, "").trim().replace(WHITESPACE_PATTERN, "-") || "chat";
-}
 
 function buildExportMessage(r: GrokResponse) {
     return {
@@ -38,16 +32,6 @@ function buildExportMessage(r: GrokResponse) {
     };
 }
 
-function downloadJson(filename: string, data: unknown) {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-}
-
 async function exportChat(conversationId: string) {
     const responses: GrokResponse[] = await ResponseStore.useResponseStore.getState().loadInitialResponses(conversationId, true);
     if (!responses?.length) return;
@@ -55,12 +39,11 @@ async function exportChat(conversationId: string) {
     const conversation: GrokConversation | undefined = ConversationStore.useConversationStore.getState().byId[conversationId];
     const title = conversation?.title ?? "Untitled Chat";
 
-    downloadJson(`${sanitizeFilename(title)}.json`, {
-        conversationId,
-        title,
-        exportedAt: new Date().toISOString(),
-        messages: responses.map(buildExportMessage),
-    });
+    downloadFile(
+        `${sanitizeFilename(title, "chat")}.json`,
+        JSON.stringify({ conversationId, title, exportedAt: new Date().toISOString(), messages: responses.map(buildExportMessage) }, null, 2),
+        "application/json",
+    );
 }
 
 function ExportItem({ conversationId }: ContextMenuLocationMap["conversation"]) {

@@ -13,15 +13,12 @@ export {
     LazyComponent,
     React,
     useCallback,
-    useContext,
     useEffect,
     useLayoutEffect,
     useMemo,
     useReducer,
     useRef,
     useState,
-    waitForComponent,
-    waitForComponentByName,
 } from "./react";
 export * from "./stores";
 export * from "./utils";

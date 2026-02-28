@@ -6,6 +6,8 @@
 
 import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@components";
 import { React } from "@turbopack/common/react";
+import { createExternalStore } from "@utils/misc";
+import { useExternalStore } from "@utils/react";
 import type { ReactNode } from "react";
 
 export interface ModalProps {
@@ -30,30 +32,13 @@ interface ModalEntry {
 }
 
 let nextId = 0;
-let version = 0;
 const modalStack: ModalEntry[] = [];
-const listeners = new Set<() => void>();
-
-function notify() {
-    version++;
-    for (const fn of listeners) fn();
-}
-
-function subscribeModals(callback: () => void) {
-    listeners.add(callback);
-    return () => {
-        listeners.delete(callback);
-    };
-}
-
-function getModalsSnapshot() {
-    return version;
-}
+const store = createExternalStore();
 
 export function openModal(render: (props: ModalProps) => ReactNode, options?: ModalOptions): string {
     const key = options?.modalKey ?? `void-modal-${nextId++}`;
     modalStack.push({ key, render });
-    notify();
+    store.notify();
     return key;
 }
 
@@ -61,13 +46,13 @@ export function closeModal(key: string) {
     const idx = modalStack.findIndex(m => m.key === key);
     if (idx !== -1) {
         modalStack.splice(idx, 1);
-        notify();
+        store.notify();
     }
 }
 
 export function closeAllModals() {
     modalStack.length = 0;
-    notify();
+    store.notify();
 }
 
 export function confirm(options: ConfirmOptions): Promise<boolean> {
@@ -94,7 +79,7 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
             );
         });
 
-        const unsub = subscribeModals(() => {
+        const unsub = store.subscribe(() => {
             if (!modalStack.some(m => m.key === key)) {
                 unsub();
                 resolve(false);
@@ -119,7 +104,7 @@ function ModalInstance({ entry }: { entry: ModalEntry }) {
 }
 
 export function ModalContainer(): ReactNode {
-    React.useSyncExternalStore(subscribeModals, getModalsSnapshot);
+    useExternalStore(store);
 
     if (!modalStack.length) return null;
 

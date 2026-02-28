@@ -56,14 +56,6 @@ export function isObject(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-export function isTruthy<T>(value: T | false | null | undefined | 0 | ""): value is T {
-    return !!value;
-}
-
-export function isNonNullish<T>(value: T | null | undefined): value is T {
-    return value != null;
-}
-
 export function fetchExternal(url: string): Promise<Response> {
     if (IS_EXTENSION || typeof GM_xmlhttpRequest === "undefined") return fetch(url);
 
@@ -86,6 +78,31 @@ export function fetchExternal(url: string): Promise<Response> {
     });
 }
 
+export interface ExternalStore {
+    notify(): void;
+    subscribe(callback: () => void): () => void;
+    getSnapshot(): number;
+}
+
+export function createExternalStore(): ExternalStore {
+    const listeners = new Set<() => void>();
+    let version = 0;
+
+    return {
+        notify() {
+            version++;
+            for (const fn of listeners) fn();
+        },
+        subscribe(callback: () => void) {
+            listeners.add(callback);
+            return () => { listeners.delete(callback); };
+        },
+        getSnapshot() {
+            return version;
+        },
+    };
+}
+
 const pad = (n: number) => String(n).padStart(2, "0");
 
 export function formatCountdown(totalSeconds: number): string {
@@ -100,4 +117,30 @@ export function formatDuration(totalSeconds: number): string {
     const m = Math.floor((totalSeconds % 3600) / 60);
     if (h > 0 && m > 0) return `${h}h ${m}m`;
     return h > 0 ? `${h}h` : `${m}m`;
+}
+
+/** Math.min(Math.max(value, min), max) */
+export function clamp(value: number, min: number, max: number): number {
+    return Math.min(Math.max(value, min), max);
+}
+
+/** Safe error-to-string extraction. */
+export function errorMessage(err: unknown): string {
+    return err instanceof Error ? err.message : String(err);
+}
+
+/** Trigger a browser file download. */
+export function downloadFile(filename: string, content: BlobPart, mimeType = "application/octet-stream") {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+/** Create a filesystem-safe filename from a string. */
+export function sanitizeFilename(title: string, fallback = "file"): string {
+    return title.replace(/[^a-zA-Z0-9 ]/g, "").trim().replace(/\s+/g, "-") || fallback;
 }

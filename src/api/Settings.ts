@@ -4,10 +4,11 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import { useEffect, useReducer } from "@turbopack/common/react";
+import { useEffect } from "@turbopack/common/react";
 import { idbGet, idbSet } from "@utils/idb";
 import { Logger } from "@utils/Logger";
 import { mergeDefaults } from "@utils/misc";
+import { useForceUpdater } from "@utils/react";
 import { SettingsStore as SettingsStoreClass } from "@utils/SettingsStore";
 import { type DefinedSettings, OptionType, type PluginSettingDef, type PluginSettingSelectOption, type SettingsChecks, type SettingsDefinition } from "@utils/types";
 
@@ -173,7 +174,7 @@ export function definePluginSettings<Def extends SettingsDefinition, Checks exte
             });
         },
         use(keys) {
-            const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
+            const forceUpdate = useForceUpdater();
 
             useEffect(() => {
                 if (keys?.length) {

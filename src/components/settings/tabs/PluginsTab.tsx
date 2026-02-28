@@ -24,6 +24,7 @@ import {
 } from "@components";
 import { React, useCallback, useEffect, useMemo, useState } from "@turbopack/common/react";
 import { classes, classNameFactory } from "@utils/css";
+import { useFiltered } from "@utils/react";
 
 import PluginCard from "../PluginCard";
 import PluginDialog from "./PluginDialog";
@@ -36,15 +37,7 @@ let dismissed = false;
 
 type Filter = "all" | "enabled" | "disabled";
 
-function filterPlugins(list: string[], search: string, filter: Filter) {
-    const q = search.toLowerCase();
-    return list.filter(name => {
-        if (q && !name.toLowerCase().includes(q) && !plugins[name].description?.toLowerCase().includes(q)) return false;
-        if (filter === "enabled") return isPluginEnabled(name);
-        if (filter === "disabled") return !isPluginEnabled(name);
-        return true;
-    });
-}
+const getPluginKey = (name: string) => `${name} ${plugins[name].description ?? ""}`;
 
 export default function PluginsTab() {
     const [search, setSearch] = useState("");
@@ -73,8 +66,20 @@ export default function PluginsTab() {
 
     const totalVisible = userPlugins.length + requiredPlugins.length;
 
-    const filteredUser = useMemo(() => filterPlugins(userPlugins, search, filter), [search, filter, userPlugins]);
-    const filteredRequired = useMemo(() => filterPlugins(requiredPlugins, search, filter), [search, filter, requiredPlugins]);
+    const visibleUser = useMemo(() => {
+        if (filter === "all") return userPlugins;
+        const enabled = filter === "enabled";
+        return userPlugins.filter(n => isPluginEnabled(n) === enabled);
+    }, [filter, userPlugins]);
+
+    const visibleRequired = useMemo(() => {
+        if (filter === "all") return requiredPlugins;
+        const enabled = filter === "enabled";
+        return requiredPlugins.filter(n => isPluginEnabled(n) === enabled);
+    }, [filter, requiredPlugins]);
+
+    const filteredUser = useFiltered(visibleUser, search, getPluginKey);
+    const filteredRequired = useFiltered(visibleRequired, search, getPluginKey);
 
     const dialogPlugin = dialogName ? plugins[dialogName] : null;
     const hasResults = filteredUser.length > 0 || filteredRequired.length > 0;

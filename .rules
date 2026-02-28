@@ -58,7 +58,7 @@ rules:
     classConcat: "`${a} ${b}`" ⟹ classes(a, b) from @utils/css
     perFileFinders: findByPropsLazy for common modules ⟹ import from @turbopack/common/*
     perFileStores: findByPropsLazy("useXxxStore") ⟹ typed import from @turbopack/common/stores
-    nullGuards: ⟹ isTruthy, isNonNullish from @utils/misc
+    nullGuards: ⟹ isTruthy, isNonNullish from @utils/guards
     clipboard: navigator.clipboard ⟹ copyToClipboard from @utils/misc
     repeatedDelays: repeated setTimeout for the same event ⟹ debounce from @utils/misc. One-shot setTimeout is fine
   antiPatterns:

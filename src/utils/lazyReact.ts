@@ -6,7 +6,7 @@
 
 import type { ComponentType } from "react";
 
-type AnyComponent = ComponentType & Record<string, unknown>;
+export type AnyComponent = ComponentType & Record<string, unknown>;
 
 let _createElement: Function | null = null;
 

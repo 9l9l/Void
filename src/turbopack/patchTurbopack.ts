@@ -110,15 +110,6 @@ export function getTurbopackHelpers(): TurbopackHelpers | null {
     return turbopackHelpers;
 }
 
-export function onCacheDiscovery(cb: () => void): () => void {
-    if (runtimeModuleCache) {
-        cb();
-        return () => {};
-    }
-    cacheDiscoveryListeners.add(cb);
-    return () => cacheDiscoveryListeners.delete(cb);
-}
-
 export function addWaitForSubscription(filter: (mod: any) => boolean, cb: (mod: any, id: number) => void) {
     waitForSubscriptions.set(filter, cb);
 }
@@ -136,7 +127,7 @@ export function onModuleLoad(cb: () => void): () => void {
 
 const badExports = new WeakSet();
 
-export function shouldIgnoreValue(value: unknown): boolean {
+function shouldIgnoreValue(value: unknown): boolean {
     if (value == null) return true;
     const t = typeof value;
     if (t !== "object" && t !== "function") return true;

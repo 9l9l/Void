@@ -6,12 +6,7 @@
 
 import { OptionType, type Plugin, type PluginSettingDef, type PluginSettingSelectOption } from "@utils/types";
 
-export function camelToTitle(s: string): string {
-    return s
-        .replace(/([A-Z])/g, " $1")
-        .replace(/^./, c => c.toUpperCase())
-        .trim();
-}
+export { humanizeKey as camelToTitle } from "@utils/text";
 
 export function getDefaultValue(setting: PluginSettingDef): unknown {
     if ("default" in setting) return setting.default;

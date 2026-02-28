@@ -5,11 +5,22 @@
  */
 
 import { subscribe } from "@api/Events";
-import { useEffect, useMemo, useReducer, useState } from "@turbopack/common/react";
+import { React, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "@turbopack/common/react";
 import { onModuleLoad } from "@turbopack/patchTurbopack";
-import { debounce } from "@utils/misc";
+import { debounce, type ExternalStore } from "@utils/misc";
+import type { ReactNode } from "react";
 
 export const NoopComponent = () => null;
+
+export type LazyNode = ReactNode | (() => ReactNode);
+
+export function resolveLazyNode(node: LazyNode | undefined): ReactNode {
+    return typeof node === "function" ? node() : node;
+}
+
+export function useExternalStore(store: ExternalStore) {
+    React.useSyncExternalStore(store.subscribe, store.getSnapshot);
+}
 
 export function useForceUpdater() {
     return useReducer((x: number) => x + 1, 0)[1];
@@ -99,4 +110,46 @@ export function useAwaiter<T>(factory: () => Promise<T>, opts?: AwaiterOpts<T | 
     }, resolved.deps);
 
     return [state.value, state.error, state.pending];
+}
+
+/** Countdown timer hook. Ticks down from `seconds` to 0, then returns null. */
+export function useCountdown(seconds: number | null): number | null {
+    const [value, setValue] = useState(seconds);
+    const prevRef = useRef(seconds);
+
+    if (prevRef.current !== seconds) {
+        prevRef.current = seconds;
+        setValue(seconds);
+    }
+
+    useEffect(() => {
+        if (value == null || value <= 0) return;
+        const id = setInterval(() => setValue(p => (p != null && p > 1 ? p - 1 : null)), 1000);
+        return () => clearInterval(id);
+    }, [value != null && value > 0]);
+
+    return value;
+}
+
+/** Intersection observer hook. Returns [refCallback, isIntersecting]. If `once` is true, stays true after first intersection. */
+export function useIntersection(once = false): [(el: Element | null) => void, boolean] {
+    const [intersecting, setIntersecting] = useState(false);
+    const elRef = useRef<Element | null>(null);
+
+    useEffect(() => {
+        const el = elRef.current;
+        if (!el) return;
+        const observer = new IntersectionObserver(([entry]) => {
+            setIntersecting(prev => {
+                if (once && prev) return prev;
+                return entry.isIntersecting;
+            });
+            if (once && entry.isIntersecting) observer.disconnect();
+        });
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [elRef.current, once]);
+
+    const ref = useCallback((el: Element | null) => { elRef.current = el; }, []);
+    return [ref, intersecting];
 }

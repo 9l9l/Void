@@ -7,9 +7,9 @@
 import { ChatBarButton } from "@components/ChatBarButton";
 import { ErrorBoundary } from "@components/ErrorBoundary";
 import { React } from "@turbopack/common/react";
+import { createExternalStore } from "@utils/misc";
+import { type LazyNode, resolveLazyNode, useExternalStore } from "@utils/react";
 import type { ComponentType, ReactNode } from "react";
-
-type LazyNode = ReactNode | (() => ReactNode);
 
 export interface ChatBarButtonRenderProps {
     iconOnly: boolean;
@@ -23,38 +23,17 @@ export interface ChatBarButtonDef {
     onClick?: () => void;
 }
 
-function resolve(node: LazyNode | undefined): ReactNode {
-    return typeof node === "function" ? node() : node;
-}
-
 const buttons = new Map<string, ChatBarButtonDef>();
-const listeners = new Set<() => void>();
-let version = 0;
-
-function notify() {
-    version++;
-    for (const fn of listeners) fn();
-}
-
-function subscribeButtons(callback: () => void) {
-    listeners.add(callback);
-    return () => {
-        listeners.delete(callback);
-    };
-}
-
-function getButtonsSnapshot() {
-    return version;
-}
+const store = createExternalStore();
 
 export function addChatBarButton(id: string, def: ChatBarButtonDef): void {
     buttons.set(id, def);
-    notify();
+    store.notify();
 }
 
 export function removeChatBarButton(id: string): void {
     buttons.delete(id);
-    notify();
+    store.notify();
 }
 
 function renderEntry(def: ChatBarButtonDef, iconOnly: boolean): ReactNode {
@@ -62,11 +41,11 @@ function renderEntry(def: ChatBarButtonDef, iconOnly: boolean): ReactNode {
         const Render = def.render;
         return <Render iconOnly={iconOnly} />;
     }
-    return <ChatBarButton icon={resolve(def.icon)} tooltip={resolve(def.tooltip)} onClick={def.onClick} iconOnly={iconOnly} />;
+    return <ChatBarButton icon={resolveLazyNode(def.icon)} tooltip={resolveLazyNode(def.tooltip)} onClick={def.onClick} iconOnly={iconOnly} />;
 }
 
 export function VoidChatBarButtons({ iconOnly }: { iconOnly: boolean }): ReactNode {
-    React.useSyncExternalStore(subscribeButtons, getButtonsSnapshot);
+    useExternalStore(store);
 
     if (!buttons.size) return null;
 

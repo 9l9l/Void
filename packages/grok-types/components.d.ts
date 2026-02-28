@@ -65,36 +65,8 @@ export interface ButtonWithTooltipProps extends ButtonProps {
     stayOpenOnClick?: boolean;
 }
 
-export interface ButtonWithPopoverProps extends ButtonProps {
-    popoverContent?: ReactNode;
-    popoverContentProps?: Record<string, any>;
-    popoverProps?: Record<string, any>;
-}
-
 export type Button = ComponentType<ButtonProps>;
 export type ButtonWithTooltip = ComponentType<ButtonWithTooltipProps>;
-export type ButtonWithTooltipOptimized = ComponentType<ButtonWithTooltipProps>;
-export type ButtonWithPopover = ComponentType<ButtonWithPopoverProps>;
-
-// #endregion
-
-// #region Checkbox (Radix Checkbox)
-
-export interface CheckboxProps {
-    checked?: boolean | "indeterminate";
-    defaultChecked?: boolean;
-    disabled?: boolean;
-    required?: boolean;
-    name?: string;
-    value?: string;
-    form?: string;
-    onCheckedChange?: (checked: boolean | "indeterminate") => void;
-    className?: string;
-    children?: ReactNode;
-    [key: string]: any;
-}
-
-export type Checkbox = ComponentType<CheckboxProps>;
 
 // #endregion
 
@@ -120,8 +92,6 @@ export interface DialogFooterProps extends RadixSubProps {}
 export interface DialogTitleProps extends RadixSubProps {}
 export interface DialogDescriptionProps extends RadixSubProps {}
 export interface DialogCloseProps extends RadixSubProps {}
-export interface DialogTriggerProps extends RadixSubProps {}
-export interface DialogOverlayProps extends RadixSubProps {}
 
 export type Dialog = ComponentType<DialogProps>;
 export type DialogContent = ComponentType<DialogContentProps>;
@@ -130,8 +100,6 @@ export type DialogFooter = ComponentType<DialogFooterProps>;
 export type DialogTitle = ComponentType<DialogTitleProps>;
 export type DialogDescription = ComponentType<DialogDescriptionProps>;
 export type DialogClose = ComponentType<DialogCloseProps>;
-export type DialogTrigger = ComponentType<DialogTriggerProps>;
-export type DialogOverlay = ComponentType<DialogOverlayProps>;
 
 // #endregion
 
@@ -213,14 +181,6 @@ export type Switch = ComponentType<SwitchProps>;
 
 // #region Tooltip (Radix Tooltip)
 
-export interface TooltipProviderProps {
-    delayDuration?: number;
-    skipDelayDuration?: number;
-    disableHoverableContent?: boolean;
-    children?: ReactNode;
-    [key: string]: any;
-}
-
 export interface TooltipProps extends RadixRootProps {
     delayDuration?: number;
 }
@@ -232,40 +192,13 @@ export interface TooltipContentProps extends RadixContentProps {
     container?: HTMLElement | null;
 }
 
-export type TooltipProvider = ComponentType<TooltipProviderProps>;
 export type Tooltip = ComponentType<TooltipProps>;
 export type TooltipTrigger = ComponentType<TooltipTriggerProps>;
 export type TooltipContent = ComponentType<TooltipContentProps>;
 
 // #endregion
 
-// #region Popover (Radix Popover)
-
-export interface PopoverProps extends RadixRootProps {}
-
-export interface PopoverTriggerProps extends RadixTriggerProps {
-    hoverOpen?: boolean;
-}
-
-export interface PopoverContentProps extends RadixContentProps {
-    hoverOpen?: boolean;
-    closeOnClick?: boolean;
-}
-
-export type Popover = ComponentType<PopoverProps>;
-export type PopoverTrigger = ComponentType<PopoverTriggerProps>;
-export type PopoverContent = ComponentType<PopoverContentProps>;
-
-// #endregion
-
 // #region DropdownMenu (Radix DropdownMenu)
-
-export interface DropdownMenuProps extends RadixRootProps {}
-export interface DropdownMenuTriggerProps extends RadixTriggerProps {}
-
-export interface DropdownMenuContentProps extends RadixContentProps {
-    collisionPadding?: number | Partial<Record<Side, number>>;
-}
 
 export interface DropdownMenuItemProps {
     onSelect?: (e: Event) => void;
@@ -276,70 +209,7 @@ export interface DropdownMenuItemProps {
     [key: string]: any;
 }
 
-export type IndicatorPosition = "start" | "end";
-
-export interface DropdownMenuCheckboxItemProps {
-    checked?: boolean;
-    onCheckedChange?: (checked: boolean) => void;
-    indicatorPosition?: IndicatorPosition;
-    disabled?: boolean;
-    className?: string;
-    children?: ReactNode;
-    [key: string]: any;
-}
-
-export type IndicatorType = "circle" | "check";
-
-export interface DropdownMenuRadioItemProps {
-    value: string;
-    indicatorPosition?: IndicatorPosition;
-    indicatorType?: IndicatorType;
-    disabled?: boolean;
-    className?: string;
-    children?: ReactNode;
-    [key: string]: any;
-}
-
-export interface DropdownMenuRadioGroupProps {
-    value?: string;
-    onValueChange?: (value: string) => void;
-    children?: ReactNode;
-    [key: string]: any;
-}
-
-export interface DropdownMenuSubProps {
-    open?: boolean;
-    defaultOpen?: boolean;
-    onOpenChange?: (open: boolean) => void;
-    children?: ReactNode;
-    [key: string]: any;
-}
-
-export interface DropdownMenuSubTriggerProps {
-    inset?: boolean;
-    className?: string;
-    children?: ReactNode;
-    [key: string]: any;
-}
-
-export interface DropdownMenuSubContentProps extends RadixContentProps {}
-
-export interface DropdownMenuSeparatorProps {
-    className?: string;
-    [key: string]: any;
-}
-
-export type DropdownMenu = ComponentType<DropdownMenuProps>;
-export type DropdownMenuTrigger = ComponentType<DropdownMenuTriggerProps>;
-export type DropdownMenuContent = ComponentType<DropdownMenuContentProps>;
 export type DropdownMenuItem = ComponentType<DropdownMenuItemProps>;
-export type DropdownMenuCheckboxItem = ComponentType<DropdownMenuCheckboxItemProps>;
-export type DropdownMenuRadioItem = ComponentType<DropdownMenuRadioItemProps>;
-export type DropdownMenuRadioGroup = ComponentType<DropdownMenuRadioGroupProps>;
-export type DropdownMenuSub = ComponentType<DropdownMenuSubProps>;
-export type DropdownMenuSubTrigger = ComponentType<DropdownMenuSubTriggerProps>;
-export type DropdownMenuSubContent = ComponentType<DropdownMenuSubContentProps>;
-export type DropdownMenuSeparator = ComponentType<DropdownMenuSeparatorProps>;
 
 // #endregion
 
@@ -354,14 +224,7 @@ export interface CardProps {
     [key: string]: any;
 }
 
-export interface CardHeaderProps extends RadixSubProps {}
-export interface CardTitleProps extends RadixSubProps {}
-export interface CardContentProps extends RadixSubProps {}
-
 export type Card = ComponentType<CardProps>;
-export type CardHeader = ComponentType<CardHeaderProps>;
-export type CardTitle = ComponentType<CardTitleProps>;
-export type CardContent = ComponentType<CardContentProps>;
 
 // #endregion
 
@@ -381,36 +244,6 @@ export interface InputProps {
 }
 
 export type Input = ComponentType<InputProps>;
-
-// #endregion
-
-// #region Textarea
-
-export interface TextareaProps {
-    value?: string;
-    defaultValue?: string;
-    placeholder?: string;
-    disabled?: boolean;
-    className?: string;
-    rows?: number;
-    onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-    [key: string]: any;
-}
-
-export type Textarea = ComponentType<TextareaProps>;
-
-// #endregion
-
-// #region Label
-
-export interface LabelProps {
-    htmlFor?: string;
-    className?: string;
-    children?: ReactNode;
-    [key: string]: any;
-}
-
-export type Label = ComponentType<LabelProps>;
 
 // #endregion
 
@@ -453,105 +286,6 @@ export interface SettingsDescriptionProps {
 export type SettingsRow = ComponentType<SettingsRowProps>;
 export type SettingsTitle = ComponentType<SettingsTitleProps>;
 export type SettingsDescription = ComponentType<SettingsDescriptionProps>;
-
-// #endregion
-
-// #region Avatar
-
-export interface AvatarProps {
-    className?: string;
-    textClassName?: string;
-    user?: {
-        givenName?: string;
-        familyName?: string;
-        profileImageUrl?: string;
-    };
-    fallbackText?: string;
-    [key: string]: any;
-}
-
-export type Avatar = ComponentType<AvatarProps>;
-
-// #endregion
-
-// #region Presence
-
-export interface PresenceProps {
-    present: boolean;
-    children: ReactNode | ((props: { present: boolean }) => ReactNode);
-}
-
-export type Presence = ComponentType<PresenceProps>;
-
-// #endregion
-
-// #region Drawer (Vaul Drawer)
-
-export interface DrawerProps {
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
-    shouldScaleBackground?: boolean;
-    dismissible?: boolean;
-    modal?: boolean;
-    children?: ReactNode;
-    [key: string]: any;
-}
-
-export interface DrawerContentProps {
-    className?: string;
-    overlayClassName?: string;
-    disableDrag?: boolean;
-    analyticsName?: string;
-    children?: ReactNode;
-    onInteractOutside?: (e: Event) => void;
-    onEscapeKeyDown?: (e: KeyboardEvent) => void;
-    [key: string]: any;
-}
-
-export interface DrawerHeaderProps extends RadixSubProps {}
-export interface DrawerFooterProps extends RadixSubProps {}
-export interface DrawerTitleProps extends RadixSubProps {}
-export interface DrawerDescriptionProps extends RadixSubProps {}
-export interface DrawerTriggerProps extends RadixSubProps {}
-
-export type Drawer = ComponentType<DrawerProps>;
-export type DrawerContent = ComponentType<DrawerContentProps>;
-export type DrawerHeader = ComponentType<DrawerHeaderProps>;
-export type DrawerFooter = ComponentType<DrawerFooterProps>;
-export type DrawerTitle = ComponentType<DrawerTitleProps>;
-export type DrawerDescription = ComponentType<DrawerDescriptionProps>;
-export type DrawerTrigger = ComponentType<DrawerTriggerProps>;
-
-// #endregion
-
-// #region ResponsiveDialog (Dialog on desktop, Drawer on mobile)
-
-export interface ResponsiveDialogProps {
-    open?: boolean;
-    setOpen?: (open: boolean) => void;
-    onClose?: () => void;
-    onBack?: () => void;
-    trigger?: ReactNode;
-    title?: ReactNode;
-    description?: ReactNode;
-    header?: ReactNode;
-    footer?: ReactNode;
-    children?: ReactNode;
-    contentClassName?: string;
-    headerClassName?: string;
-    footerClassName?: string;
-    titleClassName?: string;
-    descriptionClassName?: string;
-    overlayClassName?: string;
-    blurBackground?: boolean;
-    onInteractOutside?: (e: Event) => void;
-    onEscapeKeyDown?: (e: KeyboardEvent) => void;
-    modal?: boolean;
-    analyticsName?: string;
-    [key: string]: any;
-}
-
-export type ResponsiveDialog = ComponentType<ResponsiveDialogProps>;
 
 // #endregion
 
@@ -644,210 +378,6 @@ export type SidebarTrigger = ComponentType<SidebarTriggerProps>;
 
 // #endregion
 
-// #region Tabs (Radix Tabs)
-
-export type TabsTriggerVariant = "default" | "underline";
-
-export interface TabsProps {
-    value?: string;
-    defaultValue?: string;
-    onValueChange?: (value: string) => void;
-    orientation?: "horizontal" | "vertical";
-    dir?: "ltr" | "rtl";
-    activationMode?: "automatic" | "manual";
-    children?: ReactNode;
-    [key: string]: any;
-}
-
-export interface TabsListProps {
-    loop?: boolean;
-    className?: string;
-    children?: ReactNode;
-    [key: string]: any;
-}
-
-export interface TabsTriggerProps {
-    value: string;
-    disabled?: boolean;
-    variant?: TabsTriggerVariant;
-    className?: string;
-    children?: ReactNode;
-    [key: string]: any;
-}
-
-export interface TabsContentProps {
-    value: string;
-    forceMount?: boolean;
-    className?: string;
-    children?: ReactNode;
-    [key: string]: any;
-}
-
-export type Tabs = ComponentType<TabsProps>;
-export type TabsList = ComponentType<TabsListProps>;
-export type TabsTrigger = ComponentType<TabsTriggerProps>;
-export type TabsContent = ComponentType<TabsContentProps>;
-
-// #endregion
-
-// #region Accordion (Radix Accordion)
-
-export interface AccordionSingleProps {
-    type: "single";
-    value?: string;
-    defaultValue?: string;
-    onValueChange?: (value: string) => void;
-    collapsible?: boolean;
-    disabled?: boolean;
-    dir?: "ltr" | "rtl";
-    orientation?: "horizontal" | "vertical";
-    className?: string;
-    children?: ReactNode;
-    [key: string]: any;
-}
-
-export interface AccordionMultipleProps {
-    type: "multiple";
-    value?: string[];
-    defaultValue?: string[];
-    onValueChange?: (value: string[]) => void;
-    disabled?: boolean;
-    dir?: "ltr" | "rtl";
-    orientation?: "horizontal" | "vertical";
-    className?: string;
-    children?: ReactNode;
-    [key: string]: any;
-}
-
-export type AccordionProps = AccordionSingleProps | AccordionMultipleProps;
-
-export interface AccordionItemProps {
-    value: string;
-    disabled?: boolean;
-    className?: string;
-    children?: ReactNode;
-    [key: string]: any;
-}
-
-export interface AccordionTriggerProps {
-    className?: string;
-    children?: ReactNode;
-    [key: string]: any;
-}
-
-export interface AccordionContentProps {
-    forceMount?: boolean;
-    className?: string;
-    children?: ReactNode;
-    [key: string]: any;
-}
-
-export type Accordion = ComponentType<AccordionProps>;
-export type AccordionItem = ComponentType<AccordionItemProps>;
-export type AccordionTrigger = ComponentType<AccordionTriggerProps>;
-export type AccordionContent = ComponentType<AccordionContentProps>;
-
-// #endregion
-
-// #region Spinner
-
-export type SpinnerSize = "default" | "xxs" | "xs" | "sm" | "lg";
-
-export interface SpinnerProps {
-    size?: SpinnerSize;
-    className?: string;
-    testId?: string;
-    [key: string]: any;
-}
-
-export type Spinner = ComponentType<SpinnerProps>;
-
-// #endregion
-
-// #region ToggleGroup (Radix ToggleGroup)
-
-export interface ToggleGroupSingleProps {
-    type: "single";
-    value?: string;
-    defaultValue?: string;
-    onValueChange?: (value: string) => void;
-    disabled?: boolean;
-    rovingFocus?: boolean;
-    orientation?: "horizontal" | "vertical";
-    dir?: "ltr" | "rtl";
-    loop?: boolean;
-    className?: string;
-    children?: ReactNode;
-    [key: string]: any;
-}
-
-export interface ToggleGroupMultipleProps {
-    type: "multiple";
-    value?: string[];
-    defaultValue?: string[];
-    onValueChange?: (value: string[]) => void;
-    disabled?: boolean;
-    rovingFocus?: boolean;
-    orientation?: "horizontal" | "vertical";
-    dir?: "ltr" | "rtl";
-    loop?: boolean;
-    className?: string;
-    children?: ReactNode;
-    [key: string]: any;
-}
-
-export type ToggleGroupProps = ToggleGroupSingleProps | ToggleGroupMultipleProps;
-
-export interface ToggleGroupItemProps {
-    value: string;
-    disabled?: boolean;
-    className?: string;
-    children?: ReactNode;
-    [key: string]: any;
-}
-
-export type ToggleGroup = ComponentType<ToggleGroupProps>;
-export type ToggleGroupItem = ComponentType<ToggleGroupItemProps>;
-
-// #endregion
-
-// #region HoverCard (Radix HoverCard)
-
-export interface HoverCardProps {
-    open?: boolean;
-    defaultOpen?: boolean;
-    onOpenChange?: (open: boolean) => void;
-    openDelay?: number;
-    closeDelay?: number;
-    children?: ReactNode;
-    [key: string]: any;
-}
-
-export interface HoverCardTriggerProps extends RadixTriggerProps {}
-
-export interface HoverCardContentProps extends RadixContentProps {
-    avoidCollisions?: boolean;
-    collisionPadding?: number | Partial<Record<Side, number>>;
-}
-
-export type HoverCard = ComponentType<HoverCardProps>;
-export type HoverCardTrigger = ComponentType<HoverCardTriggerProps>;
-export type HoverCardContent = ComponentType<HoverCardContentProps>;
-
-// #endregion
-
-// #region Markdown
-
-export interface MarkdownProps {
-    children?: string;
-    className?: string;
-    [key: string]: any;
-}
-
-export type Markdown = ComponentType<MarkdownProps>;
-
-// #endregion
-
 // #region Toast (sonner)
 
 export interface ToastOptions {
@@ -896,12 +426,6 @@ export interface MotionProps {
     onClick?: (e: React.MouseEvent) => void;
     children?: ReactNode;
     [key: string]: any;
-}
-
-export interface MotionButtonProps extends MotionProps {
-    type?: "button" | "submit" | "reset";
-    disabled?: boolean;
-    "aria-label"?: string;
 }
 
 // #endregion
