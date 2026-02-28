@@ -151,12 +151,14 @@ function connect() {
         }
     };
 
-    ws.onclose = () => {
+    ws.onclose = ({ code, reason }) => {
         ws = null;
+        logger.warn(`Disconnected (code ${code}${reason ? `, ${reason}` : ""}), reconnecting in ${reconnectDelay / 1000}s`);
         scheduleReconnect();
     };
 
     ws.onerror = () => {
+        logger.error(`Connection to ${MCP_URL} failed. Is the MCP server running? (bun run mcp)`);
         ws?.close();
     };
 }
