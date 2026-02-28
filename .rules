@@ -23,7 +23,7 @@ rules:
     earlyReturn: guard clause and return early, never nest 3+ levels deep
     performance: Map/Set over object lookups, .some/.find over .filter[0], no spread in loops, Promise.all for parallel async
     logger: use Logger from @utils/Logger, NEVER raw console.log/warn/error
-    classNames: import classNameFactory from @utils/css, prefix MUST end with `-` (e.g. `classNameFactory("void-foo-")`), use `cl("bar")` not `cl("-bar")` or `cl("")`, use `cl("root")` for root element
+    classNames: import classNameFactory from @utils/css, prefix MUST end with `-` (e.g. `classNameFactory("void-foo-")`), use `cl("bar")` not `cl("-bar")` or `cl("")`, use `cl("root")` for root element. ONLY use cl() for our own custom CSS class names — never for Grok's Tailwind/design-token classes (e.g. use `"text-fg-danger"` directly, not `cl("danger")`)
     classJoin: use `classes()` from @utils/css to combine cl() with Tailwind or other classes, not template strings like `${a} ${b}`
     useExisting: use utilities from @utils/, @api/, @components/, @turbopack/common/. Check barrel exports (components/index.ts) before creating new finders
   typescript:

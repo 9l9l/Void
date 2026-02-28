@@ -4,10 +4,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import "./styles.css";
-
 import type { ChatBarButtonRenderProps } from "@api/ChatBarButtons";
-import { ChatBarButton, Text } from "@components";
+import { ChatBarButton, Separator } from "@components";
 import { GaugeIcon } from "@components/icons";
 import type { EffortRateLimits, RateLimitResponse } from "@grok-types";
 import type { ModelId, ModelMode, RequestKind } from "@grok-types/enums";
@@ -16,12 +14,9 @@ import { ChatPageStore, ModelsStore } from "@turbopack/common/stores";
 import { ApiClients, ReasoningModeUtils } from "@turbopack/common/utils";
 import { findExportedComponentLazy } from "@turbopack/turbopack";
 import { Devs } from "@utils/constants";
-import { classNameFactory } from "@utils/css";
 import { Logger } from "@utils/Logger";
 import { formatCountdown, formatDuration } from "@utils/misc";
 import definePlugin from "@utils/types";
-
-const cl = classNameFactory("void-ratelimit-");
 
 const logger = new Logger("RateLimitDisplay", "#ef9f76");
 
@@ -105,10 +100,8 @@ function SingleDisplay({ usage, iconOnly }: { usage: Usage; iconOnly: boolean })
     const tooltip = iconOnly ? [formatLabel(u), reset].filter(Boolean).join(" \u00b7 ") : reset || undefined;
 
     return (
-        <ChatBarButton icon={limited ? <ClockIcon className={cl("icon")} /> : <GaugeIcon size={18} />} tooltip={tooltip} className={limited ? cl("limited") : undefined} iconOnly={iconOnly}>
-            <Text as="span" className={cl("label")}>
-                {formatLabel(u)}
-            </Text>
+        <ChatBarButton icon={limited ? <ClockIcon size={18} /> : <GaugeIcon size={18} />} tooltip={tooltip} className={limited ? "text-fg-danger" : undefined} iconOnly={iconOnly}>
+            {formatLabel(u)}
         </ChatBarButton>
     );
 }
@@ -126,18 +119,14 @@ function AutoDisplay({ fast, expert, iconOnly }: { fast: Usage; expert: Usage; i
 
     return (
         <ChatBarButton
-            icon={limited ? <ClockIcon className={cl("icon")} /> : <GaugeIcon size={18} />}
+            icon={limited ? <ClockIcon size={18} /> : <GaugeIcon size={18} />}
             tooltip={`Fast ${formatLabel(f)} \u00b7 Expert ${formatLabel(e)}${reset}`}
-            className={limited ? cl("limited") : undefined}
+            className={limited ? "text-fg-danger" : undefined}
             iconOnly={iconOnly}
         >
-            <Text as="span" className={cl("label")}>
-                {formatLabel(f, true)}
-                <Text as="span" className="opacity-30">
-                    {" | "}
-                </Text>
-                {formatLabel(e, true)}
-            </Text>
+            {formatLabel(f, true)}
+            <Separator orientation="vertical" className="mx-1 h-3 w-0.5" />
+            {formatLabel(e, true)}
         </ChatBarButton>
     );
 }

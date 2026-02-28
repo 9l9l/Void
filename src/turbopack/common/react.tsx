@@ -27,6 +27,11 @@ export let useReducer: ReactInstance["useReducer"];
 export let useCallback: ReactInstance["useCallback"];
 export let useContext: ReactInstance["useContext"];
 export let createElement: ReactInstance["createElement"];
+export let useReducedMotion: () => boolean;
+
+waitFor(filters.byProps("useReducedMotion"), mod => {
+    ({ useReducedMotion } = mod as { useReducedMotion: () => boolean });
+});
 
 waitFor(filters.byProps("useState", "createElement"), mod => {
     const m = mod as ReactInstance;
