@@ -430,6 +430,24 @@ export interface MotionProps {
 
 // #endregion
 
+// #region Slider (Radix Slider)
+
+export interface SliderProps {
+    value?: number[];
+    defaultValue?: number[];
+    onValueChange?: (value: number[]) => void;
+    min?: number;
+    max?: number;
+    step?: number;
+    disabled?: boolean;
+    className?: string;
+    [key: string]: any;
+}
+
+export type Slider = ComponentType<SliderProps>;
+
+// #endregion
+
 // #region AnimatePresence (framer-motion)
 
 export interface AnimatePresenceProps {

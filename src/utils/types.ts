@@ -163,9 +163,9 @@ export interface PluginSettingCustomDef {
 
 export interface PluginSettingSliderDef {
     type: OptionType.SLIDER;
-    markers: number[];
+    min: number;
+    max: number;
     default: number;
-    stickToMarkers?: boolean;
 }
 
 export interface IPluginOptionComponentProps {

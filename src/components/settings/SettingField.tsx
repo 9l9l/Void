@@ -5,7 +5,7 @@
  */
 
 import { Settings } from "@api/Settings";
-import { Flex, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SettingsDescription, SettingsRow, SettingsTitle, Switch } from "@components";
+import { Flex, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SettingsDescription, SettingsRow, SettingsTitle, Slider, Switch, Text } from "@components";
 import { React, useCallback, useState } from "@turbopack/common/react";
 import { OptionType, type PluginSettingDef, type PluginSettingSelectOption } from "@utils/types";
 
@@ -55,52 +55,45 @@ function SelectField({ id, setting, pluginName }: SettingFieldProps) {
     if (!("options" in setting)) return null;
 
     return (
-        <SettingsRow
-            action={
-                <Select value={String(value ?? "")} onValueChange={update}>
-                    <SelectTrigger>
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {(setting as { options: readonly PluginSettingSelectOption[] }).options.map((o: PluginSettingSelectOption) => (
-                            <SelectItem key={String(o.value)} value={String(o.value)}>
-                                {o.label}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            }
-        >
+        <Flex flexDirection="column" gap="0.5rem">
             <SettingLabel id={id} setting={setting} />
-        </SettingsRow>
+            <Select value={String(value ?? "")} onValueChange={update}>
+                <SelectTrigger>
+                    <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                    {(setting as { options: readonly PluginSettingSelectOption[] }).options.map((o: PluginSettingSelectOption) => (
+                        <SelectItem key={String(o.value)} value={String(o.value)}>
+                            {o.label}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </Flex>
     );
 }
 
 function SliderField({ id, setting, pluginName }: SettingFieldProps) {
     const [value, update] = usePluginSetting(pluginName, id, setting);
-    if (!("markers" in setting)) return null;
+    if (!("min" in setting)) return null;
 
-    const { markers, stickToMarkers } = setting as { markers: number[]; stickToMarkers?: boolean };
+    const { min, max } = setting as { min: number; max: number };
 
     return (
-        <SettingsRow
-            action={
-                <input
-                    type="range"
-                    min={markers[0]}
-                    max={markers[markers.length - 1]}
-                    value={(value as number) ?? markers[0]}
-                    onChange={(e: { target: { value: string } }) => {
-                        let v = Number(e.target.value);
-                        if (stickToMarkers) v = markers.reduce((p, c) => (Math.abs(c - v) < Math.abs(p - v) ? c : p));
-                        update(v);
-                    }}
-                    className="w-24"
-                />
-            }
-        >
+        <Flex flexDirection="column" gap="0.5rem">
             <SettingLabel id={id} setting={setting} />
-        </SettingsRow>
+            <Flex gap="8px" className="items-center">
+                <Slider
+                    value={[(value as number) ?? min]}
+                    min={min}
+                    max={max}
+                    step={1}
+                    onValueChange={([v]: number[]) => update(v)}
+                    className="w-32"
+                />
+                <Text size="sm" color="secondary" className="tabular-nums w-6 text-right">{value as number}</Text>
+            </Flex>
+        </Flex>
     );
 }
 
@@ -115,40 +108,34 @@ function ComponentField({ setting, pluginName }: SettingFieldProps) {
 function NumberField({ id, setting, pluginName }: SettingFieldProps) {
     const [value, update] = usePluginSetting(pluginName, id, setting);
     return (
-        <SettingsRow
-            action={
-                <Input
-                    type="number"
-                    value={(value as string) ?? ""}
-                    onChange={(e: { target: { value: string } }) => {
-                        const n = Number(e.target.value);
-                        if (!isNaN(n)) update(n);
-                    }}
-                    className="w-24"
-                />
-            }
-        >
+        <Flex flexDirection="column" gap="0.5rem">
             <SettingLabel id={id} setting={setting} />
-        </SettingsRow>
+            <Input
+                type="number"
+                value={(value as string) ?? ""}
+                onChange={(e: { target: { value: string } }) => {
+                    const n = Number(e.target.value);
+                    if (!isNaN(n)) update(n);
+                }}
+                className="w-24"
+            />
+        </Flex>
     );
 }
 
 function StringField({ id, setting, pluginName }: SettingFieldProps) {
     const [value, update] = usePluginSetting(pluginName, id, setting);
     return (
-        <SettingsRow
-            action={
-                <Input
-                    type="text"
-                    value={(value as string) ?? ""}
-                    onChange={(e: { target: { value: string } }) => update(e.target.value)}
-                    placeholder={"placeholder" in setting ? (setting as { placeholder?: string }).placeholder : undefined}
-                    className="w-40"
-                />
-            }
-        >
+        <Flex flexDirection="column" gap="0.5rem">
             <SettingLabel id={id} setting={setting} />
-        </SettingsRow>
+            <Input
+                type="text"
+                value={(value as string) ?? ""}
+                onChange={(e: { target: { value: string } }) => update(e.target.value)}
+                placeholder={"placeholder" in setting ? (setting as { placeholder?: string }).placeholder : undefined}
+                className="w-full"
+            />
+        </Flex>
     );
 }
 

@@ -57,6 +57,8 @@ export {
     type SettingsRowProps,
     SettingsTitle,
     type SettingsTitleProps,
+    Slider,
+    type SliderProps,
     Switch,
     type SwitchProps,
     type SwitchSize,
