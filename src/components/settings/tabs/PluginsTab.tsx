@@ -22,7 +22,7 @@ import {
     Separator,
     Text,
 } from "@components";
-import { React, useCallback, useEffect, useMemo, useRef, useState } from "@turbopack/common/react";
+import { React, useCallback, useEffect, useMemo, useState } from "@turbopack/common/react";
 import { classes, classNameFactory } from "@utils/css";
 
 import PluginCard from "../PluginCard";
@@ -30,11 +30,9 @@ import PluginDialog from "./PluginDialog";
 
 const cl = classNameFactory("void-plugins-");
 
-interface TabState {
-    initialStates: Map<string, boolean>;
-    changedPlugins: Set<string>;
-    dismissed: boolean;
-}
+let initialStates: Map<string, boolean> | null = null;
+const changedPlugins = new Set<string>();
+let dismissed = false;
 
 type Filter = "all" | "enabled" | "disabled";
 
@@ -54,8 +52,6 @@ export default function PluginsTab() {
     const [dialogName, setDialogName] = useState<string | null>(null);
     const [showReload, setShowReload] = useState(false);
 
-    const stateRef = useRef<TabState | null>(null);
-
     const { userPlugins, requiredPlugins } = useMemo(() => {
         const user: string[] = [];
         const required: string[] = [];
@@ -68,10 +64,10 @@ export default function PluginsTab() {
     }, []);
 
     useEffect(() => {
-        const initial = new Map<string, boolean>();
+        if (initialStates) return;
+        initialStates = new Map<string, boolean>();
         for (const n of [...userPlugins, ...requiredPlugins])
-            initial.set(n, isPluginEnabled(n));
-        stateRef.current = { initialStates: initial, changedPlugins: new Set(), dismissed: false };
+            initialStates.set(n, isPluginEnabled(n));
     }, [userPlugins, requiredPlugins]);
 
     const totalVisible = userPlugins.length + requiredPlugins.length;
@@ -81,26 +77,24 @@ export default function PluginsTab() {
 
     const dialogPlugin = dialogName ? plugins[dialogName] : null;
     const hasResults = filteredUser.length > 0 || filteredRequired.length > 0;
-    const needsReload = (stateRef.current?.changedPlugins.size ?? 0) > 0;
+    const needsReload = changedPlugins.size > 0;
 
     const onReload = useCallback((pluginName: string) => {
-        const s = stateRef.current;
-        if (!s) return;
-        const initial = s.initialStates.get(pluginName);
+        if (!initialStates) return;
         const current = isPluginEnabled(pluginName);
-        if (current === initial) s.changedPlugins.delete(pluginName);
-        else s.changedPlugins.add(pluginName);
+        if (current === initialStates.get(pluginName)) changedPlugins.delete(pluginName);
+        else changedPlugins.add(pluginName);
 
-        if (s.changedPlugins.size > 0) {
-            if (!s.dismissed) setShowReload(true);
+        if (changedPlugins.size > 0) {
+            if (!dismissed) setShowReload(true);
         } else {
             setShowReload(false);
-            s.dismissed = false;
+            dismissed = false;
         }
     }, []);
 
     const onDismiss = useCallback(() => {
-        if (stateRef.current) stateRef.current.dismissed = true;
+        dismissed = true;
         setShowReload(false);
     }, []);
 
