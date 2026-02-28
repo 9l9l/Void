@@ -113,7 +113,7 @@ export default function PluginsTab() {
                     <Text size="xs" className="text-inherit flex-1">
                         Plugin changes require a page reload to take effect.
                     </Text>
-                    <Button variant="outline" size="sm" onClick={() => location.reload()}>
+                    <Button variant="secondary" size="sm" onClick={() => location.reload()}>
                         Reload
                     </Button>
                 </Flex>

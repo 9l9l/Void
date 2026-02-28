@@ -38,31 +38,16 @@ export interface RadixSubProps {
 
 // #region Button
 
-export type ButtonVariant =
-    | "filled"
-    | "filledSecondary"
-    | "outline"
-    | "ghost"
-    | "ghostSecondary"
-    | "text"
-    | "textSecondary"
-    | "sticky"
-    | "primary"
-    | "secondary"
-    | "accent"
-    | "card"
-    | "destructive"
-    | "link"
-    | "none";
+export type ButtonVariant = "primary" | "secondary" | "tertiary" | "danger" | "text" | "textsecondary" | "none";
 
-export type ButtonSize = "xxs" | "xs" | "sm" | "md" | "lg" | "iconXs" | "iconSm" | "iconMd" | "iconLg" | "iconXl" | "icon" | "pill" | "nav" | "default" | "noPadding" | "none";
+export type ButtonSize = "none" | "xs" | "sm" | "md" | "xl";
+
+export type ButtonShape = "rectangle" | "pill" | "square" | "circle";
 
 export interface ButtonProps {
     variant?: ButtonVariant;
     size?: ButtonSize;
-    rounded?: boolean;
-    btnColor?: "default" | "danger";
-    overideIconStyle?: boolean;
+    shape?: ButtonShape;
     asChild?: boolean;
     disabled?: boolean;
     className?: string;
@@ -80,8 +65,16 @@ export interface ButtonWithTooltipProps extends ButtonProps {
     stayOpenOnClick?: boolean;
 }
 
+export interface ButtonWithPopoverProps extends ButtonProps {
+    popoverContent?: ReactNode;
+    popoverContentProps?: Record<string, any>;
+    popoverProps?: Record<string, any>;
+}
+
 export type Button = ComponentType<ButtonProps>;
 export type ButtonWithTooltip = ComponentType<ButtonWithTooltipProps>;
+export type ButtonWithTooltipOptimized = ComponentType<ButtonWithTooltipProps>;
+export type ButtonWithPopover = ComponentType<ButtonWithPopoverProps>;
 
 // #endregion
 

@@ -38,12 +38,12 @@ export function ConfirmDialog({ open, onOpenChange, title, description, confirmT
 					<DialogDescription>{description}</DialogDescription>
 				</DialogHeader>
 				<DialogFooter>
-					<Button variant="secondary" onClick={() => onOpenChange(false)}>
+					<Button variant="secondary" size="md" onClick={() => onOpenChange(false)}>
 						{cancelText}
 					</Button>
 					<Button
-						variant={danger ? "filled" : "primary"}
-						btnColor={danger ? "danger" : undefined}
+						variant={danger ? "danger" : "primary"}
+						size="md"
 						onClick={() => {
 							onOpenChange(false);
 							onConfirm();

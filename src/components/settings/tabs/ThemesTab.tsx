@@ -106,7 +106,7 @@ export default function ThemesTab() {
                         onKeyDown={(e: { key: string }) => { if (e.key === "Enter") handleAdd(); }}
                         className="flex-1 min-w-0"
                     />
-                    <Button variant="primary" onClick={handleAdd} disabled={loading || !url.trim()}>
+                    <Button variant="primary" size="md" onClick={handleAdd} disabled={loading || !url.trim()}>
                         {loading ? "Importing..." : "Import"}
                     </Button>
                 </Flex>

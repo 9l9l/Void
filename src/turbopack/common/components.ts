@@ -10,6 +10,7 @@ import type {
     AccordionProps,
     AccordionTriggerProps,
     ButtonProps,
+    ButtonWithPopoverProps,
     ButtonWithTooltipProps,
     CardContentProps,
     CardHeaderProps,
@@ -69,8 +70,10 @@ export type {
     AccordionProps,
     AccordionTriggerProps,
     ButtonProps,
+    ButtonShape,
     ButtonSize,
     ButtonVariant,
+    ButtonWithPopoverProps,
     ButtonWithTooltipProps,
     CardContentProps,
     CardHeaderProps,
@@ -133,8 +136,19 @@ export type {
     TooltipTriggerProps,
 } from "@grok-types";
 
-export const Button: ComponentType<ButtonProps> = LazyComponent("Button", () => findExportedComponent("Button"));
-export const ButtonWithTooltip: ComponentType<ButtonWithTooltipProps> = LazyComponent("ButtonWithTooltip", () => findExportedComponent("ButtonWithTooltip"));
+let buttonModule: Record<string, ComponentType> | null = null;
+
+waitFor(filters.byProps("Button", "ButtonWithTooltipOptimized"), m => {
+    buttonModule = m;
+});
+
+const buttonLazy = <T extends ComponentType<any>>(name: string) =>
+    LazyComponent(name, () => (buttonModule?.[name] ?? findExportedComponent(name)) as any) as T;
+
+export const Button = buttonLazy<ComponentType<ButtonProps>>("Button");
+export const ButtonWithTooltip = buttonLazy<ComponentType<ButtonWithTooltipProps>>("ButtonWithTooltip");
+export const ButtonWithTooltipOptimized = buttonLazy<ComponentType<ButtonWithTooltipProps>>("ButtonWithTooltipOptimized");
+export const ButtonWithPopover = buttonLazy<ComponentType<ButtonWithPopoverProps>>("ButtonWithPopover");
 export const Checkbox: ComponentType<CheckboxProps> = LazyComponent("Checkbox", () => findExportedComponent("Checkbox"));
 
 export const Card: ComponentType<CardProps> = LazyComponent("Card", () => findExportedComponent("Card"));

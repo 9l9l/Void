@@ -83,10 +83,10 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
                     <DialogTitle>{options.title}</DialogTitle>
                     <DialogDescription>{options.body}</DialogDescription>
                     <DialogFooter>
-                        <Button variant="secondary" onClick={() => close(false)}>
+                        <Button variant="secondary" size="md" onClick={() => close(false)}>
                             {options.cancelText ?? "Cancel"}
                         </Button>
-                        <Button variant={options.danger ? "filled" : "primary"} btnColor={options.danger ? "danger" : undefined} onClick={() => close(true)}>
+                        <Button variant={options.danger ? "danger" : "primary"} size="md" onClick={() => close(true)}>
                             {options.confirmText ?? "Confirm"}
                         </Button>
                     </DialogFooter>

@@ -157,7 +157,7 @@ function ExperimentsTab() {
                         Only enable flags you understand. Changing the wrong setting can break Grok or cause unexpected behavior.
                     </Text>
                     {overrideCount > 0 && (
-                        <Button variant="outline" size="sm" className={cl("clear-btn")} onClick={() => FeatureStore.useFeatureStore.getState().clearAllOverrides()}>
+                        <Button variant="secondary" size="sm" className={cl("clear-btn")} onClick={() => FeatureStore.useFeatureStore.getState().clearAllOverrides()}>
                             Clear {overrideCount} override{overrideCount !== 1 ? "s" : ""}
                         </Button>
                     )}
