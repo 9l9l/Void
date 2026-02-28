@@ -14,7 +14,7 @@ const repoRawUrl = repoUrl.replace("github.com", "raw.githubusercontent.com");
 const USERSCRIPT_HEADER = `// ==UserScript==
 // @name         Void
 // @namespace    ${repoUrl}
-// @version      ${pkg.version}.${Date.now()}
+// @version      ${pkg.version}
 // @description  A modification for grok.com
 // @author       Void Contributors
 // @match        *://grok.com/*
