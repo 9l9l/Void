@@ -6,6 +6,7 @@
 
 import "./styles.css";
 
+import { showToast, ToastType } from "@api/Notifications";
 import { definePluginSettings } from "@api/Settings";
 import { Button, Card, Chip, Flex, Input, Paragraph, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SettingsDescription, SettingsRow, SettingsTitle, Switch, Text } from "@components";
 import { ErrorBoundary } from "@components/ErrorBoundary";
@@ -16,7 +17,7 @@ import { Devs } from "@utils/constants";
 import { classNameFactory } from "@utils/css";
 import { useFiltered } from "@utils/react";
 import { humanizeKey, pluralize } from "@utils/text";
-import definePlugin, { StartAt } from "@utils/types";
+import definePlugin, { OptionType, StartAt } from "@utils/types";
 
 const cl = classNameFactory("void-experiments-");
 
@@ -26,7 +27,13 @@ interface PrivateSettings {
     knownFlags: Record<string, number>;
 }
 
-const settings = definePluginSettings({}).withPrivateSettings<PrivateSettings>();
+const settings = definePluginSettings({
+    notifyNewFlags: {
+        type: OptionType.BOOLEAN,
+        description: "Show a notification when new experiment flags are added.",
+        default: true,
+    },
+}).withPrivateSettings<PrivateSettings>();
 
 function getBooleanKeys(config: FeatureStoreState["config"]) {
     return Object.keys(config).filter(k => typeof config[k] === "boolean");
@@ -50,9 +57,11 @@ function syncKnownFlags(config: FeatureStoreState["config"]) {
         }
     }
 
+    const newFlags: string[] = [];
     for (const key of booleanKeys) {
         if (!(key in known)) {
             known[key] = firstRun ? 0 : now;
+            if (!firstRun) newFlags.push(key);
             changed = true;
         }
     }
@@ -67,6 +76,10 @@ function syncKnownFlags(config: FeatureStoreState["config"]) {
 
     if (changed) {
         settings.store.knownFlags = { ...known };
+    }
+
+    if (newFlags.length && settings.store.notifyNewFlags) {
+        showToast(`${pluralize(newFlags.length, "new experiment flag")} added`, ToastType.INFO);
     }
 }
 
@@ -126,19 +139,19 @@ function ExperimentsTab() {
 
     const booleanKeys = useMemo(() => getBooleanKeys(config).sort(), [config]);
     const getFlagSearchText = useCallback((k: string) => `${k} ${prettifyKey(k)}`, []);
-    const searched = useFiltered(booleanKeys, search, getFlagSearchText);
 
-    const filtered = useMemo(() => {
-        if (filter === "all") return searched;
-        return searched.filter(k => {
-            const override = overrides[k];
-            const enabled = override !== undefined ? !!override : !!config[k];
-            if (filter === "enabled") return enabled;
-            if (filter === "disabled") return !enabled;
-            if (filter === "new") return isNewFlag(k);
-            if (filter === "modified") return override !== undefined;
-        });
-    }, [searched, filter, config, overrides]);
+    const filterFn = useCallback((k: string) => {
+        if (filter === "all") return true;
+        const override = overrides[k];
+        const enabled = override !== undefined ? !!override : !!config[k];
+        if (filter === "enabled") return enabled;
+        if (filter === "disabled") return !enabled;
+        if (filter === "new") return isNewFlag(k);
+        if (filter === "modified") return override !== undefined;
+    }, [filter, config, overrides]);
+
+    const prefiltered = useMemo(() => booleanKeys.filter(filterFn), [booleanKeys, filterFn]);
+    const filtered = useFiltered(prefiltered, search, getFlagSearchText);
 
     const overrideCount = Object.keys(overrides).length;
 
@@ -165,7 +178,7 @@ function ExperimentsTab() {
                 </Flex>
             </Card>
             <Flex alignItems="center" gap="0.5rem" className={cl("section")}>
-                <Input placeholder={`Search ${booleanKeys.length} flags...`} value={search} onChange={e => setSearch(e.target.value)} className="flex-1" />
+                <Input placeholder={`Search ${prefiltered.length} flags...`} value={search} onChange={e => setSearch(e.target.value)} className="flex-1" />
                 <Select value={filter} onValueChange={(v: string) => setFilter(v as Filter)}>
                     <SelectTrigger className="w-28">
                         <SelectValue />
