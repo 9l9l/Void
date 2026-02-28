@@ -10,14 +10,18 @@ import { type PatchedModuleFactory, SYM_PATCHED_BY, SYM_PATCHED_CODE } from "@tu
 import { EVAL, MODULE, SERIALIZE } from "./constants";
 import type { Anchor, SuggestCandidate } from "./types";
 
-export const errorMessage = (err: unknown): string => (err instanceof Error ? err.message : String(err));
+export { clamp, errorMessage } from "@utils/misc";
+
+const INTERNAL_FRAME_RE = /tryEval|handleEval|ws\.onmessage|<anonymous>:\d+:\d+\)$/;
 
 export function formatError(err: unknown): string {
     if (!(err instanceof Error)) return `Error: ${String(err)}`;
     const stack = err.stack
         ? `\n${err.stack
               .split("\n")
-              .slice(1, 1 + EVAL.STACK_LINES)
+              .slice(1)
+              .filter(line => !INTERNAL_FRAME_RE.test(line))
+              .slice(0, EVAL.STACK_LINES)
               .join("\n")}`
         : "";
     return `Error: ${err.message}${stack}`;
@@ -38,22 +42,40 @@ export function describeValue(val: unknown, maxSlice = MODULE.EXPORT_VALUE_SLICE
 }
 
 export function serialize(value: unknown, depth: number = SERIALIZE.DEFAULT_DEPTH): unknown {
-    if (value == null) return value;
+    if (value === undefined) return "[undefined]";
+    if (value === null) return null;
     const t = typeof value;
     if (t === "function") return `[fn:${(value as Function).name || "?"}]`;
     if (t === "symbol") return (value as symbol).toString();
     if (t === "bigint") return `${value}n`;
-    if (t !== "object") return value;
+    if (t === "number") {
+        if (Number.isNaN(value as number)) return "[NaN]";
+        if (!Number.isFinite(value as number)) return value === Infinity ? "[Infinity]" : "[-Infinity]";
+    }
+    if (t !== "object") {
+        if (t === "string" && (value as string).length > SERIALIZE.MAX_STRING_LENGTH)
+            return (value as string).slice(0, SERIALIZE.MAX_STRING_LENGTH) + `…+${(value as string).length - SERIALIZE.MAX_STRING_LENGTH}`;
+        return value;
+    }
     if (depth <= 0) return "[…]";
 
     return serializeInner(value as object, depth, new WeakSet());
 }
 
 function serializeInner(value: unknown, depth: number, seen: WeakSet<object>): unknown {
-    if (value == null) return value;
+    if (value === undefined) return "[undefined]";
+    if (value === null) return null;
     const t = typeof value;
-    if (t !== "object" && t !== "function") return value;
     if (t === "function") return `[fn:${(value as Function).name || "?"}]`;
+    if (t === "number") {
+        if (Number.isNaN(value as number)) return "[NaN]";
+        if (!Number.isFinite(value as number)) return value === Infinity ? "[Infinity]" : "[-Infinity]";
+    }
+    if (t !== "object") {
+        if (t === "string" && (value as string).length > SERIALIZE.MAX_STRING_LENGTH)
+            return (value as string).slice(0, SERIALIZE.MAX_STRING_LENGTH) + `…+${(value as string).length - SERIALIZE.MAX_STRING_LENGTH}`;
+        return value;
+    }
     if (depth <= 0) return "[…]";
     if (seen.has(value as object)) return "[Circular]";
     seen.add(value as object);
@@ -65,8 +87,18 @@ function serializeInner(value: unknown, depth: number, seen: WeakSet<object>): u
         }
         if (value instanceof Date) return value.toISOString();
         if (value instanceof RegExp) return String(value);
-        if (value instanceof Set) return `[Set(${value.size})]`;
-        if (value instanceof Map) return `[Map(${value.size})]`;
+        if (value instanceof Set) {
+            if (value.size > SERIALIZE.MAX_ARRAY) return `[Set(${value.size})]`;
+            return [...value].map(v => serializeInner(v, depth - 1, seen));
+        }
+        if (value instanceof Map) {
+            if (value.size > SERIALIZE.MAX_KEYS) return `[Map(${value.size})]`;
+            const result: Record<string, unknown> = {};
+            for (const [k, v] of value) {
+                result[String(k)] = serializeInner(v, depth - 1, seen);
+            }
+            return result;
+        }
         if (value instanceof Error) return `[Error: ${value.message}]`;
         const obj = value as Record<string, unknown>;
         const result: Record<string, unknown> = {};
@@ -86,8 +118,6 @@ function serializeInner(value: unknown, depth: number, seen: WeakSet<object>): u
         seen.delete(value as object);
     }
 }
-
-export const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
 
 export const clampDefault = (value: number | undefined, defaultVal: number, max: number): number => Math.min(value ?? defaultVal, max);
 

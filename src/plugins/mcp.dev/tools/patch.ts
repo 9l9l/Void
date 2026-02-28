@@ -11,7 +11,7 @@ import { canonicalizeMatch } from "@utils/patches";
 
 import { PATCH } from "./constants";
 import type { LintWarning, PatchArgs } from "./types";
-import { clampDefault, countCaptureGroups, extractContextAnchors, extractI18nKeys, getAllFactorySources } from "./utils";
+import { clampDefault, countCaptureGroups, errorMessage, extractContextAnchors, extractI18nKeys, getAllFactorySources } from "./utils";
 
 const PATCH_ACTIONS = ["test", "analyze", "list", "conflicts", "broken", "lint", "context"] as const;
 
@@ -41,12 +41,12 @@ function lintMatchRegex(matchStr: string, replaceStr?: string): LintWarning[] {
         warnings.push({ severity: "warn", message: "No string literal anchor in match", fix: "Add i18n key, component name, or data-testid" });
     }
 
-    if (matchStr.length > 80 && matchStr.length <= 200) {
-        warnings.push({ severity: "info", message: `Match regex is ${matchStr.length} chars (>80)`, fix: "Simplify: use .{0,N}, $&, or lookbehind" });
+    if (matchStr.length > PATCH.MATCH_WARN_LENGTH && matchStr.length <= PATCH.MATCH_LONG_LENGTH) {
+        warnings.push({ severity: "info", message: `Match regex is ${matchStr.length} chars (>${PATCH.MATCH_WARN_LENGTH})`, fix: "Simplify: use .{0,N}, $&, or lookbehind" });
     }
 
     const groups = countCaptureGroups(matchStr);
-    if (groups > 5) warnings.push({ severity: "warn", message: `${groups} capture groups`, fix: "Use (?:...) for unused groups" });
+    if (groups > PATCH.MAX_CAPTURE_WARN) warnings.push({ severity: "warn", message: `${groups} capture groups`, fix: "Use (?:...) for unused groups" });
 
     if (replaceStr) {
         if (groups > 0 && !replaceStr.includes("$&") && !/\$\d/.test(replaceStr)) {
@@ -62,7 +62,7 @@ function lintMatchRegex(matchStr: string, replaceStr?: string): LintWarning[] {
         }
     }
 
-    if (matchStr.length > 200) warnings.push({ severity: "warn", message: "Long regex (200+ chars)", fix: "Split into multiple patches" });
+    if (matchStr.length > PATCH.MATCH_LONG_LENGTH) warnings.push({ severity: "warn", message: `Long regex (${PATCH.MATCH_LONG_LENGTH}+ chars)`, fix: "Split into multiple patches" });
 
     return warnings;
 }
@@ -104,7 +104,7 @@ function testMatchOnSource(src: string, id: number, findStr: string, matchStr: s
     try {
         regex = canonicalizeMatch(new RegExp(matchStr, flags ?? ""));
     } catch (e: unknown) {
-        return { status: "INVALID_REGEX" as const, error: e instanceof Error ? e.message : String(e) };
+        return { status: "INVALID_REGEX" as const, error: errorMessage(e) };
     }
 
     const lintWarnings = lintMatchRegex(matchStr, replaceStr);
@@ -116,17 +116,20 @@ function testMatchOnSource(src: string, id: number, findStr: string, matchStr: s
     try {
         matched = src.match(regex);
     } catch (e: unknown) {
-        return { status: "MATCH_FAILED", id, hint: `Regex error: ${e instanceof Error ? e.message : String(e)}`, ...(warnings.length && { warnings }) };
+        return { status: "MATCH_FAILED", id, hint: `Regex error: ${errorMessage(e)}`, ...(warnings.length && { warnings }) };
     }
 
     if (!matched) {
         const literal = longestLiteral(matchStr);
-        const literalIdx = literal.length >= 3 ? src.indexOf(literal) : -1;
-        const hint = literalIdx >= 0
-            ? `Longest literal "${literal.slice(0, PATCH.HINT_LITERAL_SLICE)}" found at ${literalIdx} but full regex didn't match — check quantifiers and escaping`
-            : literal.length >= 3
-                ? `Longest literal "${literal.slice(0, PATCH.HINT_LITERAL_SLICE)}" not found in source — verify find targets the right module`
-                : "No substantial literal in match pattern — add string anchors";
+        const literalIdx = literal.length >= PATCH.MIN_LITERAL_LENGTH ? src.indexOf(literal) : -1;
+        let hint: string;
+        if (literalIdx >= 0) {
+            hint = `Longest literal "${literal.slice(0, PATCH.HINT_LITERAL_SLICE)}" found at ${literalIdx} but full regex didn't match — check quantifiers and escaping`;
+        } else if (literal.length >= PATCH.MIN_LITERAL_LENGTH) {
+            hint = `Longest literal "${literal.slice(0, PATCH.HINT_LITERAL_SLICE)}" not found in source — verify find targets the right module`;
+        } else {
+            hint = "No substantial literal in match pattern — add string anchors";
+        }
         const canonFindStr = canonicalizeMatch(findStr);
         const findIdx = typeof canonFindStr === "string" ? src.indexOf(canonFindStr) : src.search(canonFindStr);
         const nfPad = clampDefault(contextPad, PATCH.DEFAULT_CONTEXT_PAD, PATCH.MAX_CONTEXT_PAD);
@@ -237,13 +240,13 @@ export function handlePatch(args: PatchArgs): unknown {
     }
 
     if (action === "analyze") {
-        if (!findStr) return "Provide find string";
+        if (!findStr) return { error: "Provide find string" };
         const canonFind = canonicalizeMatch(findStr);
         const results = search(canonFind);
         const ids = Object.keys(results).map(Number);
         if (!ids.length) return { unique: false, count: 0, hint: "No modules match this find string" };
 
-        const ctxPad = clampDefault(args.context, 300, PATCH.MAX_CONTEXT_PAD);
+        const ctxPad = clampDefault(args.context, PATCH.ANALYZE_DEFAULT_CONTEXT, PATCH.MAX_CONTEXT_PAD);
 
         if (ids.length === 1) {
             const id = ids[0];
@@ -281,7 +284,7 @@ export function handlePatch(args: PatchArgs): unknown {
     }
 
     if (action === "test") {
-        if (!findStr || !matchStr || !replaceStr) return "Provide find, match, and replace";
+        if (!findStr || !matchStr || !replaceStr) return { error: "Provide find, match, and replace" };
 
         const canonFind = canonicalizeMatch(findStr);
         const results = search(canonFind);
@@ -348,7 +351,7 @@ export function handlePatch(args: PatchArgs): unknown {
     }
 
     if (action === "lint") {
-        if (!matchStr) return "Provide match regex string to lint";
+        if (!matchStr) return { error: "Provide match regex string to lint" };
         const warnings = lintMatchRegex(matchStr, replaceStr);
         const errorCount = warnings.filter(w => w.severity === "error").length;
         const warnCount = warnings.filter(w => w.severity === "warn").length;
@@ -356,18 +359,22 @@ export function handlePatch(args: PatchArgs): unknown {
     }
 
     if (action === "context") {
-        if (!findStr) return "Provide find string";
+        if (!findStr) return { error: "Provide find string" };
         const canonFind = canonicalizeMatch(findStr);
         const results = search(canonFind);
         const ids = Object.keys(results).map(Number);
-        if (!ids.length) return { error: "No modules match this find string" };
+        if (!ids.length) {
+            const registry = getRuntimeFactoryRegistry();
+            return { error: "No modules match this find string", hint: "Verify the string exists in module source or use search tool.", factories: registry?.size ?? 0 };
+        }
 
         const id = ids[0];
         const src = String(results[id]);
         const findIdx = typeof canonFind === "string" ? src.indexOf(canonFind) : src.search(canonFind);
         if (findIdx < 0) return { error: "Find matched module but indexOf failed" };
 
-        const windowSize = clampDefault(args.window, PATCH.CONTEXT_DEFAULT_WINDOW, PATCH.CONTEXT_MAX_WINDOW);
+        const rawWindow = args.window;
+        const windowSize = Math.max(PATCH.CONTEXT_MIN_WINDOW, clampDefault(rawWindow, PATCH.CONTEXT_DEFAULT_WINDOW, PATCH.CONTEXT_MAX_WINDOW));
         const half = Math.floor(windowSize / 2);
         const ctxStart = Math.max(0, findIdx - half);
         const ctxEnd = Math.min(src.length, findIdx + half);
@@ -385,6 +392,7 @@ export function handlePatch(args: PatchArgs): unknown {
             src: ctx,
             anchors,
         };
+        if (rawWindow != null && rawWindow < PATCH.CONTEXT_MIN_WINDOW) result.note = `Window clamped to minimum of ${PATCH.CONTEXT_MIN_WINDOW} (requested ${rawWindow}).`;
         if (ids.length > 1) {
             const sameSource = ids.every(mid => String(results[mid]) === src);
             result.findCount = ids.length;

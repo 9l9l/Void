@@ -70,13 +70,13 @@ function resolveEl(selector: string): Element | string {
 
 export function handleReact(args: ReactArgs): unknown {
     const { action, selector, componentName } = args;
-    const maxD = clampDefault(args.depth, REACT.DEFAULT_DEPTH, REACT.MAX_DEPTH);
-    const lim = clampDefault(args.limit, REACT.DEFAULT_LIMIT, REACT.MAX_LIMIT);
+    const maxD = Math.max(0, clampDefault(args.depth, REACT.DEFAULT_DEPTH, REACT.MAX_DEPTH));
+    const lim = Math.max(1, clampDefault(args.limit, REACT.DEFAULT_LIMIT, REACT.MAX_LIMIT));
 
     if (action === "find") {
-        if (!componentName) return "Provide componentName";
+        if (!componentName) return { error: "Provide componentName" };
         const root = getRoot();
-        if (!root) return "No React root";
+        if (!root) return { error: "No React root found. Is grok.com loaded?" };
 
         const lower = componentName.toLowerCase();
         const found: Array<{ name: string; d: number; props?: string[]; s?: boolean }> = [];
@@ -103,7 +103,7 @@ export function handleReact(args: ReactArgs): unknown {
 
     if (action === "root") {
         const root = getRoot();
-        if (!root) return "No React root";
+        if (!root) return { error: "No React root found. Is grok.com loaded?" };
 
         const seen = new Set<string>();
         const queue: Fiber[] = [root];
@@ -112,23 +112,23 @@ export function handleReact(args: ReactArgs): unknown {
         while (qi < queue.length && qi < REACT.MAX_PROCESS) {
             const f = queue[qi++];
             const nm = fiberName(f);
-            if (nm && nm.length >= 3 && seen.size < REACT.MAX_NAMED) seen.add(nm);
+            if (nm && nm.length >= REACT.MIN_COMPONENT_NAME && seen.size < REACT.MAX_NAMED) seen.add(nm);
             if (f.child) queue.push(f.child);
             if (f.sibling) queue.push(f.sibling);
         }
         return [...seen].sort();
     }
 
-    if (!selector) return "Provide selector";
+    if (!selector) return { error: "Provide CSS selector (required for this action)" };
     const el = resolveEl(selector);
-    if (typeof el === "string") return el;
+    if (typeof el === "string") return { error: el };
 
     if (action === "query") {
         let elements: NodeListOf<Element>;
         try {
             elements = document.querySelectorAll(selector);
         } catch {
-            return "Invalid selector";
+            return { error: "Invalid CSS selector" };
         }
         const out: Array<Record<string, unknown>> = [];
         for (let i = 0, l = Math.min(elements.length, lim); i < l; i++) {
@@ -140,7 +140,7 @@ export function handleReact(args: ReactArgs): unknown {
             item.rect = [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)];
             const fiber = getFiber(e);
             if (fiber) {
-                const comp = walkUp(fiber, 5, f => !!fiberName(f));
+                const comp = walkUp(fiber, REACT.WALK_UP_DEPTH, f => !!fiberName(f));
                 if (comp) item.component = fiberName(comp);
             }
             out.push(item);
@@ -150,7 +150,7 @@ export function handleReact(args: ReactArgs): unknown {
 
     if (action === "fiber") {
         const fiber = getFiber(el);
-        if (!fiber) return "No fiber";
+        if (!fiber) return { error: "No React fiber found on this element" };
 
         const nodes: Array<Record<string, unknown>> = [];
         let cur: Fiber | null = fiber;
@@ -172,17 +172,17 @@ export function handleReact(args: ReactArgs): unknown {
 
     if (action === "props") {
         const fiber = getFiber(el);
-        if (!fiber) return "No fiber";
+        if (!fiber) return { error: "No React fiber found on this element" };
         const target = walkUp(fiber, maxD, f => !!f.memoizedProps && !!fiberName(f));
-        if (!target) return "No component found";
+        if (!target) return { error: "No component with props found walking up from this element" };
         return { c: fiberName(target), props: serialize(target.memoizedProps) };
     }
 
     if (action === "hooks") {
         const fiber = getFiber(el);
-        if (!fiber) return "No fiber";
+        if (!fiber) return { error: "No React fiber found on this element" };
         const target = walkUp(fiber, maxD, f => f.tag === 0 && !!f.memoizedState);
-        if (!target) return "No hooks found";
+        if (!target) return { error: "No function component with hooks found" };
 
         const hooks: Array<Record<string, unknown>> = [];
         let state: FiberState | null = target.memoizedState;
@@ -211,9 +211,9 @@ export function handleReact(args: ReactArgs): unknown {
 
     if (action === "state") {
         const fiber = getFiber(el);
-        if (!fiber) return "No fiber";
+        if (!fiber) return { error: "No React fiber found on this element" };
         const target = walkUp(fiber, maxD, f => f.tag === 0 && !!f.memoizedState);
-        if (!target) return "No state found";
+        if (!target) return { error: "No useState hooks found on nearest function component" };
 
         const vals: unknown[] = [];
         let hs: FiberState | null = target.memoizedState;
@@ -225,11 +225,11 @@ export function handleReact(args: ReactArgs): unknown {
     }
 
     if (action === "tree") {
-        const breadth = clampDefault(args.breadth, REACT.DEFAULT_BREADTH, REACT.MAX_BREADTH);
+        const breadth = Math.max(1, clampDefault(args.breadth, REACT.DEFAULT_BREADTH, REACT.MAX_BREADTH));
         const build = (node: Element, d: number): Record<string, unknown> => {
             const info: Record<string, unknown> = { tag: node.tagName.toLowerCase() };
             if (node.id) info.id = node.id;
-            if (node.classList?.length) info.cls = [...node.classList].slice(0, 5);
+            if (node.classList?.length) info.cls = [...node.classList].slice(0, REACT.MAX_CLASS_PREVIEW);
             if (!node.children.length && node.textContent) info.txt = node.textContent.slice(0, REACT.TEXT_SLICE);
             if (d > 0 && node.children.length) {
                 const ch: Array<Record<string, unknown>> = [];
@@ -244,7 +244,7 @@ export function handleReact(args: ReactArgs): unknown {
 
     if (action === "owner") {
         const fiber = getFiber(el);
-        if (!fiber) return "No fiber";
+        if (!fiber) return { error: "No React fiber found on this element" };
 
         const owners: string[] = [];
         let cur: Fiber | null = fiber._debugOwner ?? fiber.return ?? null;

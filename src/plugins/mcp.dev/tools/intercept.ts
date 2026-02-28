@@ -5,10 +5,13 @@
  */
 
 import { getModuleCache } from "@turbopack/patchTurbopack";
+import { Logger } from "@utils/Logger";
 
 import { INTERCEPT } from "./constants";
 import type { InterceptArgs, InterceptState } from "./types";
 import { clamp, errorMessage, serialize } from "./utils";
+
+const logger = new Logger("MCP:Intercept");
 
 let nextId = 1;
 const active = new Map<number, InterceptState>();
@@ -16,7 +19,9 @@ const active = new Map<number, InterceptState>();
 function restoreIntercept(state: InterceptState) {
     try {
         state.holder[state.finalKey] = state.original;
-    } catch {}
+    } catch (e) {
+        logger.warn("Failed to restore intercepted export", e);
+    }
     clearTimeout(state.timer);
     active.delete(state.id);
 }
@@ -26,7 +31,7 @@ export function handleIntercept(args: InterceptArgs): unknown {
 
     if (action === "set") {
         const { moduleId, exportKey = "default" } = args;
-        if (moduleId == null) return "Provide moduleId";
+        if (moduleId == null) return { error: "Provide moduleId" };
 
         const exports = getModuleCache().get(Number(moduleId));
         if (!exports || typeof exports !== "object") return { error: `Module ${moduleId} not found or not an object` };
@@ -42,6 +47,12 @@ export function handleIntercept(args: InterceptArgs): unknown {
         const finalKey = parts[parts.length - 1];
         const original = holder[finalKey];
         if (typeof original !== "function") return { error: `${exportKey} is not a function (${typeof original})` };
+
+        for (const existing of active.values()) {
+            if (existing.moduleId === Number(moduleId) && existing.finalKey === finalKey) {
+                return { error: `Intercept already active on module ${moduleId}.${exportKey} (id: ${existing.id}). Stop it first with stop action.` };
+            }
+        }
 
         const duration = clamp(args.duration ?? INTERCEPT.DEFAULT_DURATION, INTERCEPT.MIN_DURATION, INTERCEPT.MAX_DURATION);
         const maxCaptures = Math.min(args.maxCaptures ?? INTERCEPT.DEFAULT_CAPTURES, INTERCEPT.MAX_CAPTURES);
@@ -59,27 +70,28 @@ export function handleIntercept(args: InterceptArgs): unknown {
             timer: setTimeout(() => restoreIntercept(state), duration),
         };
 
-        holder[finalKey] = function (this: unknown, ...callArgs: unknown[]) {
+        const wrapper = function (this: unknown, ...callArgs: unknown[]) {
             const elapsed = Date.now() - state.startTime;
             const callStart = performance.now();
             try {
                 const ret = original.apply(this, callArgs);
                 if (state.captures.length < maxCaptures) {
-                    state.captures.push({ t: elapsed, d: Math.round((performance.now() - callStart) * 100) / 100, args: serialize(callArgs, 2), ret: serialize(ret, 2) });
+                    state.captures.push({ t: elapsed, d: Math.round((performance.now() - callStart) * 100) / 100, args: serialize(callArgs, INTERCEPT.SERIALIZE_DEPTH), ret: serialize(ret, INTERCEPT.SERIALIZE_DEPTH) });
                 }
                 return ret;
             } catch (err: unknown) {
                 if (state.captures.length < maxCaptures) {
-                    state.captures.push({ t: elapsed, d: Math.round((performance.now() - callStart) * 100) / 100, args: serialize(callArgs, 2), ret: null, err: errorMessage(err) });
+                    state.captures.push({ t: elapsed, d: Math.round((performance.now() - callStart) * 100) / 100, args: serialize(callArgs, INTERCEPT.SERIALIZE_DEPTH), ret: null, err: errorMessage(err) });
                 }
                 throw err;
             }
         };
-        Object.defineProperties(holder[finalKey], {
+        Object.defineProperties(wrapper, {
             length: { value: original.length, configurable: true },
             name: { value: original.name, configurable: true },
             toString: { value: () => String(original), configurable: true },
         });
+        Object.defineProperty(holder, finalKey, { value: wrapper, writable: true, configurable: true });
 
         active.set(id, state);
         return { id, moduleId: state.moduleId, exportKey, duration, maxCaptures, fnName: original.name ?? null };
@@ -87,7 +99,7 @@ export function handleIntercept(args: InterceptArgs): unknown {
 
     if (action === "get") {
         const { id } = args;
-        if (id == null) return "Provide intercept id";
+        if (id == null) return { error: "Provide intercept id" };
         const state = active.get(id);
         if (!state) return { error: `Intercept ${id} not found (expired or stopped)` };
         return {
@@ -95,15 +107,16 @@ export function handleIntercept(args: InterceptArgs): unknown {
             moduleId: state.moduleId,
             exportKey: state.exportKey,
             elapsed: Date.now() - state.startTime,
-            captures: state.captures,
+            captures: state.captures.length > INTERCEPT.GET_CAPTURES_LIMIT ? state.captures.slice(-INTERCEPT.GET_CAPTURES_LIMIT) : state.captures,
+            ...(state.captures.length > INTERCEPT.GET_CAPTURES_LIMIT && { totalCaptures: state.captures.length, hint: `Showing last ${INTERCEPT.GET_CAPTURES_LIMIT} captures. Use stop to get final count.` }),
         };
     }
 
     if (action === "stop") {
         const { id } = args;
-        if (id == null) return "Provide intercept id";
+        if (id == null) return { error: "Provide intercept id" };
         const state = active.get(id);
-        if (!state) return { error: `Intercept ${id} not found` };
+        if (!state) return { error: `Intercept ${id} not found (expired or stopped)` };
         const captureCount = state.captures.length;
         restoreIntercept(state);
         return { id, captures: captureCount, restored: true };

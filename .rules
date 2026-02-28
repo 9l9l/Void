@@ -25,7 +25,7 @@ rules:
     logger: use Logger from @utils/Logger, NEVER raw console.log/warn/error
     classNames: import classNameFactory from @utils/css, prefix MUST end with `-` (e.g. `classNameFactory("void-foo-")`), use `cl("bar")` not `cl("-bar")` or `cl("")`, use `cl("root")` for root element. ONLY use cl() for our own custom CSS class names — never for Grok's Tailwind/design-token classes (e.g. use `"text-fg-danger"` directly, not `cl("danger")`)
     classJoin: use `classes()` from @utils/css to combine cl() with Tailwind or other classes, not template strings like `${a} ${b}`
-    useExisting: use utilities from @utils/, @api/, @components/, @turbopack/common/. Check barrel exports (components/index.ts) before creating new finders
+    useExisting: use utilities from @utils/, @api/, @components/, @turbopack/common/. Check barrel exports before creating new finders. Key modules: @utils/guards (isTruthy, isNonNullish, isObject), @utils/text (humanizeKey, pluralize, escapeRegExp), @utils/react (useForceUpdater, useFiltered, useAwaiter, useCountdown, useIntersection, useEventSubscription, useExternalStore), @utils/misc (copyToClipboard, debounce, errorMessage, downloadFile, sanitizeFilename, createExternalStore)
   typescript:
     prefer: optional chaining (?.), nullish coalescing (??), const, arrow functions, satisfies over as
     use: destructuring, template literals, object shorthand, array methods, readonly where immutable
@@ -58,9 +58,15 @@ rules:
     classConcat: "`${a} ${b}`" ⟹ classes(a, b) from @utils/css
     perFileFinders: findByPropsLazy for common modules ⟹ import from @turbopack/common/*
     perFileStores: findByPropsLazy("useXxxStore") ⟹ typed import from @turbopack/common/stores
+    perFileUtils: findByPropsLazy for common utils (router, i18n, zustand, toaster, classnames) ⟹ import from @turbopack/common/utils
     nullGuards: ⟹ isTruthy, isNonNullish from @utils/guards
+    objectGuards: typeof x === "object" ⟹ isObject from @utils/guards
     clipboard: navigator.clipboard ⟹ copyToClipboard from @utils/misc
+    textFormatting: manual key formatting ⟹ humanizeKey from @utils/text, manual pluralization ⟹ pluralize from @utils/text
+    errorStrings: manual error-to-string ⟹ errorMessage from @utils/misc
+    downloads: manual blob/anchor downloads ⟹ downloadFile from @utils/misc, manual filename cleaning ⟹ sanitizeFilename from @utils/misc
     repeatedDelays: repeated setTimeout for the same event ⟹ debounce from @utils/misc. One-shot setTimeout is fine
+    regexEscape: manual regex escaping ⟹ escapeRegExp from @utils/text
   antiPatterns:
     "value !== null && value !== undefined" ⟹ "value != null"
     "array && array.length > 0" ⟹ "array.length"
@@ -82,7 +88,10 @@ structure:
   corePlugins: src/plugins/_core/ and _api/ — patch Grok to inject API functionality. Pattern: API in src/api/ → Core plugin patches to inject it
   components: src/components/ — custom Void components only, no turbopack finders. Icons in src/components/icons/
   grokComponents: src/turbopack/common/components.ts — all Grok native wrappers via LazyComponent + findExportedComponent
-  addingGrokComponent: 1. type in packages/grok-types/components.d.ts → 2. LazyComponent wrapper in common/components.ts → 3. re-export from components/index.ts
+  grokUtils: src/turbopack/common/utils.ts — shared Grok runtime utils (ApiClients, Toaster, ClassNames, ReasoningModeUtils, zustandCreate, i18n, NextRouter)
+  grokReact: src/turbopack/common/react.tsx — React instance, hooks (useState, useEffect, etc.), useReducedMotion, ReactDOM, Fragment
+  addingGrokComponent: 1. type in packages/grok-types/components.d.ts → 2. LazyComponent wrapper in common/components.ts → 3. re-exported via wildcard from common/index.ts
+  addingGrokUtil: typed finder in common/utils.ts → re-exported via wildcard from common/index.ts
   grokTypes: packages/grok-types/ — TypeScript type definitions for Grok runtime (stores, components, enums). No runtime code
   plugins: |
     src/plugins/<name>/index.ts(x) — plugin entry, uses definePlugin

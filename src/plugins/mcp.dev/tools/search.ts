@@ -23,6 +23,14 @@ function findMatch(src: string, pattern: string, regex: RegExp | null, startFrom
     return { idx, len: pattern.length };
 }
 
+function buildSnippet(src: string, idx: number, matchLen: number, ctx: number): { snippet: string; truncatedMatch?: boolean } {
+    const start = Math.max(0, idx - ctx);
+    const cappedMatchLen = Math.min(matchLen, SEARCH.MAX_MATCH_LENGTH);
+    const end = Math.min(src.length, idx + cappedMatchLen + ctx);
+    const snippet = src.slice(start, end);
+    return matchLen > SEARCH.MAX_MATCH_LENGTH ? { snippet, truncatedMatch: true } : { snippet };
+}
+
 function shouldSkipModule(id: number, filter: string | undefined, loadedCache: Map<number, unknown> | null): boolean {
     if (!filter || !loadedCache) return false;
     if (filter === "loaded") return !loadedCache.has(id);
@@ -32,13 +40,15 @@ function shouldSkipModule(id: number, filter: string | undefined, loadedCache: M
 
 export function handleSearch(args: SearchArgs): unknown {
     const { pattern, max = SEARCH.DEFAULT_MAX, context = SEARCH.DEFAULT_CONTEXT, id: targetId, and: andPatterns, filter } = args;
+    const cappedMax = Math.min(max, SEARCH.MAX_RESULTS_CAP);
+    const wasCapped = max > SEARCH.MAX_RESULTS_CAP;
 
     if (filter && filter !== "loaded" && filter !== "unloaded") return { error: `Invalid filter: "${filter}". Use "loaded" or "unloaded".` };
     if (!pattern && !andPatterns?.length)
         return { error: 'Provide pattern (string or /regex/) or and[] (array of strings). Use count:true for count-only, filter:"loaded"/"unloaded" to narrow scope.' };
 
     const sources = getFactorySourceCache();
-    if (!sources.size) return "Factory registry not available";
+    if (!sources.size) return { error: "Factory registry not available" };
 
     const loadedCache = filter ? getModuleCache() : null;
     const ctx = Math.min(context, SEARCH.MAX_CONTEXT);
@@ -67,7 +77,7 @@ export function handleSearch(args: SearchArgs): unknown {
             if (shouldSkipModule(id, filter, loadedCache)) continue;
             if (!matchesAllPatterns(src, allPatterns)) continue;
             moduleHits++;
-            if (matches.length >= max) continue;
+            if (matches.length >= cappedMax) continue;
 
             let idx: number;
             let matchLen: number;
@@ -80,20 +90,21 @@ export function handleSearch(args: SearchArgs): unknown {
                 idx = m ? m.index : 0;
                 matchLen = m ? m[0].length : 0;
             }
-            const start = Math.max(0, idx - ctx);
-            const end = Math.min(src.length, idx + matchLen + ctx);
-            const entry: SearchMatch = { id, at: idx, s: src.slice(start, end), len: src.length };
+            const { snippet, truncatedMatch } = buildSnippet(src, idx, matchLen, ctx);
+            const entry: SearchMatch = { id, at: idx, s: snippet, len: src.length };
+            if (truncatedMatch) entry.truncatedMatch = true;
             if (isModulePatched(id)) entry.patched = true;
             matches.push(entry);
         }
-        const result: { matches: SearchMatch[]; totalModules?: number } = { matches };
+        const result: { matches: SearchMatch[]; totalModules?: number; hint?: string } = { matches };
         if (moduleHits > matches.length) result.totalModules = moduleHits;
+        if (wasCapped) result.hint = `Results capped at ${SEARCH.MAX_RESULTS_CAP} (requested ${max}).`;
         return result;
     }
 
     const { regex } = parseRegexPattern(pattern!);
     if (!regex && pattern!.startsWith("/")) {
-        return `Invalid regex: could not parse ${pattern}`;
+        return { error: `Invalid regex: could not parse ${pattern}. Use /pattern/flags syntax.` };
     }
 
     if (args.count) {
@@ -118,14 +129,13 @@ export function handleSearch(args: SearchArgs): unknown {
         if (targetId != null) {
             const patched = isModulePatched(id);
             let startFrom = 0;
-            while (matches.length < max && total < SEARCH.MAX_TOTAL) {
+            while (matches.length < cappedMax && total < SEARCH.MAX_TOTAL) {
                 const hit = findMatch(src, pattern!, regex, startFrom);
                 if (!hit) break;
-                const start = Math.max(0, hit.idx - ctx);
-                const end = Math.min(src.length, hit.idx + hit.len + ctx);
-                const snippet = src.slice(start, end);
+                const { snippet, truncatedMatch } = buildSnippet(src, hit.idx, hit.len, ctx);
                 total += snippet.length;
                 const entry: SearchMatch = { id, at: hit.idx, s: snippet, len: src.length };
+                if (truncatedMatch) entry.truncatedMatch = true;
                 if (patched) entry.patched = true;
                 matches.push(entry);
                 startFrom = hit.idx + Math.max(hit.len, 1);
@@ -135,15 +145,14 @@ export function handleSearch(args: SearchArgs): unknown {
             if (!hit) continue;
             moduleHits++;
             if (capped) continue;
-            if (matches.length >= max || total >= SEARCH.MAX_TOTAL) {
+            if (matches.length >= cappedMax || total >= SEARCH.MAX_TOTAL) {
                 capped = true;
                 continue;
             }
-            const start = Math.max(0, hit.idx - ctx);
-            const end = Math.min(src.length, hit.idx + hit.len + ctx);
-            const snippet = src.slice(start, end);
+            const { snippet, truncatedMatch } = buildSnippet(src, hit.idx, hit.len, ctx);
             total += snippet.length;
             const entry: SearchMatch = { id, at: hit.idx, len: src.length, s: snippet };
+            if (truncatedMatch) entry.truncatedMatch = true;
             if (isModulePatched(id)) entry.patched = true;
             matches.push(entry);
         }
@@ -155,5 +164,6 @@ export function handleSearch(args: SearchArgs): unknown {
         else if (targetId != null) result.hint = `Pattern not found in module ${targetId}. Use without id to search all modules.`;
         else if (regex) result.hint = "No regex matches. Check syntax or try a simpler literal pattern.";
     }
+    if (wasCapped && matches.length >= cappedMax) result.hint = (result.hint ? result.hint + " " : "") + `Results capped at ${SEARCH.MAX_RESULTS_CAP} (requested ${max}).`;
     return result;
 }

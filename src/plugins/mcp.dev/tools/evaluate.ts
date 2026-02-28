@@ -21,16 +21,27 @@ const STATEMENT_RE = /^(return|throw|break|continue|if|for|while|switch|try|clas
 
 function autoReturn(code: string): string {
     const lastNewline = code.lastIndexOf("\n");
-    if (lastNewline === -1) {
-        const expr = code.trim().replace(/;$/, "").trim();
-        if (expr && !STATEMENT_RE.test(expr)) return `return ${expr};`;
+    const lastLine = lastNewline === -1 ? code.trim() : code.slice(lastNewline + 1).trim();
+
+    if (!lastLine || /^[)\]},;]+$/.test(lastLine)) return code;
+
+    const expr = lastLine.replace(/;$/, "").trim();
+
+    if (STATEMENT_RE.test(expr)) {
+        const lastSemi = code.lastIndexOf(";");
+        if (lastSemi !== -1) {
+            const afterSemi = code.slice(lastSemi + 1).trim();
+            if (afterSemi && !STATEMENT_RE.test(afterSemi)) {
+                return `${code.slice(0, lastSemi + 1)}\nreturn ${afterSemi};`;
+            }
+        }
         return code;
     }
-    const lastLine = code.slice(lastNewline + 1).trim();
-    if (!lastLine || /^[)\]},;]+$/.test(lastLine)) return code;
-    const expr = lastLine.replace(/;$/, "").trim();
-    if (expr && !STATEMENT_RE.test(expr)) return `${code.slice(0, lastNewline)}\nreturn ${expr};`;
-    return code;
+
+    if (lastNewline === -1) {
+        return `return ${expr};`;
+    }
+    return `${code.slice(0, lastNewline)}\nreturn ${expr};`;
 }
 
 function wrapIIFE(code: string): string {
@@ -47,8 +58,8 @@ function tryEval(code: string): EvalResult | EvalError {
 
 export function handleEval(args: EvalArgs): unknown {
     const { code } = args;
-    if (!code) return "Provide code to evaluate";
-    if (code.length > EVAL.MAX_CODE_LENGTH) return `Code too long (${code.length} chars, max ${EVAL.MAX_CODE_LENGTH})`;
+    if (!code) return { error: "Provide code to evaluate" };
+    if (code.length > EVAL.MAX_CODE_LENGTH) return { error: `Code too long: ${code.length} chars (max ${EVAL.MAX_CODE_LENGTH}). Reduce code or split into multiple calls.` };
 
     let evalCode = needsIIFE(code) ? wrapIIFE(code) : code;
 
@@ -59,10 +70,10 @@ export function handleEval(args: EvalArgs): unknown {
             try {
                 return evalAsync(code).then(
                     val => serialize(val, EVAL.SERIALIZE_DEPTH),
-                    (err: unknown) => formatError(err),
+                    (err: unknown) => ({ error: formatError(err) }),
                 );
             } catch (asyncErr: unknown) {
-                return formatError(asyncErr);
+                return { error: formatError(asyncErr) };
             }
         }
         if (evalCode === code) {
@@ -71,12 +82,12 @@ export function handleEval(args: EvalArgs): unknown {
         }
     }
 
-    if (!r.ok) return formatError(r.error);
+    if (!r.ok) return { error: formatError(r.error) };
 
     if (r.value != null && typeof (r.value as Promise<unknown>).then === "function") {
         return (r.value as Promise<unknown>).then(
             val => serialize(val, EVAL.SERIALIZE_DEPTH),
-            (err: unknown) => formatError(err),
+            (err: unknown) => ({ error: formatError(err) }),
         );
     }
     return serialize(r.value, EVAL.SERIALIZE_DEPTH);

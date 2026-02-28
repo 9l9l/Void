@@ -108,19 +108,9 @@ export interface InterceptArgs {
     maxCaptures?: number;
 }
 
-export interface BatchArgs {
-    calls?: Array<{ tool: string; arguments?: Record<string, unknown> }>;
-}
-
-export type ToolArgs = ModuleArgs | SearchArgs | EvalArgs | PatchArgs | PluginArgs | ReactArgs | StoreArgs | GrokArgs | InterceptArgs | BatchArgs;
+export type ToolArgs = ModuleArgs | SearchArgs | EvalArgs | PatchArgs | PluginArgs | ReactArgs | StoreArgs | GrokArgs | InterceptArgs;
 
 export type ToolHandler = (args: any) => unknown;
-
-export interface SingleResult {
-    tool: string;
-    result?: unknown;
-    error?: string;
-}
 
 export interface SuggestCandidate {
     text: string;
@@ -141,6 +131,7 @@ export interface SearchMatch {
     len?: number;
     at?: number;
     patched?: boolean;
+    truncatedMatch?: boolean;
 }
 
 export interface EvalResult {

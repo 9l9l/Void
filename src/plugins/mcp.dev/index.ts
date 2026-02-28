@@ -7,6 +7,7 @@
 import { definePluginSettings } from "@api/Settings";
 import { Devs } from "@utils/constants";
 import { Logger } from "@utils/Logger";
+import { errorMessage, isObject } from "@utils/misc";
 import definePlugin, { OptionType } from "@utils/types";
 
 import { toolHandlers } from "./tools";
@@ -22,7 +23,7 @@ const settings = definePluginSettings({
 
 const logger = new Logger("MCP", "#ca9ee6");
 
-const MCP_URL = "ws://localhost:7890";
+const MCP_URL = `ws://localhost:${MCP_CONSTANTS.PORT}`;
 const { SLOW_THRESHOLD, MAX_RESULT_SIZE, INITIAL_RECONNECT_DELAY, MAX_RECONNECT_DELAY } = MCP_CONSTANTS;
 
 interface WsMessage {
@@ -43,14 +44,14 @@ let reconnectDelay: number = INITIAL_RECONNECT_DELAY;
 
 function truncateResult(result: unknown): unknown {
     if (Array.isArray(result)) {
-        const half = Math.max(5, Math.floor(result.length / 2));
+        const half = Math.max(MCP_CONSTANTS.MIN_TRUNCATED_ITEMS, Math.floor(result.length / 2));
         return [...result.slice(0, half), { _truncated: true, total: result.length, showing: half, hint: "Use narrower query, limit, or pagination to see more" }];
     }
-    if (result != null && typeof result === "object") {
+    if (isObject(result)) {
         const out: Record<string, unknown> = {};
         for (const [k, v] of Object.entries(result as Record<string, unknown>)) {
-            if (Array.isArray(v) && JSON.stringify(v).length > 20000) {
-                const half = Math.max(3, Math.floor(v.length / 2));
+            if (Array.isArray(v) && JSON.stringify(v).length > MCP_CONSTANTS.TRUNCATION_THRESHOLD) {
+                const half = Math.max(MCP_CONSTANTS.MIN_TRUNCATED_NESTED, Math.floor(v.length / 2));
                 out[k] = [...v.slice(0, half), { _truncated: true, total: v.length, showing: half }];
             } else {
                 out[k] = v;
@@ -76,7 +77,7 @@ function send(data: WsResponse) {
         ws?.send(json);
     } catch (err: unknown) {
         try {
-            ws?.send(JSON.stringify({ id: data.id, error: `Serialization failed: ${err instanceof Error ? err.message : String(err)}` }));
+            ws?.send(JSON.stringify({ id: data.id, error: `Serialization failed: ${errorMessage(err)}` }));
         } catch (sendErr: unknown) {
             logger.error("WebSocket send failed", sendErr);
         }
@@ -136,7 +137,7 @@ function connect() {
                     },
                     (err: unknown) => {
                         logCall(true);
-                        send({ id, error: err instanceof Error ? err.message : String(err) });
+                        send({ id, error: errorMessage(err) });
                     },
                 );
             } else {
@@ -145,7 +146,7 @@ function connect() {
             }
         } catch (err: unknown) {
             logCall(true);
-            send({ id, error: err instanceof Error ? err.message : String(err) });
+            send({ id, error: errorMessage(err) });
         }
     };
 

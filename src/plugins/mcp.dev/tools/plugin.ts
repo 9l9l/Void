@@ -25,37 +25,47 @@ export function handlePlugin(args: PluginArgs): unknown {
 
     if (!(PLUGIN_ACTIONS as readonly string[]).includes(action)) return { error: `Unknown action: ${action}`, validActions: PLUGIN_ACTIONS };
 
-    if (!name) return "Provide plugin name";
-    const plugin = plugins[name];
-    if (!plugin) {
+    if (!name) return { error: "Provide plugin name" };
+
+    const resolved = plugins[name] ? name : Object.keys(plugins).find(n => n.toLowerCase() === name.toLowerCase());
+    const plugin = resolved ? plugins[resolved] : null;
+    if (!plugin || !resolved) {
         const lower = name.toLowerCase();
         const similar = Object.keys(plugins).filter(n => n.toLowerCase().includes(lower) || lower.includes(n.toLowerCase()));
-        return similar.length ? { error: `Plugin not found: ${name}`, similar } : `Plugin not found: ${name}. Use plugin list to see available plugins.`;
+        return similar.length ? { error: `Plugin not found: ${name}`, similar } : { error: `Plugin not found: ${name}. Use list action to see available plugins.` };
     }
 
     if (action === "enable") {
-        Settings.plugins[name] = { ...Settings.plugins[name], enabled: true };
+        const wasEnabled = isPluginEnabled(resolved);
+        Settings.plugins[resolved] = { ...Settings.plugins[resolved], enabled: true };
         startPlugin(plugin);
-        return `Enabled ${name}`;
+        return wasEnabled ? { ok: true, action: "enabled", name: resolved, noop: true } : { ok: true, action: "enabled", name: resolved };
     }
 
     if (action === "disable") {
-        if (plugin.required) return `Cannot disable required plugin: ${name}`;
-        Settings.plugins[name] = { ...Settings.plugins[name], enabled: false };
+        if (plugin.required) return { error: `Cannot disable required plugin: ${resolved}` };
+        if (resolved === "MCP") return { error: "Cannot disable MCP plugin via MCP — it would kill this connection" };
+        const wasDisabled = !isPluginEnabled(resolved);
+        Settings.plugins[resolved] = { ...Settings.plugins[resolved], enabled: false };
         stopPlugin(plugin);
-        return `Disabled ${name}`;
+        return wasDisabled ? { ok: true, action: "disabled", name: resolved, noop: true } : { ok: true, action: "disabled", name: resolved };
     }
 
     if (action === "toggle") {
-        const enabled = isPluginEnabled(name);
-        return handlePlugin({ action: enabled ? "disable" : "enable", name });
+        const enabled = isPluginEnabled(resolved);
+        if (enabled && resolved === "MCP") return { error: "Cannot disable MCP plugin via MCP — it would kill this connection" };
+        return handlePlugin({ action: enabled ? "disable" : "enable", name: resolved });
     }
 
     if (action === "settings") {
-        return Settings.plugins[name] ?? {};
+        return Settings.plugins[resolved] ?? {};
     }
 
-    if (!key) return "Provide setting key";
-    Settings.plugins[name] = { ...Settings.plugins[name], enabled: Settings.plugins[name]?.enabled ?? true, [key]: value };
-    return `Set ${name}.${key} = ${JSON.stringify(value)}`;
+    if (!key) return { error: "Provide setting key. Use settings action to see available keys." };
+    const settingsDef = plugin.settings?.def;
+    if (settingsDef && !(key in settingsDef)) {
+        return { error: `Unknown setting key "${key}" for ${resolved}. Valid keys: ${Object.keys(settingsDef).join(", ")}` };
+    }
+    Settings.plugins[resolved] = { ...Settings.plugins[resolved], [key]: value };
+    return { ok: true, name: resolved, key, value };
 }

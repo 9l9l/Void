@@ -6,6 +6,7 @@
 
 import { ChatPageStore, FeatureStore, ModelsStore, RoutingStore, SessionStore, SettingsStore } from "@turbopack/common";
 
+import { GROK } from "./constants";
 import type { GrokArgs, MemoryInfo } from "./types";
 import { serialize } from "./utils";
 
@@ -48,7 +49,7 @@ export function handleGrok(args: GrokArgs): unknown {
 
         const lower = filter.toLowerCase();
         const matched = entries.filter(([k]) => k.toLowerCase().includes(lower));
-        return { status: state.status, matched: matched.length, features: Object.fromEntries(matched.slice(0, 50)) };
+        return { status: state.status, matched: matched.length, features: Object.fromEntries(matched.slice(0, GROK.MAX_FEATURE_RESULTS)) };
     }
 
     if (action === "models") {
@@ -116,9 +117,9 @@ export function handleGrok(args: GrokArgs): unknown {
                 : null,
             memory: mem
                 ? {
-                      used: Math.round(mem.usedJSHeapSize / 1048576),
-                      total: Math.round(mem.totalJSHeapSize / 1048576),
-                      limit: Math.round(mem.jsHeapSizeLimit / 1048576),
+                      used: Math.round(mem.usedJSHeapSize / GROK.BYTES_PER_MB),
+                      total: Math.round(mem.totalJSHeapSize / GROK.BYTES_PER_MB),
+                      limit: Math.round(mem.jsHeapSizeLimit / GROK.BYTES_PER_MB),
                   }
                 : null,
             url: location.href,

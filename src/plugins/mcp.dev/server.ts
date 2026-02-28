@@ -4,16 +4,15 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import { Logger } from "@utils/Logger";
+import { errorMessage } from "@utils/misc";
 import type { ServerWebSocket } from "bun";
 
-import { Logger } from "../../utils/Logger";
 import { MCP } from "./tools/constants";
 import { TOOL_DEFINITIONS } from "./tools/definitions";
 
 const logger = new Logger("MCP", "#ca9ee6");
-const PORT = 7890;
-const REQUEST_TIMEOUT = 30_000;
-const { SLOW_THRESHOLD } = MCP;
+const { SLOW_THRESHOLD, REQUEST_TIMEOUT, WS_OPEN } = MCP;
 
 interface PendingRequest {
     id: string | number;
@@ -42,7 +41,7 @@ function jsonRpc(id: string | number | null | undefined, result?: unknown, error
 
 function forwardToPage(id: string | number, tool: string, args: Record<string, unknown>): Promise<unknown> {
     return new Promise((resolve, reject) => {
-        if (!pageSocket || pageSocket.readyState !== 1) {
+        if (!pageSocket || pageSocket.readyState !== WS_OPEN) {
             reject(new Error("Page not connected. Open grok.com with Void extension loaded."));
             return;
         }
@@ -64,7 +63,7 @@ const corsHeaders = {
 } as const;
 
 const server = Bun.serve({
-    port: PORT,
+    port: MCP.PORT,
     async fetch(req): Promise<Response> {
         if (req.headers.get("upgrade") === "websocket") {
             if (server.upgrade(req)) return undefined as unknown as Response;
@@ -107,7 +106,7 @@ const server = Bun.serve({
                 else logger.info(`${tool} ${elapsed} ms (${text.length} chars)`);
                 return Response.json(jsonRpc(id, { content: [{ type: "text", text }] }), { headers: corsHeaders });
             } catch (err: unknown) {
-                const message = err instanceof Error ? err.message : String(err);
+                const message = errorMessage(err);
                 logger.error(`${tool} FAILED: ${message}`);
                 return Response.json(jsonRpc(id, undefined, { code: -32603, message }), { headers: corsHeaders });
             }
@@ -131,8 +130,8 @@ const server = Bun.serve({
                 pending.delete(data.id);
                 if (data.error) req.reject(new Error(typeof data.error === "string" ? data.error : JSON.stringify(data.error)));
                 else req.resolve(data.result ?? null);
-            } catch {
-                /* malformed ws message */
+            } catch (e) {
+                logger.warn("Malformed WebSocket message", e);
             }
         },
         close() {
@@ -149,4 +148,4 @@ const server = Bun.serve({
     },
 });
 
-logger.info(`Listening on http://localhost:${PORT}`);
+logger.info(`Listening on http://localhost:${MCP.PORT}`);

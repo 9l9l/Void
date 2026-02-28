@@ -5,6 +5,7 @@
  */
 
 import { getModuleCache } from "@turbopack/patchTurbopack";
+import { isObject } from "@utils/misc";
 
 import { SERIALIZE, STORE } from "./constants";
 import type { StoreArgs, StoreEntry, ZustandLike } from "./types";
@@ -39,9 +40,9 @@ function findStores(): StoreEntry[] {
                 if (!isZustandStore(val) || seen.has(val as object)) continue;
                 seen.add(val as object);
                 const state = val.getState();
-                const stateKeys = state && typeof state === "object" ? Object.keys(state) : [];
-                const storeName = (key.startsWith("use") ? key : null) ?? (typeof val.name === "string" && val.name !== "r" ? val.name : null) ?? (key !== "default" && key !== "r" ? key : null);
-                stores.push({ id, name: storeName, keys: stateKeys.slice(0, 10) });
+                const stateKeys = isObject(state) ? Object.keys(state) : [];
+                const storeName = (key.startsWith("use") ? key : null) ?? (typeof val.name === "string" && val.name !== STORE.MINIFIED_STORE_NAME ? val.name : null) ?? (key !== "default" && key !== STORE.MINIFIED_STORE_NAME ? key : null);
+                stores.push({ id, name: storeName, keys: stateKeys.slice(0, STORE.KEYS_PREVIEW) });
             } catch {}
         }
     }
@@ -70,9 +71,23 @@ function findStoreByQuery(query: string | number): ZustandLike | null {
     if (!Number.isNaN(numQuery) && Number.isFinite(numQuery)) return getStoreFromModule(numQuery);
 
     const lower = String(query).toLowerCase();
+
+    let bestMatch: StoreEntry | null = null;
+    let bestLen = Infinity;
+
     for (const entry of stores) {
-        if (entry.name?.toLowerCase().includes(lower)) return getStoreFromModule(entry.id, entry.name);
+        if (!entry.name) continue;
+        const nameLower = entry.name.toLowerCase();
+        if (nameLower === lower || nameLower === `use${lower}store` || nameLower === `use${lower}`) {
+            return getStoreFromModule(entry.id, entry.name);
+        }
+        if (nameLower.includes(lower) && entry.name.length < bestLen) {
+            bestMatch = entry;
+            bestLen = entry.name.length;
+        }
     }
+    if (bestMatch) return getStoreFromModule(bestMatch.id, bestMatch.name);
+
     for (const entry of stores) {
         if (entry.keys.some(k => k.toLowerCase().includes(lower))) return getStoreFromModule(entry.id, entry.name);
     }
@@ -85,32 +100,34 @@ function storeNotFound(query: string | number): { error: string; similar?: strin
     const similar = stores
         .filter(s => s.name?.toLowerCase().includes(lower) || s.keys.some(k => k.toLowerCase().includes(lower)))
         .map(s => s.name ?? `module:${s.id}`)
-        .slice(0, 5);
+        .slice(0, STORE.SIMILAR_LIMIT);
     return similar.length ? { error: `No store "${query}"`, similar } : { error: `No store "${query}". Use list action.` };
 }
+
+const DESTRUCTIVE_METHODS = new Set(["clearUser", "logout", "reset", "clearAll", "deleteUser", "signOut", "clearSession"]);
 
 export function handleStore(args: StoreArgs): unknown {
     const { action, query, path, depth = SERIALIZE.DEFAULT_DEPTH } = args;
 
     if (action === "list") {
-        return findStores().map(s => ({ id: s.id, n: s.name, k: s.keys.slice(0, 8) }));
+        return findStores().map(s => ({ id: s.id, n: s.name, k: s.keys.slice(0, STORE.LIST_KEYS_PREVIEW) }));
     }
 
     if (action === "get") {
-        if (!query) return "Provide query";
+        if (!query) return { error: "Provide query (store name or module ID)" };
         const store = findStoreByQuery(query);
         if (!store) return storeNotFound(query);
         const state = store.getState();
-        if (path) return serialize(getPath(state, path), Math.min(depth, 4));
-        return serialize(state, Math.min(depth, 3));
+        if (path) return serialize(getPath(state, path), Math.min(depth, STORE.MAX_DEPTH));
+        return serialize(state, Math.min(depth, STORE.DEFAULT_DEPTH));
     }
 
     if (action === "keys") {
-        if (!query) return "Provide query";
+        if (!query) return { error: "Provide query (store name or module ID)" };
         const store = findStoreByQuery(query);
         if (!store) return storeNotFound(query);
         const state = store.getState();
-        if (!state || typeof state !== "object") return [];
+        if (!isObject(state)) return [];
         const result: Record<string, string> = {};
         for (const k of Object.keys(state)) {
             try {
@@ -123,11 +140,11 @@ export function handleStore(args: StoreArgs): unknown {
     }
 
     if (action === "methods") {
-        if (!query) return "Provide query";
+        if (!query) return { error: "Provide query (store name or module ID)" };
         const store = findStoreByQuery(query);
         if (!store) return storeNotFound(query);
         const state = store.getState();
-        if (!state || typeof state !== "object") return [];
+        if (!isObject(state)) return [];
         const methods: Record<string, number> = {};
         for (const k of Object.keys(state)) {
             if (typeof state[k] === "function") methods[k] = (state[k] as Function).length;
@@ -136,29 +153,35 @@ export function handleStore(args: StoreArgs): unknown {
     }
 
     if (action === "call") {
-        if (!query) return "Provide query";
+        if (!query) return { error: "Provide query (store name or module ID)" };
         const { method, callArgs } = args;
-        if (!method) return "Provide method";
+        if (!method) return { error: "Provide method name. Use methods action to list available methods." };
+        if (DESTRUCTIVE_METHODS.has(method)) return { error: `Method "${method}" is potentially destructive and blocked via MCP. Use evaluateCode if you really need to call it.` };
         const store = findStoreByQuery(query);
         if (!store) return storeNotFound(query);
         const state = store.getState();
-        if (!state || typeof state[method] !== "function") return { error: `No method "${method}"` };
+        if (!state || typeof state[method] !== "function") {
+            const available = state ? Object.keys(state).filter(k => typeof state[k] === "function").slice(0, STORE.METHODS_PREVIEW) : [];
+            return available.length
+                ? { error: `No method "${method}"`, available }
+                : { error: `No method "${method}". Store has no callable methods.` };
+        }
         try {
             const result = (state[method] as Function)(...(callArgs ?? []));
             if (result != null && typeof (result as Promise<unknown>).then === "function") {
                 return (result as Promise<unknown>).then(
-                    v => serialize(v, Math.min(depth, 4)),
+                    v => serialize(v, Math.min(depth, STORE.MAX_DEPTH)),
                     (e: unknown) => ({ error: errorMessage(e) }),
                 );
             }
-            return serialize(result, Math.min(depth, 4));
+            return serialize(result, Math.min(depth, STORE.MAX_DEPTH));
         } catch (e: unknown) {
             return { error: errorMessage(e) };
         }
     }
 
     if (action === "subscribe") {
-        if (!query) return "Provide query";
+        if (!query) return { error: "Provide query (store name or module ID)" };
         const store = findStoreByQuery(query);
         if (!store) return storeNotFound(query);
         const duration = clamp(args.duration ?? STORE.DEFAULT_DURATION, STORE.MIN_DURATION, STORE.MAX_DURATION);
@@ -184,17 +207,17 @@ export function handleStore(args: StoreArgs): unknown {
                 if (cur === prev) return;
 
                 if (watchPath) {
-                    changes.push({ t: Date.now() - startTime, p: watchPath, from: serialize(prev, 1), to: serialize(cur, 1) });
-                } else if (typeof cur === "object" && cur != null && typeof prev === "object" && prev != null) {
+                    changes.push({ t: Date.now() - startTime, p: watchPath, from: serialize(prev, STORE.SUBSCRIBE_DEPTH), to: serialize(cur, STORE.SUBSCRIBE_DEPTH) });
+                } else if (isObject(cur) && isObject(prev)) {
                     const curObj = cur as Record<string, unknown>;
                     const prevObj = prev as Record<string, unknown>;
                     for (const k of Object.keys(curObj)) {
                         if (curObj[k] !== prevObj[k] && changes.length < maxCaptures) {
-                            changes.push({ t: Date.now() - startTime, p: k, from: serialize(prevObj[k], 1), to: serialize(curObj[k], 1) });
+                            changes.push({ t: Date.now() - startTime, p: k, from: serialize(prevObj[k], STORE.SUBSCRIBE_DEPTH), to: serialize(curObj[k], STORE.SUBSCRIBE_DEPTH) });
                         }
                     }
                 } else {
-                    changes.push({ t: Date.now() - startTime, from: serialize(prev, 1), to: serialize(cur, 1) });
+                    changes.push({ t: Date.now() - startTime, from: serialize(prev, STORE.SUBSCRIBE_DEPTH), to: serialize(cur, STORE.SUBSCRIBE_DEPTH) });
                 }
 
                 prev = cur;

@@ -17,6 +17,7 @@ export {
     useEffect,
     useLayoutEffect,
     useMemo,
+    useReducedMotion,
     useReducer,
     useRef,
     useState,
