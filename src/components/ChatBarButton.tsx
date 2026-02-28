@@ -39,6 +39,7 @@ export function ChatBarButton({ icon, children, tooltip, onClick, className, ico
 
     useEffect(() => {
         if (showText) hasShownText.current = true;
+        return () => {};
     }, [showText]);
 
     return (

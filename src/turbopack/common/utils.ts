@@ -33,7 +33,6 @@ export const Toaster = findByPropsLazy("Toaster", "toast");
 export const ClipboardUtils = findByPropsLazy("copyAndToast");
 export const ClipboardMarkdown = findByPropsLazy("copyMarkdown");
 export const ThemeUtils = findByPropsLazy("ThemeProvider", "useTheme");
-export const CommandMenu = findByPropsLazy("useCommandMenuStore", "createSelection");
 export const Mobile = findByPropsLazy("useMobile", "useMobileSize");
 
 export const Hotkeys = findByPropsLazy("useHotkeys");

@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import "./PluginCard.css";
+
 import { dispatch } from "@api/Events";
 import { isPluginEnabled, plugins, startPlugin, stopPlugin } from "@api/PluginManager";
 import { Settings } from "@api/Settings";
@@ -19,8 +21,6 @@ import { hasVisibleSettings } from "./utils";
 
 const EllipsisVertical = findExportedComponentLazy("EllipsisVertical");
 const TriangleAlert = findExportedComponentLazy("TriangleAlert");
-
-import "./PluginCard.css";
 
 const cl = classNameFactory("void-plugin-card-");
 

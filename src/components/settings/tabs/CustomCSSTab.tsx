@@ -125,6 +125,7 @@ export default function CustomCSSTab() {
 
     useEffect(() => {
         editorRef.current?.updateOptions({ readOnly: !enabled });
+        return () => {};
     }, [enabled]);
 
     return (

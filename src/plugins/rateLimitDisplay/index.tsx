@@ -114,7 +114,7 @@ function AutoDisplay({ fast, expert, iconOnly }: { fast: Usage; expert: Usage; i
     const limited = fLimited || eLimited;
     const f = fLimited ? { ...fast, waitSeconds: fw } : fast;
     const e = eLimited ? { ...expert, waitSeconds: ew } : expert;
-    const windowSeconds = fast.windowSeconds || expert.windowSeconds;
+    const windowSeconds = fast.windowSeconds ?? expert.windowSeconds;
     const reset = windowSeconds > 0 ? ` \u00b7 resets every ${formatDuration(windowSeconds)}` : "";
 
     return (

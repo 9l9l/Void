@@ -64,10 +64,11 @@ export default function PluginsTab() {
     }, []);
 
     useEffect(() => {
-        if (initialStates) return;
+        if (initialStates) return () => {};
         initialStates = new Map<string, boolean>();
         for (const n of [...userPlugins, ...requiredPlugins])
             initialStates.set(n, isPluginEnabled(n));
+        return () => {};
     }, [userPlugins, requiredPlugins]);
 
     const totalVisible = userPlugins.length + requiredPlugins.length;
