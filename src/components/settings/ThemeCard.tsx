@@ -35,10 +35,10 @@ export default function ThemeCard({ theme, globalEnabled, onRemove, onToggle }: 
                 <Flex alignItems="center" justifyContent="space-between" gap="0.5rem">
                     <Text as="span" className={cl("name")}>{theme.name ?? theme.url}</Text>
                     <Flex alignItems="center" gap="0.375rem" className={cl("controls")}>
-                        <ButtonWithTooltip variant="tertiary" size="xs" shape="circle" tooltipContent="Copy URL" onClick={() => copyToClipboard(theme.url)}>
+                        <ButtonWithTooltip variant="tertiary" size="xs" shape="square" tooltipContent="Copy URL" onClick={() => copyToClipboard(theme.url)}>
                             <CopyIcon size={16} />
                         </ButtonWithTooltip>
-                        <ButtonWithTooltip variant="tertiary" size="xs" shape="circle" tooltipContent="Remove" onClick={() => onRemove(theme.url)}>
+                        <ButtonWithTooltip variant="tertiary" size="xs" shape="square" tooltipContent="Remove" onClick={() => onRemove(theme.url)}>
                             <TrashIcon size={16} />
                         </ButtonWithTooltip>
                         <Switch checked={theme.enabled} disabled={!globalEnabled} onCheckedChange={handleToggle} />
