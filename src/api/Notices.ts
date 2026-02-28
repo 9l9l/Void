@@ -5,6 +5,9 @@
  */
 
 import { FeatureStore } from "@turbopack/common/stores";
+import { Logger } from "@utils/Logger";
+
+const logger = new Logger("Notices");
 
 export const enum NoticeType {
     INFO = "log",
@@ -24,7 +27,7 @@ let dismissTimer: ReturnType<typeof setTimeout> | null = null;
 function clearDismissal(sentAt: string) {
     try {
         localStorage.removeItem(`banner-${sentAt}`);
-    } catch { /* noop */ }
+    } catch (e) { logger.debug("Failed to clear banner dismissal:", e); }
 }
 
 /**
@@ -61,16 +64,14 @@ export function showNotice(options: NoticeOptions): string {
 
     activeNoticeKey = sentAt;
 
-    if (options.timeout && options.timeout > 0) {
-        dismissTimer = setTimeout(() => {
-            closeNotice();
-        }, options.timeout);
+    if (options.timeout) {
+        dismissTimer = setTimeout(closeNotice, options.timeout);
     }
 
     return sentAt;
 }
 
-export function closeNotice(): void {
+export function closeNotice() {
     if (!activeNoticeKey) return;
 
     if (dismissTimer) {
@@ -80,7 +81,7 @@ export function closeNotice(): void {
 
     try {
         localStorage.setItem(`banner-${activeNoticeKey}`, "true");
-    } catch { /* noop */ }
+    } catch (e) { logger.debug("Failed to persist banner dismissal:", e); }
 
     const { config } = FeatureStore.useFeatureStore.getState();
 

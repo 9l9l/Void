@@ -11,3 +11,7 @@ export function isTruthy<T>(item: T): item is Exclude<T, 0 | "" | false | null |
 export function isNonNullish<T>(item: T): item is Exclude<T, null | undefined> {
     return item != null;
 }
+
+export function isObject(value: any): value is Record<string, any> {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}

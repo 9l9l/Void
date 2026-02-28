@@ -9,7 +9,7 @@ import definePlugin from "@utils/types";
 
 export default definePlugin({
     name: "FixChrome",
-    description: "Fixes performance issues specific to Chromium browsers.",
+    description: "Fixes Chromium-specific performance issues like backdrop blur lag.",
     authors: [Devs.Prism],
     required: true,
 

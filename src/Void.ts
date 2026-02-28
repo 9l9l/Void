@@ -24,7 +24,7 @@ export * as common from "@turbopack/common";
 export { getModuleCache, getRuntimeFactoryRegistry, getRuntimeModuleCache, getTurbopackHelpers, isBlacklisted, onceReady, patches, patchReport, patchResults, patchStats, syncLazyModules } from "@turbopack/patchTurbopack";
 export * from "@turbopack/turbopack";
 export { classes, classNameFactory, disableStyle, enableStyle, registerStyle } from "@utils/css";
-export { isNonNullish, isTruthy } from "@utils/guards";
+export { isNonNullish, isObject, isTruthy } from "@utils/guards";
 export { makeLazy, proxyLazy } from "@utils/lazy";
 export { Logger } from "@utils/Logger";
 export { clamp, copyToClipboard, debounce, downloadFile, errorMessage, fetchExternal, formatCountdown, formatDuration, mergeDefaults, onlyOnce, sanitizeFilename, sleep } from "@utils/misc";

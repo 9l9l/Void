@@ -10,17 +10,13 @@ import { dispatch } from "@api/Events";
 import { isPluginEnabled, plugins, startPlugin, stopPlugin } from "@api/PluginManager";
 import { Settings } from "@api/Settings";
 import { Button, Flex, Switch, Text, Tooltip, TooltipContent, TooltipTrigger } from "@components";
-import { CircleAlertIcon } from "@components/icons";
+import { CircleAlertIcon, EllipsisVertical, TriangleAlert } from "@components/icons";
 import { React } from "@turbopack/common/react";
-import { findExportedComponentLazy } from "@turbopack/turbopack";
 import { classes, classNameFactory } from "@utils/css";
 import { useForceUpdater } from "@utils/react";
 
 import { PluginBadges } from "./pluginBadges";
 import { hasVisibleSettings } from "./utils";
-
-const EllipsisVertical = findExportedComponentLazy("EllipsisVertical");
-const TriangleAlert = findExportedComponentLazy("TriangleAlert");
 
 const cl = classNameFactory("void-plugin-card-");
 

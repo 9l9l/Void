@@ -22,7 +22,7 @@ export const plugins: Record<string, Plugin> = {};
 const pluginUnsubscribers = new Map<string, Array<() => void>>();
 let initialized = false;
 
-const storeRegistry: Record<string, Record<string, unknown>> = allStores as never;
+const storeRegistry: Record<string, Record<string, any>> = allStores as never;
 
 export function isPluginEnabled(pluginName: string): boolean {
     const plugin = plugins[pluginName];
@@ -54,7 +54,7 @@ export function addPatch(newPatch: Omit<Patch, "plugin">, pluginName: string) {
     patches.push(patch);
 }
 
-function startDependenciesRecursive(plugin: Plugin, visiting = new Set<string>()): boolean {
+function startDependenciesRecursive(plugin: Plugin, visiting = new Set<string>()) {
     if (!plugin.dependencies) return true;
 
     for (const depName of plugin.dependencies) {
@@ -82,17 +82,17 @@ function startDependenciesRecursive(plugin: Plugin, visiting = new Set<string>()
     return true;
 }
 
-function resolveStoreHook(storeName: string): { subscribe: Function } | null {
+function resolveStoreHook(storeName: string): { subscribe: (...args: any[]) => any } | null {
     const storeModule = storeRegistry[storeName];
     if (!storeModule) return null;
 
     const hookName = `use${storeName}`;
-    const hook = storeModule[hookName] as { subscribe?: Function } | undefined;
-    if (hook && typeof hook.subscribe === "function") return hook as { subscribe: Function };
+    const hook = storeModule[hookName] as { subscribe?: (...args: any[]) => any } | undefined;
+    if (hook && typeof hook.subscribe === "function") return hook as { subscribe: (...args: any[]) => any };
 
     for (const key in storeModule) {
-        const val = storeModule[key] as { subscribe?: Function } | undefined;
-        if (val && typeof val.subscribe === "function") return val as { subscribe: Function };
+        const val = storeModule[key] as { subscribe?: (...args: any[]) => any } | undefined;
+        if (val && typeof val.subscribe === "function") return val as { subscribe: (...args: any[]) => any };
     }
 
     return null;
@@ -144,7 +144,7 @@ export function startPlugin(plugin: Plugin, silent = false): boolean {
                     continue;
                 }
 
-                const wrappedHandler = (current: unknown, prev: unknown) => {
+                const wrappedHandler = (current: any, prev: any) => {
                     try {
                         sub.handler(current, prev);
                     } catch (e) {

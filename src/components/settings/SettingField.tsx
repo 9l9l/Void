@@ -21,10 +21,10 @@ function usePluginSetting(pluginName: string, id: string, setting: PluginSetting
     const [value, setValue] = useState((Settings.plugins[pluginName] ?? {})[id] ?? getDefaultValue(setting));
 
     const update = useCallback(
-        (val: unknown) => {
+        (val: any) => {
             setValue(val);
             Settings.plugins[pluginName] = { ...Settings.plugins[pluginName], [id]: val };
-            if ("onChange" in setting) setting.onChange?.(val);
+            setting.onChange?.(val);
         },
         [id, pluginName, setting],
     );
@@ -108,7 +108,7 @@ function ComponentField({ setting, pluginName }: SettingFieldProps) {
     const [, update] = usePluginSetting(pluginName, "component", setting);
     if (!("component" in setting)) return null;
 
-    const Comp = (setting as { component: React.ComponentType<{ setValue: (v: unknown) => void; option: PluginSettingDef }> }).component;
+    const Comp = (setting as { component: React.ComponentType<{ setValue: (v: any) => void; option: PluginSettingDef }> }).component;
     return <Comp setValue={update} option={setting} />;
 }
 

@@ -6,8 +6,8 @@
 
 /** A sequential promise queue. Tasks run one-at-a-time in FIFO order. */
 export class Queue {
-    private queue: Array<() => unknown> = [];
-    private running: Promise<unknown> | null = null;
+    private queue: Array<() => any> = [];
+    private running: Promise<any> | null = null;
     private maxSize: number;
 
     constructor(maxSize = Infinity) {

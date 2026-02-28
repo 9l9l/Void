@@ -18,11 +18,11 @@ const settings = definePluginSettings({
 
 const pending = new WeakMap<HTMLVideoElement, Promise<void>>();
 
-function playVideo(video: HTMLVideoElement): void {
+function playVideo(video: HTMLVideoElement) {
     pending.set(video, video.play().catch(() => {}));
 }
 
-function pauseVideo(video: HTMLVideoElement): void {
+function pauseVideo(video: HTMLVideoElement) {
     const promise = pending.get(video);
     pending.delete(video);
     if (promise) {

@@ -57,11 +57,10 @@ export default function PluginsTab() {
     }, []);
 
     useEffect(() => {
-        if (initialStates) return () => {};
+        if (initialStates) return;
         initialStates = new Map<string, boolean>();
-        for (const n of [...userPlugins, ...requiredPlugins])
-            initialStates.set(n, isPluginEnabled(n));
-        return () => {};
+        for (const n of userPlugins) initialStates.set(n, isPluginEnabled(n));
+        for (const n of requiredPlugins) initialStates.set(n, isPluginEnabled(n));
     }, [userPlugins, requiredPlugins]);
 
     const totalVisible = userPlugins.length + requiredPlugins.length;
@@ -82,7 +81,7 @@ export default function PluginsTab() {
     const filteredRequired = useFiltered(visibleRequired, search, getPluginKey);
 
     const dialogPlugin = dialogName ? plugins[dialogName] : null;
-    const hasResults = filteredUser.length > 0 || filteredRequired.length > 0;
+    const hasResults = filteredUser.length || filteredRequired.length;
     const needsReload = changedPlugins.size > 0;
 
     const onReload = useCallback((pluginName: string) => {
@@ -91,7 +90,7 @@ export default function PluginsTab() {
         if (current === initialStates.get(pluginName)) changedPlugins.delete(pluginName);
         else changedPlugins.add(pluginName);
 
-        if (changedPlugins.size > 0) {
+        if (changedPlugins.size) {
             if (!dismissed) setShowReload(true);
         } else {
             setShowReload(false);
@@ -111,13 +110,13 @@ export default function PluginsTab() {
                     Plugins
                 </Text>
                 <Text size="xs" color="secondary">
-                    Enable or disable plugins to customize your Grok experience. Some plugins require a page reload.
+                    Pick which plugins to use. Some need a page reload to kick in.
                 </Text>
             </Flex>
             {needsReload && !showReload && (
                 <Flex alignItems="center" className={classes(cl("reload-banner"), "mx-3")}>
                     <Text size="xs" className="text-inherit flex-1">
-                        Plugin changes require a page reload to take effect.
+                        Reload the page to apply plugin changes.
                     </Text>
                     <Button variant="secondary" size="sm" onClick={() => location.reload()}>
                         Reload
@@ -170,7 +169,7 @@ export default function PluginsTab() {
                 open={showReload}
                 onOpenChange={v => { if (!v) onDismiss(); }}
                 title="Reload required"
-                description="This plugin modifies Grok's code and requires a page reload to apply changes."
+                description="This plugin patches Grok's code, so you need to reload the page."
                 confirmText="Reload"
                 cancelText="Later"
                 onConfirm={() => location.reload()}

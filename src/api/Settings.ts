@@ -18,7 +18,7 @@ export interface Settings {
     plugins: {
         [plugin: string]: {
             enabled: boolean;
-            [setting: string]: unknown;
+            [setting: string]: any;
         };
     };
     notifications: {
@@ -65,7 +65,7 @@ export async function initSettings(): Promise<void> {
 
     if (!raw) {
         raw = migrateFromLocalStorage();
-        if (raw) idbSet("VoidSettings", raw).catch(() => {});
+        if (raw) idbSet("VoidSettings", raw).catch((e: any) => logger.debug("Failed to persist settings to IndexedDB:", e));
     }
 
     if (raw) {
@@ -139,10 +139,10 @@ export function migrateSettingsToPlugin(targetPlugin: string, sourcePlugin: stri
     }
 }
 
-function resolveDefault(setting: PluginSettingDef): unknown {
+function resolveDefault(setting: PluginSettingDef): any {
     if ("default" in setting) return setting.default;
-    if (setting.type === OptionType.SELECT) return (setting as { options: readonly PluginSettingSelectOption[] }).options.find((o: PluginSettingSelectOption) => o.default)?.value;
-    return undefined;
+    if (setting.type === OptionType.SELECT) return (setting as { options: readonly PluginSettingSelectOption[] }).options.find(o => o.default)?.value;
+    return;
 }
 
 export function definePluginSettings<Def extends SettingsDefinition, Checks extends SettingsChecks<Def>, PrivateSettings extends object = {}>(def: Def, checks?: Checks) {
@@ -177,8 +177,8 @@ export function definePluginSettings<Def extends SettingsDefinition, Checks exte
             const forceUpdate = useForceUpdater();
 
             useEffect(() => {
+                const prefix = `plugins.${_pluginName}`;
                 if (keys?.length) {
-                    const prefix = `plugins.${_pluginName}`;
                     const paths = keys.map(k => `${prefix}.${String(k)}`);
                     const listener = (path: string) => {
                         if (paths.some(p => path.startsWith(p))) forceUpdate();
@@ -186,7 +186,6 @@ export function definePluginSettings<Def extends SettingsDefinition, Checks exte
                     SettingsStore.addPrefixChangeListener(prefix, listener);
                     return () => SettingsStore.removePrefixChangeListener(prefix, listener);
                 }
-                const prefix = `plugins.${_pluginName}`;
                 SettingsStore.addPrefixChangeListener(prefix, forceUpdate);
                 return () => SettingsStore.removePrefixChangeListener(prefix, forceUpdate);
             }, []);

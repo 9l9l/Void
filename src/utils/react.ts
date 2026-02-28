@@ -58,12 +58,12 @@ export function useFiltered<T>(list: T[], search: string, getKey: (item: T) => s
 
 interface AwaiterOpts<T> {
     fallbackValue: T;
-    deps?: unknown[];
-    onError?(e: unknown): void;
+    deps?: any[];
+    onError?(e: any): void;
     onSuccess?(value: T): void;
 }
 
-type AwaiterRes<T> = [value: T, error: unknown, isPending: boolean];
+type AwaiterRes<T> = [value: T, error: any, isPending: boolean];
 
 /**
  * Await a promise in a React component.
@@ -84,7 +84,7 @@ export function useAwaiter<T>(factory: () => Promise<T>, opts?: AwaiterOpts<T | 
 
     const [state, setState] = useState({
         value: resolved.fallbackValue,
-        error: null as unknown,
+        error: null as any,
         pending: true,
     });
 

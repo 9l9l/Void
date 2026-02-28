@@ -13,15 +13,15 @@ declare const GIT_HASH: string;
 
 declare const unsafeWindow: typeof globalThis;
 
-declare function GM_getValue<T = unknown>(key: string, defaultValue?: T): T;
-declare function GM_setValue(key: string, value: unknown): void;
+declare function GM_getValue<T = any>(key: string, defaultValue?: T): T;
+declare function GM_setValue(key: string, value: any): void;
 declare function GM_deleteValue(key: string): void;
 declare function GM_listValues(): string[];
 declare function GM_setClipboard(text: string): void;
-declare function GM_xmlhttpRequest(options: Record<string, unknown>): void;
+declare function GM_xmlhttpRequest(options: Record<string, any>): void;
 
 declare namespace globalThis {
-    var TURBOPACK: unknown;
+    var TURBOPACK: any;
 }
 
 declare module "*.css" {}

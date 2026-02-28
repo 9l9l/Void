@@ -44,7 +44,7 @@ handler.getOwnPropertyDescriptor = (target, p) => {
     return descriptor;
 };
 
-function makeCachedFactory<T>(factory: () => T): () => T {
+export function makeLazy<T>(factory: () => T): () => T {
     let cache: T;
     let resolved = false;
     return () => {
@@ -56,12 +56,8 @@ function makeCachedFactory<T>(factory: () => T): () => T {
     };
 }
 
-export function makeLazy<T>(factory: () => T): () => T {
-    return makeCachedFactory(factory);
-}
-
 export function proxyLazy<T>(factory: () => T): T {
-    const getter = makeCachedFactory(factory);
+    const getter = makeLazy(factory);
     const proxyDummy = Object.assign(() => {}, {
         [SYM_LAZY_CACHED]: void 0 as T | undefined,
         [SYM_LAZY_GET]() {

@@ -25,11 +25,11 @@ interface ThemeMeta {
     description: string;
 }
 
-function getSettingsObj(): Record<string, unknown> {
-    return (Settings.plugins.Settings as Record<string, unknown>) ?? {};
+function getSettingsObj(): Record<string, any> {
+    return (Settings.plugins.Settings as Record<string, any>) ?? {};
 }
 
-function themeStyleId(url: string): string {
+function themeStyleId(url: string) {
     let hash = 0;
     for (let i = 0; i < url.length; i++) {
         hash = ((hash << 5) - hash + url.charCodeAt(i)) | 0;
@@ -37,7 +37,7 @@ function themeStyleId(url: string): string {
     return `void-theme-${(hash >>> 0).toString(36)}`;
 }
 
-function parseThemeMeta(css: string): ThemeMeta {
+function parseThemeMeta(css: string) {
     const meta: ThemeMeta = { name: "", author: "", description: "" };
     const header = css.match(/\/\*\*[\s\S]*?\*\//);
     if (!header) return meta;
@@ -162,7 +162,7 @@ export async function loadSavedThemes() {
     }
 }
 
-function urlToName(url: string): string {
+function urlToName(url: string) {
     const filename = url.split("/").pop() ?? url;
     return filename.replace(/\.css$/i, "").replace(/[-_]/g, " ");
 }

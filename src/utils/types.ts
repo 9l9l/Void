@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-export default function definePlugin<P extends PluginDef>(p: P & Record<PropertyKey, unknown>) {
+export default function definePlugin<P extends PluginDef>(p: P & Record<PropertyKey, any>) {
     return p as typeof p & Plugin;
 }
 
@@ -34,9 +34,9 @@ export interface Plugin extends PluginDef {
 }
 
 export interface StoreSubscription {
-    store: { subscribe: (callback: (...args: unknown[]) => void, selector?: (state: unknown) => unknown) => () => void };
-    callback: (state: unknown, prevState: unknown) => void;
-    selector?: (state: unknown) => unknown;
+    store: { subscribe: (callback: (...args: any[]) => void, selector?: (state: any) => any) => () => void };
+    callback: (state: any, prevState: any) => void;
+    selector?: (state: any) => any;
 }
 
 export interface ZustandSubscription {
@@ -74,7 +74,7 @@ export interface PluginDef {
     zustand?: Record<string, ZustandSubscription>;
     chatBarButton?: import("@api/ChatBarButtons").ChatBarButtonDef;
     contextMenuItems?: { [L in import("@api/ContextMenus").ContextMenuLocation]?: import("@api/ContextMenus").ContextMenuItemDef<L> };
-    events?: Record<string, (data: unknown) => void>;
+    events?: Record<string, (data: any) => void>;
     eventListeners?: PluginEventListener[];
     cleanupSelectors?: string[];
 }
@@ -110,17 +110,17 @@ export type PluginSettingDef =
 export interface PluginSettingCommon {
     description: string;
     placeholder?: string;
-    onChange?(newValue: unknown): void;
+    onChange?(newValue: any): void;
     restartNeeded?: boolean;
-    componentProps?: Record<string, unknown>;
+    componentProps?: Record<string, any>;
     hidden?: boolean;
 }
 
-interface IsDisabled<D = unknown> {
+interface IsDisabled<D = any> {
     disabled?(this: D): boolean;
 }
 
-interface IsValid<T, D = unknown> {
+interface IsValid<T, D = any> {
     isValid?(this: D, value: T): boolean | string;
 }
 
@@ -158,7 +158,7 @@ export interface PluginSettingSelectOption {
 
 export interface PluginSettingCustomDef {
     type: OptionType.CUSTOM;
-    default?: unknown;
+    default?: any;
 }
 
 export interface PluginSettingSliderDef {
@@ -169,14 +169,14 @@ export interface PluginSettingSliderDef {
 }
 
 export interface IPluginOptionComponentProps {
-    setValue(newValue: unknown): void;
+    setValue(newValue: any): void;
     option: PluginSettingComponentDef;
 }
 
 export interface PluginSettingComponentDef {
     type: OptionType.COMPONENT;
-    component: (props: IPluginOptionComponentProps) => unknown;
-    default?: unknown;
+    component: (props: IPluginOptionComponentProps) => any;
+    default?: any;
 }
 
 type PluginSettingType<O extends PluginSettingDef> = O extends PluginSettingStringDef

@@ -9,7 +9,7 @@ import definePlugin from "@utils/types";
 
 export default definePlugin({
     name: "NoTelemetry",
-    description: "Blocks analytics, metrics, and error reporting sent to Grok servers.",
+    description: "Disables Sentry, Mixpanel, and metric logging.",
     authors: [Devs.Prism],
     required: true,
 

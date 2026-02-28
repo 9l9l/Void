@@ -6,7 +6,7 @@
 
 import type { ComponentType } from "react";
 
-export type AnyComponent = ComponentType & Record<string, unknown>;
+export type AnyComponent = ComponentType & Record<string, any>;
 
 let _createElement: Function | null = null;
 
@@ -17,7 +17,7 @@ export function setCreateElement(fn: Function) {
 export function LazyComponent<T extends AnyComponent = AnyComponent>(name: string, factory: () => T | null): T {
     let cached: T | null = null;
 
-    const wrapper = ((props: Record<string, unknown>) => {
+    const wrapper = ((props: Record<string, any>) => {
         cached ??= factory();
         if (!cached || !_createElement) return null;
         return _createElement(cached, props);
@@ -30,7 +30,7 @@ export function LazyComponent<T extends AnyComponent = AnyComponent>(name: strin
             if (prop === "$$voidGetWrapped") return () => cached ?? factory();
             if (prop === "displayName") {
                 cached ??= factory();
-                if (cached) return (cached as Record<string, unknown>)[prop];
+                if (cached) return (cached as Record<string, any>)[prop];
             }
             return Reflect.get(target, prop);
         },

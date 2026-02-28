@@ -26,17 +26,17 @@ export interface ChatBarButtonDef {
 const buttons = new Map<string, ChatBarButtonDef>();
 const store = createExternalStore();
 
-export function addChatBarButton(id: string, def: ChatBarButtonDef): void {
+export function addChatBarButton(id: string, def: ChatBarButtonDef) {
     buttons.set(id, def);
     store.notify();
 }
 
-export function removeChatBarButton(id: string): void {
+export function removeChatBarButton(id: string) {
     buttons.delete(id);
     store.notify();
 }
 
-function renderEntry(def: ChatBarButtonDef, iconOnly: boolean): ReactNode {
+function renderEntry(def: ChatBarButtonDef, iconOnly: boolean) {
     if (def.render) {
         const Render = def.render;
         return <Render iconOnly={iconOnly} />;

@@ -7,8 +7,8 @@
 import "./PluginDialog.css";
 
 import { Button, Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, Flex, Separator, Text } from "@components";
+import { Cross2Icon } from "@components/icons";
 import { React } from "@turbopack/common/react";
-import { findExportedComponentLazy } from "@turbopack/turbopack";
 import { classNameFactory } from "@utils/css";
 import type { Plugin } from "@utils/types";
 
@@ -16,7 +16,6 @@ import SettingField from "../SettingField";
 import { isVisibleSetting } from "../utils";
 
 const cl = classNameFactory("void-plugin-dialog-");
-const Cross2Icon = findExportedComponentLazy("Cross2Icon");
 
 interface PluginDialogProps {
     plugin: Plugin;
@@ -49,7 +48,7 @@ export default function PluginDialog({ plugin, open, onClose }: PluginDialogProp
                     )}
                 </DialogHeader>
                 <Separator />
-                {plugin.authors?.length > 0 && (
+                {plugin.authors?.length && (
                     <Flex flexDirection="column" gap="0.25rem">
                         <Text size="sm" weight="medium">
                             Authors

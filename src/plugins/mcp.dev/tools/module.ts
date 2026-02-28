@@ -22,7 +22,7 @@ import {
     requireModule,
 } from "@turbopack/turbopack";
 import { type FilterFn, type PatchedModuleFactory, SYM_ORIGINAL, SYM_PATCHED_BY, SYM_PATCHED_CODE } from "@turbopack/types";
-import { isObject } from "@utils/misc";
+import { isObject } from "@utils/guards";
 
 import { MODULE } from "./constants";
 import type { DiffChunk, ModuleArgs } from "./types";

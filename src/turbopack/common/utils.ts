@@ -44,7 +44,7 @@ export const zustandCreate: {
 
 /** Grok's `useTranslation` hook for internationalized strings. */
 export const i18n: {
-    useTranslation: (namespace?: string) => { t: (key: string, values?: Record<string, unknown>) => string };
+    useTranslation: (namespace?: string) => { t: (key: string, values?: Record<string, any>) => string };
 } = findByPropsLazy("useTranslation");
 
 // #endregion

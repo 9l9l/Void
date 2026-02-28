@@ -30,7 +30,7 @@ export class Logger {
         public color = "white",
     ) {}
 
-    private _log(level: "log" | "error" | "warn" | "info" | "debug", args: unknown[]) {
+    private _log(level: "log" | "error" | "warn" | "info" | "debug", args: any[]) {
         if (isBrowser) {
             console[level](
                 `%c Void %c %c ${this.name} `,
@@ -42,24 +42,25 @@ export class Logger {
             return;
         }
 
-        const levelAnsi = level === "error" ? ANSI.red : level === "warn" ? ANSI.yellow : ANSI.green;
+        const LEVEL_ANSI: Record<string, string> = { error: ANSI.red, warn: ANSI.yellow };
+        const levelAnsi = LEVEL_ANSI[level] ?? ANSI.green;
         const prefix = `${ANSI.bold}${levelAnsi}[${this.name}]${ANSI.reset}`;
         console[level](prefix, ...args);
     }
 
-    public log(...args: unknown[]) {
+    public log(...args: any[]) {
         this._log("log", args);
     }
-    public info(...args: unknown[]) {
+    public info(...args: any[]) {
         this._log("info", args);
     }
-    public error(...args: unknown[]) {
+    public error(...args: any[]) {
         this._log("error", args);
     }
-    public warn(...args: unknown[]) {
+    public warn(...args: any[]) {
         this._log("warn", args);
     }
-    public debug(...args: unknown[]) {
+    public debug(...args: any[]) {
         this._log("debug", args);
     }
 }

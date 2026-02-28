@@ -9,7 +9,7 @@ import definePlugin from "@utils/types";
 
 export default definePlugin({
     name: "BackgroundThinking",
-    description: "Unlocks the Background Thinking feature.",
+    description: "Lets Grok think in the background while you are away.",
     authors: [Devs.Prism],
 
     patches: [

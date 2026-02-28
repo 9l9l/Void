@@ -22,8 +22,8 @@ const MonacoModule: {
 
 const ThemeModule: { darkTheme: any } = findLazy(m => m.darkTheme?.base === "vs-dark");
 
-export function getCustomCSSSettings(): Record<string, unknown> {
-    return (Settings.plugins.Settings as Record<string, unknown>) ?? {};
+export function getCustomCSSSettings(): Record<string, any> {
+    return (Settings.plugins.Settings as Record<string, any>) ?? {};
 }
 
 function injectCSS(css: string) {
@@ -61,7 +61,7 @@ export function loadSavedCSS(): string {
 
 function applyCSS(css: string) {
     const prev = Settings.plugins.Settings;
-    const enabled = (prev as Record<string, unknown>)?.customCSSEnabled !== false;
+    const enabled = (prev as Record<string, any>)?.customCSSEnabled !== false;
     Settings.plugins.Settings = { ...prev, customCSS: css };
     if (enabled) injectCSS(css);
 }
@@ -125,7 +125,6 @@ export default function CustomCSSTab() {
 
     useEffect(() => {
         editorRef.current?.updateOptions({ readOnly: !enabled });
-        return () => {};
     }, [enabled]);
 
     return (
@@ -136,7 +135,7 @@ export default function CustomCSSTab() {
                         Quick CSS
                     </Text>
                     <Text size="xs" color="secondary">
-                        Write custom CSS to tweak how Grok looks. Changes are saved and applied in real time.
+                        Custom CSS applied live as you type.
                     </Text>
                 </Flex>
                 <Switch checked={enabled} onCheckedChange={handleToggle} />

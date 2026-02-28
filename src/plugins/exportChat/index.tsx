@@ -57,7 +57,7 @@ function ExportItem({ conversationId }: ContextMenuLocationMap["conversation"]) 
 
 export default definePlugin({
     name: "ExportChat",
-    description: "Adds an Export option to the conversation context menu.",
+    description: "Export conversations as JSON from the right-click menu.",
     authors: [Devs.Prism],
 
     contextMenuItems: {

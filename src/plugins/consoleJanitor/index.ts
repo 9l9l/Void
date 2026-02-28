@@ -9,7 +9,7 @@ import definePlugin from "@utils/types";
 
 export default definePlugin({
     name: "ConsoleJanitor",
-    description: "Cleans up the browser developer console.",
+    description: "Silences noisy warnings and info logs in the browser console.",
     authors: [Devs.Prism],
 
     patches: [

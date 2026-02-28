@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-type Handler = (data: unknown) => void;
+type Handler = (data: any) => void;
 
 const listeners = new Map<string, Set<Handler>>();
 
@@ -20,7 +20,7 @@ export function subscribe(event: string, handler: Handler): () => void {
     };
 }
 
-export function dispatch(event: string, data?: unknown) {
+export function dispatch(event: string, data?: any) {
     const set = listeners.get(event);
     if (!set?.size) return;
     for (const handler of [...set]) handler(data);

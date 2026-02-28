@@ -7,6 +7,7 @@
 import { makeLazy, proxyLazy } from "@utils/lazy";
 import { LazyComponent } from "@utils/lazyReact";
 import { Logger } from "@utils/Logger";
+import { escapeRegExp } from "@utils/text";
 
 import { matchesAllPatterns } from "./match";
 import { addWaitForSubscription, getModuleCache, getRuntimeFactoryRegistry, getTurbopackHelpers, isBlacklisted, removeWaitForSubscription, syncLazyModules } from "./patchTurbopack";
@@ -21,7 +22,7 @@ function silenceWarns<T>(fn: () => T): T {
     if (warnsSuppressed) return fn();
     warnsSuppressed = true;
     const orig = console.warn;
-    console.warn = (...args: unknown[]) => {
+    console.warn = (...args: any[]) => {
         if (args.some(a => typeof a === "string" && (a.includes("has been renamed to") || a.includes("silence this warning")))) return;
         if (args.length === 1 && args[0] === "") return;
         orig.apply(console, args);
@@ -111,7 +112,7 @@ function searchCache(filter: FilterFn, collectAll = false, topLevelOnly = false)
 
 function scanModuleCache(filter: FilterFn, collectAll: boolean, topLevelOnly: boolean): any {
     const results: any[] = [];
-    const seen: Set<unknown> | null = collectAll ? new Set() : null;
+    const seen: Set<any> | null = collectAll ? new Set() : null;
     const cache = getModuleCache();
 
     for (const [, exports] of cache) {
@@ -238,7 +239,7 @@ export function findCssClassesLazy(...classes: string[]): Record<string, string>
 }
 
 function makeClassNameRegex(className: string): RegExp {
-    return new RegExp(`(?:\\b|_)${className.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:\\b|_)`);
+    return new RegExp(`(?:\\b|_)${escapeRegExp(className)}(?:\\b|_)`);
 }
 
 export function mapMangledCssClasses<S extends string>(mod: Record<string, string>, classes: S[] | readonly S[]): Record<S, string> {

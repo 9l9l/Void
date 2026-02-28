@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-export type ModuleFactory = (helpers: TurbopackHelpers, module?: TurbopackModule, exports?: Record<string, unknown>) => void;
+export type ModuleFactory = (helpers: TurbopackHelpers, module?: TurbopackModule, exports?: Record<string, any>) => void;
 
 export const SYM_ORIGINAL = Symbol("Void.originalFactory");
 export const SYM_PATCHED = Symbol("Void.patched");
@@ -20,10 +20,10 @@ export interface PatchedModuleFactory extends ModuleFactory {
 }
 
 export interface TurbopackRequireFn {
-    (id: string): unknown;
+    (id: string): any;
     keys(): string[];
     resolve(id: string): number;
-    import(id: string): Promise<unknown>;
+    import(id: string): Promise<any>;
 }
 
 export interface TurbopackHelpers {
@@ -50,16 +50,16 @@ export interface TurbopackHelpers {
      * (e.g. icon factories where the same source handles 157+ different icon modules).
      * @example `e.s([["Button", () => Button], ["ButtonGroup", () => ButtonGroup]], 12345)`
      */
-    s(exports: [string, () => unknown][], moduleId?: number): void;
+    s(exports: [string, () => any][], moduleId?: number): void;
     /**
      * Define CJS exports via a Proxy-based merge. Supports re-exports by merging the source
      * objects properties onto the current modules exports through a Proxy getter.
      */
     j(exports: object | null, moduleId?: number): void;
     /** Set module exports to a single value (replaces the entire exports object). */
-    v(value: unknown, moduleId?: number): void;
+    v(value: any, moduleId?: number): void;
     /** Set both module.exports and module.namespaceObject to the same value. */
-    n(value: unknown, moduleId?: number): void;
+    n(value: any, moduleId?: number): void;
     /**
      * Resolve an async module. Calls `this.r(id)` to get the module, then invokes the result
      * with `this.i` bound as the require function. Used for top-level await modules where the
@@ -67,13 +67,13 @@ export interface TurbopackHelpers {
      */
     A(moduleId: number): Promise<any>;
     /** Register the current module as async (top-level await). Called at the start of async module factories. */
-    a(asyncModule: unknown, hasAwait: boolean): void;
+    a(asyncModule: any, hasAwait: boolean): void;
     /**
      * Create a `require()` function from a resolve map. Used for dynamic `require()` calls where
      * turbopack precomputes which modules the dynamic require could resolve to. The resolve map
      * maps string specifiers to `{ id(), module() }` objects.
      */
-    f(resolveMap: Record<string, { id(): number; module(): unknown }>): TurbopackRequireFn;
+    f(resolveMap: Record<string, { id(): number; module(): any }>): TurbopackRequireFn;
     /** Throws "dynamic usage of require is not supported". Called when turbopack cant statically analyze a require. */
     z(specifier: string): never;
     /** Throws "Unexpected use of runtime require". Dead code guard for require paths that shouldnt be reached. */
@@ -98,9 +98,9 @@ export interface TurbopackHelpers {
     /** Create a web worker from an array of chunk paths. Bundles the chunks into a blob URL worker. */
     b(chunkPaths: string[]): Worker;
     /** Load a WASM module with imports object and a JS fallback if WASM isnt supported. */
-    w(wasmPath: string, imports: unknown, fallback: unknown): Promise<unknown>;
+    w(wasmPath: string, imports: any, fallback: any): Promise<any>;
     /** Load a WASM module with imports object (no fallback). */
-    u(wasmPath: string, imports: unknown): Promise<unknown>;
+    u(wasmPath: string, imports: any): Promise<any>;
     /** The current module being initialized. Set by the runtime before calling the factory. */
     m: TurbopackModule;
     /**
@@ -109,7 +109,7 @@ export interface TurbopackHelpers {
      */
     c: Record<number, TurbopackModule>;
     /** The current modules exports object. Same reference as `this.m.exports`. */
-    e: Record<string, unknown>;
+    e: Record<string, any>;
     /** Factory registry. Map of module ID to factory function. Contains all registered but not necessarily instantiated factories. */
     M: Map<number, ModuleFactory>;
     /** Reference to `window` / `globalThis`. */

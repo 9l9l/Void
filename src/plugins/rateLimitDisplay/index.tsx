@@ -41,7 +41,7 @@ interface Usage {
 
 const EMPTY: Usage = { remaining: -1, total: -1, windowSeconds: 0, waitSeconds: null };
 
-function ceilWait(seconds?: number): number | null {
+function ceilWait(seconds?: number) {
     return seconds != null && seconds > 0 ? Math.ceil(seconds) : null;
 }
 
@@ -77,11 +77,11 @@ function fetchForModel(modelId: ModelId, requestKind: RequestKind): Promise<Rate
     return ApiClients.rateLimitsApi.rateLimitsGetRateLimits({ body: { modelName: modelId, requestKind } });
 }
 
-function formatLabel(u: Usage, short?: boolean): string {
+function formatLabel(u: Usage, short?: boolean) {
     if (u.waitSeconds != null && u.waitSeconds > 0) return formatCountdown(u.waitSeconds);
     if (u.total < 0) return "...";
     if (u.total === 0) return "\u221e";
-    return short || !settings.store.showMaxCount ? `${u.remaining}` : `${u.remaining}/${u.total}`;
+    return short || !settings.store.showMaxCount ? String(u.remaining) : `${u.remaining}/${u.total}`;
 }
 
 function SingleDisplay({ usage, iconOnly }: { usage: Usage; iconOnly: boolean }) {
@@ -138,7 +138,8 @@ function RateLimitIndicator({ iconOnly }: ChatBarButtonRenderProps) {
     useEffect(() => {
         if (modelMode === "auto" && streaming) return;
 
-        const requestKind: RequestKind = ReasoningModeUtils.reasoningModeToRequestKind?.(reasoningMode) ?? "DEFAULT";
+        const requestKind = ReasoningModeUtils.reasoningModeToRequestKind?.(reasoningMode) ?? "DEFAULT";
+        const logError = (err: any) => logger.error("Failed to fetch rate limits", err);
         let cancelled = false;
 
         if (modelMode === "auto") {
@@ -157,7 +158,7 @@ function RateLimitIndicator({ iconOnly }: ChatBarButtonRenderProps) {
                         setExpert(parse(data, "expert"));
                         setSingle(EMPTY);
                     })
-                    .catch((err: unknown) => logger.error("Failed to fetch rate limits", err));
+                    .catch(logError);
             } else {
                 Promise.all([fastId ? fetchForModel(fastId, requestKind) : null, expertId ? fetchForModel(expertId, requestKind) : null])
                     .then(([f, e]) => {
@@ -166,7 +167,7 @@ function RateLimitIndicator({ iconOnly }: ChatBarButtonRenderProps) {
                         setExpert(e ? parse(e, "expert") : EMPTY);
                         setSingle(EMPTY);
                     })
-                    .catch((err: unknown) => logger.error("Failed to fetch rate limits", err));
+                    .catch(logError);
             }
         } else {
             const modelId = modelByMode?.[modelMode]?.modelId;
@@ -179,7 +180,7 @@ function RateLimitIndicator({ iconOnly }: ChatBarButtonRenderProps) {
                     setExpert(EMPTY);
                     setSingle(parse(result, modelMode));
                 })
-                .catch((err: unknown) => logger.error("Failed to fetch rate limits", err));
+                .catch(logError);
         }
 
         return () => {

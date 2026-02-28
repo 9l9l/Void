@@ -6,8 +6,9 @@
 
 import { definePluginSettings } from "@api/Settings";
 import { Devs } from "@utils/constants";
+import { isObject } from "@utils/guards";
 import { Logger } from "@utils/Logger";
-import { errorMessage, isObject } from "@utils/misc";
+import { errorMessage } from "@utils/misc";
 import definePlugin, { OptionType } from "@utils/types";
 
 import { toolHandlers } from "./tools";

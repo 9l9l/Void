@@ -4,12 +4,14 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import { isObject } from "./guards";
+
 export function mergeDefaults<T extends object>(target: T, defaults: T): T {
     for (const key in defaults) {
         if (key === "__proto__" || key === "constructor" || key === "prototype") continue;
         const value = target[key];
         if (isObject(value)) {
-            mergeDefaults(value as Record<string, unknown>, defaults[key] as Record<string, unknown>);
+            mergeDefaults(value as Record<string, any>, defaults[key] as Record<string, any>);
         } else if (value === undefined) {
             target[key] = defaults[key];
         }
@@ -31,10 +33,10 @@ export async function copyToClipboard(text: string): Promise<void> {
     }
 }
 
-export function onlyOnce<T extends (...args: never[]) => unknown>(fn: T): T {
-    let result: unknown;
+export function onlyOnce<T extends (...args: never[]) => any>(fn: T): T {
+    let result: any;
     let called = false;
-    return ((...args: unknown[]) => {
+    return ((...args: any[]) => {
         if (called) return result;
         called = true;
         result = fn(...(args as never[]));
@@ -44,16 +46,12 @@ export function onlyOnce<T extends (...args: never[]) => unknown>(fn: T): T {
 
 export function debounce<T extends (...args: never[]) => void>(fn: T, ms: number): T & { cancel(): void } {
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const debounced = ((...args: unknown[]) => {
+    const debounced = ((...args: any[]) => {
         clearTimeout(timer);
         timer = setTimeout(() => fn(...(args as never[])), ms);
-    }) as unknown as T & { cancel(): void };
+    }) as any as T & { cancel(): void };
     debounced.cancel = () => clearTimeout(timer);
     return debounced;
-}
-
-export function isObject(value: unknown): value is Record<string, unknown> {
-    return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export function fetchExternal(url: string): Promise<Response> {
@@ -125,7 +123,7 @@ export function clamp(value: number, min: number, max: number): number {
 }
 
 /** Safe error-to-string extraction. */
-export function errorMessage(err: unknown): string {
+export function errorMessage(err: any): string {
     return err instanceof Error ? err.message : String(err);
 }
 

@@ -67,7 +67,7 @@ export default function ThemesTab() {
             await addTheme(trimmed);
             setUrl("");
             setThemes(getThemes());
-        } catch (e: unknown) {
+        } catch (e) {
             setError(errorMessage(e));
         } finally {
             setLoading(false);
@@ -92,7 +92,7 @@ export default function ThemesTab() {
                         Themes
                     </Text>
                     <Text size="xs" color="secondary">
-                        Add and manage custom themes for Grok. Paste a URL to a CSS file to get started.
+                        Custom CSS themes for Grok. Paste a URL to a .css file to add one.
                     </Text>
                 </Flex>
                 <Switch checked={enabled} onCheckedChange={handleToggle} />
@@ -107,7 +107,7 @@ export default function ThemesTab() {
                         onKeyDown={(e: { key: string }) => { if (e.key === "Enter") handleAdd(); }}
                         className="flex-1 min-w-0"
                     />
-                    <Button variant="primary" size="md" onClick={handleAdd} disabled={loading || !url.trim()}>
+                    <Button variant="primary" size="sm" className="h-9" onClick={handleAdd} disabled={loading || !url.trim()}>
                         {loading ? "Importing..." : "Import"}
                     </Button>
                 </Flex>
@@ -118,7 +118,7 @@ export default function ThemesTab() {
                     <Flex flexDirection="column" gap="0">
                         <Text size="sm" weight="medium">Installed Themes</Text>
                         <Text size="xs" color="secondary">
-                            Themes are fetched fresh on each page load. Toggle individual themes on or off, or use the global switch above to disable all at once.
+                            Re-fetched every page load. Use the switch above to disable all themes at once.
                         </Text>
                     </Flex>
                     <Text size="xs" color="secondary">

@@ -18,7 +18,7 @@ rules:
     fileOrder: imports → Logger → turbopack finders → interfaces/types → const globals → functions/components → definePlugin/export default
     deleteNotComment: DELETE dead code, dont comment it, git preserves history
     noHardcoded: no hardcoded values, magic numbers, string literals that should be constants
-    minimal: KISS over clever, flat over nested, explicit over implicit. Less code is always better
+    minimal: KISS over clever, flat over nested, explicit over implicit. Less code is always better. If removing code keeps the same behavior, remove it. No noop returns, no wrapper functions that just call another function, no variables that are used once right after assignment unless they clarify intent, no redundant type annotations the compiler infers, no unnecessary destructuring just to restructure
     namedVars: prefer a well-named variable when it clarifies intent, inline only when the expression is already obvious
     earlyReturn: guard clause and return early, never nest 3+ levels deep
     performance: Map/Set over object lookups, .some/.find over .filter[0], no spread in loops, Promise.all for parallel async
@@ -32,12 +32,12 @@ rules:
     style: trust inference for locals, annotate exports/params, inline single-use variables
     generics: constrain with extends, default type params where sensible
     enums: const enum for fixed sets (zero runtime cost, inlined). as const objects when you need runtime key iteration or computed values
-    typing: proper type > any > unknown. Use any for turbopack finders/module exports, Proxy handlers. Use unknown for user input, error params, JSON parse
+    typing: proper type > any. Prefer any over unknown when something cant be properly typed, unknown is annoying to handle. Use any for turbopack finders/module exports, Proxy handlers, catch params, untyped callbacks, JSON parse, anything that would need verbose casting. Only use unknown when you genuinely need type narrowing guards
     grokTypes: NEVER use any for Grok objects when types exist in packages/grok-types/, import proper types
   react:
     errorBoundary: wrap complex components with ErrorBoundary.wrap(Component, { noop: true })
     nullNotUndefined: return null for conditional rendering not undefined
-    cleanup: always return cleanup functions in useEffect
+    cleanup: return cleanup functions in useEffect when there is something to clean up. No noop return () => {} when there is nothing to clean
     keys: stable unique keys, never array index
     memoization: useMemo/useCallback only when measurably needed, not by default
     forbidden: React.cloneElement, React.isValidElement, React.memo(), React.lazy, React.Children

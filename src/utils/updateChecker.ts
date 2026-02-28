@@ -25,7 +25,7 @@ export async function checkForUpdates() {
         logger.info(`Update available: ${VERSION} → ${latest}`);
 
         showNotice({
-            message: `Void ${VERSION} is outdated! Latest version is ${latest}. Visit ${REPO_URL} to update.`,
+            message: `Void ${VERSION} is outdated, ${latest} is available. Visit ${REPO_URL} to update.`,
             type: NoticeType.WARNING,
         });
     } catch (e) {

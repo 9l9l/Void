@@ -5,7 +5,7 @@
  */
 
 import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@components";
-import { React } from "@turbopack/common/react";
+import { React, useCallback } from "@turbopack/common/react";
 import { createExternalStore } from "@utils/misc";
 import { useExternalStore } from "@utils/react";
 import type { ReactNode } from "react";
@@ -89,7 +89,7 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
 }
 
 function ModalInstance({ entry }: { entry: ModalEntry }) {
-    const onClose = React.useCallback(() => closeModal(entry.key), [entry.key]);
+    const onClose = useCallback(() => closeModal(entry.key), [entry.key]);
 
     return (
         <Dialog
@@ -103,7 +103,7 @@ function ModalInstance({ entry }: { entry: ModalEntry }) {
     );
 }
 
-export function ModalContainer(): ReactNode {
+export function ModalContainer() {
     useExternalStore(store);
 
     if (!modalStack.length) return null;

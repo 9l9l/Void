@@ -5,12 +5,9 @@
  */
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components";
-import { ChromiumIcon, TelescopeIcon } from "@components/icons";
+import { ChromiumIcon, GhostFilledIcon, TelescopeIcon } from "@components/icons";
 import { React } from "@turbopack/common/react";
-import { findExportedComponentLazy } from "@turbopack/turbopack";
 import type { Plugin } from "@utils/types";
-
-const GhostFilledIcon = findExportedComponentLazy("GhostFilledIcon");
 
 interface BadgeDef {
     key: keyof Plugin;
@@ -21,7 +18,7 @@ interface BadgeDef {
 const badges: BadgeDef[] = [
     { key: "dev", icon: GhostFilledIcon, tooltip: "Dev Only" },
     { key: "chrome", icon: ChromiumIcon, tooltip: "Chromium Only" },
-    { key: "preview", icon: TelescopeIcon, tooltip: "This is a preview plugin and may be removed once Grok adds this feature natively." },
+    { key: "preview", icon: TelescopeIcon, tooltip: "Preview plugin, may be removed once Grok ships this." },
 ];
 
 export function PluginBadges({ plugin, className }: { plugin: Plugin; className?: string }) {

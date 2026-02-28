@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import { ErrorBoundary } from "@components/ErrorBoundary";
 import { React } from "@turbopack/common/react";
 import { findExportedComponentLazy } from "@turbopack/turbopack";
 import { Devs } from "@utils/constants";
@@ -13,12 +14,10 @@ const StarsBackground = findExportedComponentLazy("StarsBackground");
 
 export default definePlugin({
     name: "Starry",
-    description: "Adds an always-visible starry background animation.",
+    description: "Always-on starry background animation.",
     authors: [Devs.Prism],
 
-    _stars() {
-        return <StarsBackground key="void-starry" className="fixed inset-0 z-0 pointer-events-none" />;
-    },
+    _stars: ErrorBoundary.wrap(() => <StarsBackground key="void-starry" className="fixed inset-0 z-0 pointer-events-none" />),
 
     patches: [
         {

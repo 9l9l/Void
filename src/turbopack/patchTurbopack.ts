@@ -11,11 +11,11 @@ import { matchesAllPatterns, matchesPattern } from "./match";
 import { type ModuleFactory, type PatchedModuleFactory, SYM_ORIGINAL, SYM_PATCHED, SYM_PATCHED_BY, SYM_PATCHED_CODE, type TurbopackHelpers, type TurbopackModule } from "./types";
 
 interface TurbopackPushable {
-    push: (...args: unknown[]) => unknown;
-    [key: string]: unknown;
+    push: (...args: any[]) => any;
+    [key: string]: any;
 }
 
-type PageWindow = Window & typeof globalThis & { TURBOPACK: TurbopackPushable | unknown[] | undefined };
+type PageWindow = Window & typeof globalThis & { TURBOPACK: TurbopackPushable | any[] | undefined };
 
 const logger = new Logger("TurbopackPatcher", "#e78284");
 const pageWindow = (typeof unsafeWindow !== "undefined" ? unsafeWindow : window) as PageWindow;
@@ -54,7 +54,7 @@ export const patches: Patch[] = [];
 const moduleCache = new Map<number, any>();
 const waitForSubscriptions = new Map<(mod: any) => boolean, (mod: any, id: number) => void>();
 
-let originalPush: ((...args: unknown[]) => unknown) | null = null;
+let originalPush: ((...args: any[]) => any) | null = null;
 let runtimeModuleCache: Record<number, TurbopackModule> | null = null;
 let runtimeFactoryRegistry: Map<number, ModuleFactory> | null = null;
 let turbopackHelpers: TurbopackHelpers | null = null;
@@ -127,14 +127,14 @@ export function onModuleLoad(cb: () => void): () => void {
 
 const badExports = new WeakSet();
 
-function shouldIgnoreValue(value: unknown): boolean {
+function shouldIgnoreValue(value: any): boolean {
     if (value == null) return true;
     const t = typeof value;
     if (t !== "object" && t !== "function") return true;
     if (value === window || value === document || value === document.documentElement) return true;
     try {
-        if ((value as Record<symbol | string, unknown>)[Symbol.toStringTag] === "DOMTokenList") return true;
-        if ((value as Record<symbol, unknown>)[motionSymbol]) return true;
+        if ((value as Record<symbol | string, any>)[Symbol.toStringTag] === "DOMTokenList") return true;
+        if ((value as Record<symbol, any>)[motionSymbol]) return true;
     } catch {
         return true;
     }
@@ -151,7 +151,7 @@ function shouldIgnoreValue(value: unknown): boolean {
 
 export function blacklistBadModules(): void {
     const origWarn = console.warn;
-    console.warn = (...args: unknown[]) => {
+    console.warn = (...args: any[]) => {
         if (args.some(a => typeof a === "string" && (a.includes("has been renamed to") || a.includes("silence this warning")))) return;
         if (args.length === 1 && args[0] === "") return;
         origWarn.apply(console, args);
@@ -267,7 +267,6 @@ function patchFactory(moduleId: number, factory: ModuleFactory): PatchedModuleFa
                 patchedFactory[SYM_PATCHED_CODE] = code;
 
                 patchedBy.add(patch.plugin);
-                patchedFactory[SYM_PATCHED_BY] = [...patchedBy];
                 patchStats.applied++;
                 groupApplied++;
                 patchStats.patchedModules.add(moduleId);
@@ -322,7 +321,7 @@ function wrapFactory(moduleId: number, factory: ModuleFactory): ModuleFactory {
     const patched = patchFactory(moduleId, factory);
     const original = (patched as PatchedModuleFactory)[SYM_ORIGINAL] ?? factory;
 
-    const wrapped: PatchedModuleFactory = function (this: unknown, helpers: TurbopackHelpers, mod?: TurbopackModule, exports?: Record<string, unknown>) {
+    const wrapped: PatchedModuleFactory = function (this: any, helpers: TurbopackHelpers, mod?: TurbopackModule, exports?: Record<string, any>) {
         if (!turbopackHelpers) turbopackHelpers = helpers;
         if (!runtimeModuleCache && helpers.c) {
             runtimeModuleCache = helpers.c;
@@ -366,11 +365,11 @@ function wrapFactory(moduleId: number, factory: ModuleFactory): ModuleFactory {
     return wrapped;
 }
 
-function handleChunkPush(...args: unknown[]) {
+function handleChunkPush(...args: any[]) {
     const entry = args[0];
     if (!Array.isArray(entry)) return originalPush!(...args);
 
-    let patchedEntry: unknown[] | null = null;
+    let patchedEntry: any[] | null = null;
     const wrappedInChunk = new Map<ModuleFactory, ModuleFactory>();
 
     for (let i = 1; i < entry.length; i++) {
@@ -453,9 +452,9 @@ export function rescanRuntimeModules(): void {
 
 function captureFactoryRegistry(): Map<number, ModuleFactory> | null {
     const origMapSet = Map.prototype.set;
-    let captured: Map<number, unknown> | null = null;
+    let captured: Map<number, any> | null = null;
 
-    Map.prototype.set = function (key: unknown, value: unknown) {
+    Map.prototype.set = function (key: any, value: any) {
         if (!captured && typeof key === "number" && typeof value === "function") {
             captured = this;
         }
@@ -468,7 +467,7 @@ function captureFactoryRegistry(): Map<number, ModuleFactory> | null {
         Map.prototype.set = origMapSet;
     }
 
-    (captured as Map<number, unknown> | null)?.delete(FACTORY_PROBE_ID);
+    (captured as Map<number, any> | null)?.delete(FACTORY_PROBE_ID);
     return captured as Map<number, ModuleFactory> | null;
 }
 
@@ -499,7 +498,7 @@ export function patchTurbopack(): void {
 
     if (existingTp && !Array.isArray(existingTp) && typeof existingTp.push === "function") {
         originalPush = existingTp.push.bind(existingTp);
-        existingTp.push = (...args: unknown[]) => handleChunkPush(...args);
+        existingTp.push = (...args: any[]) => handleChunkPush(...args);
 
         runtimeFactoryRegistry = captureFactoryRegistry();
         if (runtimeFactoryRegistry) {
@@ -515,21 +514,21 @@ export function patchTurbopack(): void {
         return;
     }
 
-    const queuedChunks: unknown[][] = [];
-    if (Array.isArray(existingTp)) queuedChunks.push(...(existingTp as unknown[][]));
+    const queuedChunks: any[][] = [];
+    if (Array.isArray(existingTp)) queuedChunks.push(...(existingTp as any[][]));
 
-    let currentTurbopack: TurbopackPushable | unknown[] = existingTp ?? [];
+    let currentTurbopack: TurbopackPushable | any[] = existingTp ?? [];
 
     Object.defineProperty(pageWindow, "TURBOPACK", {
         configurable: true,
         get() {
             return currentTurbopack;
         },
-        set(newValue: unknown) {
+        set(newValue: any) {
             if (newValue && !Array.isArray(newValue) && typeof (newValue as TurbopackPushable).push === "function") {
                 const tp = newValue as TurbopackPushable;
                 originalPush = tp.push.bind(tp);
-                tp.push = (...args: unknown[]) => handleChunkPush(...args);
+                tp.push = (...args: any[]) => handleChunkPush(...args);
                 currentTurbopack = tp;
 
                 for (const chunk of queuedChunks) {
@@ -551,15 +550,15 @@ export function patchTurbopack(): void {
                     captureModuleCache(runtimeFactoryRegistry);
                 }
             } else {
-                currentTurbopack = newValue as TurbopackPushable | unknown[];
+                currentTurbopack = newValue as TurbopackPushable | any[];
             }
         },
     });
 
     if (Array.isArray(currentTurbopack)) {
         const origPush = currentTurbopack.push.bind(currentTurbopack);
-        (currentTurbopack as unknown[]).push = (...args: unknown[]) => {
-            queuedChunks.push(...(args as unknown[][]));
+        (currentTurbopack as any[]).push = (...args: any[]) => {
+            queuedChunks.push(...(args as any[][]));
             return origPush(...args);
         };
     }

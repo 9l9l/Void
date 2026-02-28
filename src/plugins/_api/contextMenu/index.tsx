@@ -8,8 +8,6 @@ import { VoidContextMenuItems } from "@api/ContextMenus";
 import { createElement } from "@turbopack/common/react";
 import definePlugin from "@utils/types";
 
-const render = (props: Record<string, unknown>) => createElement(VoidContextMenuItems as any, props);
-
 export default definePlugin({
     name: "ContextMenuAPI",
     description: "Adds items to context menus.",
@@ -17,8 +15,8 @@ export default definePlugin({
     required: true,
     hidden: true,
 
-    renderItems(location: string, ctx?: Record<string, unknown>) {
-        return render({ location, ...ctx });
+    renderItems(location: string, ctx?: Record<string, any>) {
+        return createElement(VoidContextMenuItems as any, { location, ...ctx });
     },
 
     patches: [

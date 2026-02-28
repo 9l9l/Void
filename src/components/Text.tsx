@@ -19,7 +19,7 @@ export interface TextProps {
     as?: string;
     className?: string;
     children?: ReactNode;
-    [key: string]: unknown;
+    [key: string]: any;
 }
 
 const sizeClasses = {

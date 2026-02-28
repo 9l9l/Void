@@ -95,7 +95,7 @@ export function disableStyle(name: string) {
     return true;
 }
 
-export type ClassNameFactoryArg = string | string[] | Record<string, unknown> | false | null | undefined | 0 | "";
+export type ClassNameFactoryArg = string | string[] | Record<string, any> | false | null | undefined | 0 | "";
 
 export const classNameFactory =
     (prefix = "") =>

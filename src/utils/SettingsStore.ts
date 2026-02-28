@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import { isObject } from "./guards";
 import { idbSet } from "./idb";
 import { Logger } from "./Logger";
-import { isObject } from "./misc";
 
 const logger = new Logger("SettingsStore");
 
@@ -25,7 +25,7 @@ export class SettingsStore<T extends object> {
     private globalListeners = new Set<Listener>();
     private pathListeners = new Map<string, Set<Listener>>();
     private prefixListeners = new Map<string, Set<Listener>>();
-    private defaultGetters = new Map<string, (key: string) => unknown>();
+    private defaultGetters = new Map<string, (key: string) => any>();
     private saveTimer: ReturnType<typeof setTimeout> | null = null;
 
     public declare store: T;
@@ -36,7 +36,7 @@ export class SettingsStore<T extends object> {
         this.store = this.makeProxy(plain as any);
     }
 
-    public setDefaultGetter(prefix: string, getter: (key: string) => unknown) {
+    public setDefaultGetter(prefix: string, getter: (key: string) => any) {
         this.defaultGetters.set(prefix, getter);
     }
 

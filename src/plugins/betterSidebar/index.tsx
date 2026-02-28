@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import { ErrorBoundary } from "@components/ErrorBoundary";
 import { Flex } from "@components/Flex";
 import { Text } from "@components/Text";
 import type { SessionTierId, SubscriptionTier } from "@grok-types/enums";
@@ -57,9 +58,7 @@ export default definePlugin({
     description: "Shows your name and plan in the sidebar footer.",
     authors: [Devs.Prism],
 
-    renderUserInfo() {
-        return <UserInfo />;
-    },
+    renderUserInfo: ErrorBoundary.wrap(UserInfo),
 
     patches: [
         {

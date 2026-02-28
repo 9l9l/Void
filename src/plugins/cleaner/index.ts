@@ -9,7 +9,7 @@ import definePlugin from "@utils/types";
 
 export default definePlugin({
     name: "Cleaner",
-    description: "Removes advertisement banners and promotional clutter.",
+    description: "Hides upgrade nags and upsell banners.",
     authors: [Devs.Prism],
 
     patches: [

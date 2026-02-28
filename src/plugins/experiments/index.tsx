@@ -28,7 +28,7 @@ interface PrivateSettings {
 
 const settings = definePluginSettings({}).withPrivateSettings<PrivateSettings>();
 
-function getBooleanKeys(config: FeatureStoreState["config"]): string[] {
+function getBooleanKeys(config: FeatureStoreState["config"]) {
     return Object.keys(config).filter(k => typeof config[k] === "boolean");
 }
 
@@ -70,7 +70,7 @@ function syncKnownFlags(config: FeatureStoreState["config"]) {
     }
 }
 
-function isNewFlag(key: string): boolean {
+function isNewFlag(key: string) {
     const seen = settings.plain.knownFlags?.[key];
     if (seen == null) return false;
     return Date.now() - seen < NEW_FLAG_TTL;
@@ -137,14 +137,13 @@ function ExperimentsTab() {
             if (filter === "disabled") return !enabled;
             if (filter === "new") return isNewFlag(k);
             if (filter === "modified") return override !== undefined;
-            return true;
         });
     }, [searched, filter, config, overrides]);
 
     const overrideCount = Object.keys(overrides).length;
 
     return (
-        <Flex flexDirection="column" gap="1rem">
+        <Flex flexDirection="column" gap="1rem" className={cl("root")}>
             <Flex flexDirection="column" gap="0" className={cl("section")}>
                 <Text size="sm" weight="medium">
                     Experiments

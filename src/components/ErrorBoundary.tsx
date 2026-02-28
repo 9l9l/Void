@@ -11,7 +11,7 @@ export interface ErrorBoundaryProps {
     fallback?: ReactNode;
     children?: ReactNode;
     onError?: (error: Error) => void;
-    [key: string]: unknown;
+    [key: string]: any;
 }
 
 interface ErrorBoundaryState {
@@ -47,7 +47,7 @@ function getErrorBoundaryClass(): ComponentType<ErrorBoundaryProps> {
 }
 
 type ErrorBoundaryComponent = ComponentType<ErrorBoundaryProps> & {
-    wrap<P extends Record<string, unknown>>(Component: ComponentType<P>, fallback?: ReactNode): ComponentType<P>;
+    wrap<P extends Record<string, any>>(Component: ComponentType<P>, fallback?: ReactNode): ComponentType<P>;
 };
 
 function ErrorBoundaryWrapper(props: ErrorBoundaryProps): ReactNode {
@@ -58,7 +58,7 @@ function ErrorBoundaryWrapper(props: ErrorBoundaryProps): ReactNode {
 export const ErrorBoundary: ErrorBoundaryComponent = ErrorBoundaryWrapper as unknown as ErrorBoundaryComponent;
 
 Object.defineProperty(ErrorBoundary, "wrap", {
-    value<P extends Record<string, unknown>>(Component: ComponentType<P>, fallback: ReactNode = null): ComponentType<P> {
+    value<P extends Record<string, any>>(Component: ComponentType<P>, fallback: ReactNode = null): ComponentType<P> {
         const Wrapped = (props: P) => (
             <ErrorBoundary fallback={fallback}>
                 <Component {...props} />

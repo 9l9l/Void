@@ -5,7 +5,7 @@
  */
 
 import { getModuleCache } from "@turbopack/patchTurbopack";
-import { isObject } from "@utils/misc";
+import { isObject } from "@utils/guards";
 
 import { SERIALIZE, STORE } from "./constants";
 import type { StoreArgs, StoreEntry, ZustandLike } from "./types";
