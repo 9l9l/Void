@@ -19,7 +19,7 @@ rules:
     deleteNotComment: DELETE dead code, dont comment it, git preserves history
     noHardcoded: no hardcoded values, magic numbers, string literals that should be constants
     minimal: KISS over clever, flat over nested, explicit over implicit. Less code is always better
-    noIntermediateVars: if a value is only used once, inline it. Exception: guard/early return before usage
+    namedVars: prefer a well-named variable when it clarifies intent, inline only when the expression is already obvious
     earlyReturn: guard clause and return early, never nest 3+ levels deep
     performance: Map/Set over object lookups, .some/.find over .filter[0], no spread in loops, Promise.all for parallel async
     logger: use Logger from @utils/Logger, NEVER raw console.log/warn/error
@@ -30,7 +30,8 @@ rules:
     prefer: optional chaining (?.), nullish coalescing (??), const, arrow functions, satisfies over as
     use: destructuring, template literals, object shorthand, array methods, readonly where immutable
     style: trust inference for locals, annotate exports/params, inline single-use variables
-    generics: constrain with extends, default type params where sensible, const objects with as const over enums
+    generics: constrain with extends, default type params where sensible
+    enums: const enum for fixed sets (zero runtime cost, inlined). as const objects when you need runtime key iteration or computed values
     typing: proper type > any > unknown. Use any for turbopack finders/module exports, Proxy handlers. Use unknown for user input, error params, JSON parse
     grokTypes: NEVER use any for Grok objects when types exist in packages/grok-types/, import proper types
   react:
@@ -41,8 +42,8 @@ rules:
     memoization: useMemo/useCallback only when measurably needed, not by default
     forbidden: React.cloneElement, React.isValidElement, React.memo(), React.lazy, React.Children
   css:
-    componentsFirst: use Flex/Grid for layout, Text/Paragraph for text, Tailwind className for the rest
-    noInlineStyles: NEVER use style={{}}, React.CSSProperties, or CSSProperties consts in .tsx. Use Tailwind className or styles.css with cl(). Exceptions: Flex/Grid component internals (they ARE the layout abstraction), settingsTabs section padding
+    componentsFirst: prefer Flex/Grid for flex/grid layouts, Text/Paragraph for styled text. Plain <div>/<span> are fine for simple wrappers or containers that dont need layout logic. Tailwind className for styling
+    noInlineStyles: prefer Tailwind className or styles.css with cl() over style={{}}. Inline styles are acceptable for dynamic computed values, layout component internals (Flex/Grid), and settingsTabs section padding
     tailwindWithCl: when combining cl() classes with Tailwind, use `classes(cl("foo"), "tailwind-class")`. Never pass raw Tailwind into cl() since it prefixes everything
     pluginCSS: always name styles.css
     runtimeCSS: registerStyle(name, css) for runtime injection
@@ -57,12 +58,9 @@ rules:
     classConcat: "`${a} ${b}`" ⟹ classes(a, b) from @utils/css
     perFileFinders: findByPropsLazy for common modules ⟹ import from @turbopack/common/*
     perFileStores: findByPropsLazy("useXxxStore") ⟹ typed import from @turbopack/common/stores
-    setTimeout: ⟹ debounce from @utils/misc
     nullGuards: ⟹ isTruthy, isNonNullish from @utils/misc
     clipboard: navigator.clipboard ⟹ copyToClipboard from @utils/misc
-    divLayout: bare `<div>` ⟹ Flex or Grid from @components/
-    spanText: bare `<p>`/`<span>` ⟹ Paragraph or Text from @components/
-    inlineStyles: style={{}} ⟹ Tailwind className or styles.css with cl()
+    repeatedDelays: repeated setTimeout for the same event ⟹ debounce from @utils/misc. One-shot setTimeout is fine
   antiPatterns:
     "value !== null && value !== undefined" ⟹ "value != null"
     "array && array.length > 0" ⟹ "array.length"
@@ -76,7 +74,7 @@ rules:
     "[...arr1, ...arr2] in loops" ⟹ "arr1.concat(arr2) or push(...arr2)"
 
 settingsTabs:
-  layout: Wrapper div handles flex-1, w-full, h-full, padding, overflow-scroll. Tab components NEVER set width/height/overflow/flex:1 or create inner scroll containers. Root = bare `<Flex flexDirection="column" gap="...">`. Use `style={{ padding: "0 0.75rem" }}` on sections. All other sizing/spacing uses Tailwind className
+  layout: Wrapper div handles flex-1, w-full, h-full, padding, overflow-scroll. Tab components NEVER set width/height/overflow/flex:1 or create inner scroll containers. Root = bare `<Flex flexDirection="column" gap="...">`. Use Tailwind className for sizing/spacing
   consistency: verify against Grok's native settings appearance using MCP tools
 
 structure:
