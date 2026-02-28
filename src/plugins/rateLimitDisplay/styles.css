@@ -8,5 +8,7 @@
 }
 
 .void-ratelimit-label {
+    font-size: inherit;
+    font-weight: inherit;
     line-height: 1;
 }
