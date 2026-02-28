@@ -16,10 +16,34 @@ const settings = definePluginSettings({
     },
 });
 
-const onMouseEnter = (e: { target: HTMLVideoElement }) => e.target.play();
-const onMouseLeave = (e: { target: HTMLVideoElement }) => {
-    e.target.pause();
-    e.target.currentTime = 0;
+const pending = new WeakMap<HTMLVideoElement, Promise<void>>();
+
+function playVideo(video: HTMLVideoElement): void {
+    pending.set(video, video.play().catch(() => {}));
+}
+
+function pauseVideo(video: HTMLVideoElement): void {
+    const promise = pending.get(video);
+    pending.delete(video);
+    if (promise) {
+        promise.then(() => {
+            video.pause();
+            video.currentTime = 0;
+        });
+    } else {
+        video.pause();
+        video.currentTime = 0;
+    }
+}
+
+const onMouseEnter = (e: { currentTarget: HTMLElement }) => {
+    const video = e.currentTarget.querySelector("video");
+    if (video) playVideo(video);
+};
+
+const onMouseLeave = (e: { currentTarget: HTMLElement }) => {
+    const video = e.currentTarget.querySelector("video");
+    if (video) pauseVideo(video);
 };
 
 export default definePlugin({
@@ -33,22 +57,18 @@ export default definePlugin({
         return { onMouseEnter, onMouseLeave };
     },
 
-    _pointerClass() {
-        return settings.store.playOnHover ? "pointer-events-auto" : "pointer-events-none";
-    },
-
     patches: [
         {
             find: "group/media-post-masonry-card",
             group: true,
             replacement: [
                 {
-                    match: /(src:\i),muted:!0,autoPlay:!0/,
-                    replace: "...$self._hoverProps(),$1,muted:!0,autoPlay:!1",
+                    match: /muted:!0,autoPlay:!0/,
+                    replace: "muted:!0,autoPlay:!1",
                 },
                 {
-                    match: /"pointer-events-none"/,
-                    replace: "$self._pointerClass()",
+                    match: /onMouseOver:\i\?\(\)=>\i\(!0\):void 0,onMouseLeave:\i\?\(\)=>\i\(!1\):void 0/,
+                    replace: "$&,...$self._hoverProps()",
                 },
             ],
         },
