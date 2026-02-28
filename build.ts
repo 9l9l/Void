@@ -8,10 +8,12 @@ const isWatch = process.argv.includes("--watch");
 
 const logger = new Logger("Build", "#89b4fa");
 const pkg = JSON.parse(readFileSync("package.json", "utf-8"));
+const repoUrl: string = pkg.repository.url.replace(/^git\+/, "").replace(/\.git$/, "");
+const repoRawUrl = repoUrl.replace("github.com", "raw.githubusercontent.com");
 
 const USERSCRIPT_HEADER = `// ==UserScript==
 // @name         Void
-// @namespace    https://github.com/imjustprism/Void
+// @namespace    ${repoUrl}
 // @version      ${pkg.version}.${Date.now()}
 // @description  A modification for grok.com
 // @author       Void Contributors
@@ -23,8 +25,8 @@ const USERSCRIPT_HEADER = `// ==UserScript==
 // @grant        GM_setValue
 // @grant        GM_deleteValue
 // @grant        GM_listValues
-// @downloadURL  https://raw.githubusercontent.com/imjustprism/Void/main/dist/Void.user.js
-// @updateURL    https://raw.githubusercontent.com/imjustprism/Void/main/dist/Void.user.js
+// @downloadURL  ${repoRawUrl}/main/dist/Void.user.js
+// @updateURL    ${repoRawUrl}/main/dist/Void.user.js
 // ==/UserScript==
 `;
 
@@ -130,6 +132,8 @@ async function buildCore(outfile: string, isExt: boolean) {
             IS_DEV: JSON.stringify(isDev),
             IS_EXTENSION: JSON.stringify(isExt),
             VERSION: JSON.stringify(pkg.version),
+            REPO_URL: JSON.stringify(repoUrl),
+            REPO_RAW_URL: JSON.stringify(repoRawUrl),
             GIT_HASH: JSON.stringify((() => {
                 try {
                     const result = Bun.spawnSync(["git", "rev-parse", "--short", "HEAD"]);

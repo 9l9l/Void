@@ -48,8 +48,6 @@ function getVisibleTabs() {
     return allTabs.filter(t => !t.plugin || isPluginEnabled(t.plugin));
 }
 
-const REPO_URL = "https://github.com/imjustprism/Void";
-
 function Dot() {
     return (
         <Text as="span" color="secondary">

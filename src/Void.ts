@@ -9,12 +9,14 @@ import { _resolveReady, blacklistBadModules, getModuleCache, getRuntimeFactoryRe
 import { filters, waitFor } from "@turbopack/turbopack";
 import { Logger } from "@utils/Logger";
 import { type Plugin, StartAt } from "@utils/types";
+import { checkForUpdates } from "@utils/updateChecker";
 
 import Plugins from "~plugins";
 
 export { addChatBarButton, removeChatBarButton } from "@api/ChatBarButtons";
 export { dispatch, subscribe } from "@api/Events";
 export { closeAllModals, closeModal, confirm, openModal } from "@api/Modals";
+export { closeNotice, NoticeType, showNotice } from "@api/Notices";
 export { showToast, ToastType } from "@api/Notifications";
 export { addPatch, isPluginEnabled, plugins, registerPlugin, startPlugin, stopPlugin } from "@api/PluginManager";
 export { definePluginSettings, initSettings, migratePluginSetting, migratePluginSettings, migrateSettingsToPlugin, PlainSettings, Settings, SettingsStore } from "@api/Settings";
@@ -118,6 +120,7 @@ function waitForModulesStable() {
         logger.info(`${getModuleCache().size} modules loaded, ready`);
         retryFailedPlugins();
         deferOrphanReport();
+        checkForUpdates();
     };
 
     const settleUntilReady = () => {
