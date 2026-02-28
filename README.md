@@ -4,39 +4,23 @@
 [![Contributing](https://img.shields.io/badge/contributing-guide-blue?style=flat-square)](CONTRIBUTING.md)
 [![GitHub Stars](https://img.shields.io/github/stars/imjustprism/Void?style=flat-square)](https://github.com/imjustprism/Void/stargazers)
 
-A modification for [Grok](https://grok.com), inspired by [Vencord](https://github.com/Vendicated/Vencord).
-
-## Features
-
-- Plugin system with a built-in settings UI
-- Custom CSS editor for quick theming
-- Patches Grok's bundled code at runtime, no server-side changes
-- Works as a userscript (Violentmonkey, Tampermonkey) or browser extension (Chrome, Firefox)
-- Lightweight and privacy friendly, no telemetry
+A client-side modification for [Grok](https://grok.com), inspired by [Vencord](https://github.com/Vendicated/Vencord). Patches Grok's bundled code at runtime with a plugin system, custom CSS editor, and theme support. No server-side changes, no telemetry. Works as a userscript or browser extension.
 
 ## Installation
 
 ### Userscript
 
-1. Install a userscript manager ([Violentmonkey](https://violentmonkey.github.io/), [Tampermonkey](https://www.tampermonkey.net/), etc.)
-2. Build Void (see [Building from Source](#building-from-source))
-3. Load `dist/Void.user.js` into your userscript manager
+Install [Violentmonkey](https://violentmonkey.github.io/) or [Tampermonkey](https://www.tampermonkey.net/), then install the script from [Greasy Fork](https://greasyfork.org/en/scripts/567871-void).
 
 ### Browser Extension
 
-#### Chrome / Chromium
-1. Build with `bun run build`
-2. Go to `chrome://extensions`, enable Developer Mode
-3. Click "Load unpacked" and select the `dist/chrome-unpacked` folder
+**Chrome / Chromium** — Build with `bun run build`, go to `chrome://extensions`, enable Developer Mode, click "Load unpacked" and select the `dist/chrome-unpacked` folder.
 
-#### Firefox
-1. Build with `bun run build`
-2. Go to `about:debugging#/runtime/this-firefox`
-3. Click "Load Temporary Add-on" and select `dist/firefox-unpacked/manifest.json`
+**Firefox** — Build with `bun run build`, go to `about:debugging#/runtime/this-firefox`, click "Load Temporary Add-on" and select `dist/firefox-unpacked/manifest.json`.
 
 ## Building from Source
 
-Prerequisites: [Bun](https://bun.sh/) >= 1.0
+Requires [Bun](https://bun.sh/) >= 1.0.
 
 ```sh
 git clone https://github.com/imjustprism/Void.git
