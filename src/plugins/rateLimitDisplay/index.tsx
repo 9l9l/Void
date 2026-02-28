@@ -5,6 +5,7 @@
  */
 
 import type { ChatBarButtonRenderProps } from "@api/ChatBarButtons";
+import { definePluginSettings } from "@api/Settings";
 import { ChatBarButton, Separator } from "@components";
 import { GaugeIcon } from "@components/icons";
 import type { EffortRateLimits, RateLimitResponse } from "@grok-types";
@@ -16,9 +17,17 @@ import { findExportedComponentLazy } from "@turbopack/turbopack";
 import { Devs } from "@utils/constants";
 import { Logger } from "@utils/Logger";
 import { formatCountdown, formatDuration } from "@utils/misc";
-import definePlugin from "@utils/types";
+import definePlugin, { OptionType } from "@utils/types";
 
 const logger = new Logger("RateLimitDisplay", "#ef9f76");
+
+const settings = definePluginSettings({
+    showMaxCount: {
+        type: OptionType.BOOLEAN,
+        description: "Show the maximum count alongside remaining.",
+        default: true,
+    },
+});
 
 const ClockIcon = findExportedComponentLazy("ClockIcon");
 
@@ -71,7 +80,7 @@ function formatLabel(u: Usage, short?: boolean): string {
     if (u.waitSeconds != null && u.waitSeconds > 0) return formatCountdown(u.waitSeconds);
     if (u.total < 0) return "...";
     if (u.total === 0) return "\u221e";
-    return short ? `${u.remaining}` : `${u.remaining}/${u.total}`;
+    return short || !settings.store.showMaxCount ? `${u.remaining}` : `${u.remaining}/${u.total}`;
 }
 
 function useCountdown(seconds: number | null): number | null {
@@ -203,5 +212,6 @@ export default definePlugin({
     name: "RateLimitDisplay",
     description: "Shows rate limit usage next to the chat input.",
     authors: [Devs.Prism],
+    settings,
     chatBarButton: { render: RateLimitIndicator },
 });
