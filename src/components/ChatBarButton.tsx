@@ -38,8 +38,14 @@ export function ChatBarButton({ icon, children, tooltip, onClick, className, ico
     }, [showText]);
 
     const button = (
-        <MotionButton type="button" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className={cl("root")} onClick={onClick} aria-label={label}>
-            <div className={classes(cl("inner", { "has-text": showText }), className)}>
+        <MotionButton type="button" whileTap={{ scale: 0.97 }} className="group flex flex-col justify-center rounded-full focus:outline-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" onClick={onClick} aria-label={label}>
+            <div className={classes(
+                "h-10 relative flex items-center justify-center",
+                "rounded-full ring-1 ring-inset transition-colors duration-150 ease-out",
+                "text-fg-primary ring-border-l1 hover:bg-surface-l3",
+                showText ? "px-2.5 gap-1.5 text-xs font-medium tabular-nums" : "aspect-square gap-0.5",
+                className,
+            )}>
                 {icon}
                 {iconOnly != null ? (
                     <AnimatePresence>
