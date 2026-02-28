@@ -10,7 +10,7 @@ import { Settings } from "@api/Settings";
 import { Flex, Switch, Text } from "@components";
 import { React, useEffect, useRef, useState } from "@turbopack/common/react";
 import { findByPropsLazy, findLazy } from "@turbopack/turbopack";
-import { classNameFactory } from "@utils/css";
+import { classNameFactory, disableStyle, enableStyle, registerStyle } from "@utils/css";
 
 const cl = classNameFactory("void-css-");
 const STYLE_ID = "void-custom-css";
@@ -27,26 +27,22 @@ export function getCustomCSSSettings(): Record<string, any> {
 }
 
 function injectCSS(css: string) {
-    let el = document.getElementById(STYLE_ID);
-    if (!el) {
-        el = document.createElement("style");
-        el.id = STYLE_ID;
-        document.head.appendChild(el);
-    }
-    el.textContent = css;
+    registerStyle(STYLE_ID, css);
 }
 
 function removeCSS() {
-    document.getElementById(STYLE_ID)?.remove();
+    disableStyle(STYLE_ID);
 }
 
 export function setCustomCSSEnabled(enabled: boolean) {
     const prev = Settings.plugins.Settings;
     Settings.plugins.Settings = { ...prev, customCSSEnabled: enabled };
-    const s = getCustomCSSSettings();
-    const css = typeof s.customCSS === "string" ? s.customCSS : "";
-    if (enabled && css) injectCSS(css);
-    else removeCSS();
+    if (enabled) {
+        const css = typeof getCustomCSSSettings().customCSS === "string" ? getCustomCSSSettings().customCSS : "";
+        if (css) injectCSS(css);
+    } else {
+        removeCSS();
+    }
 }
 
 export function loadSavedCSS(): string {

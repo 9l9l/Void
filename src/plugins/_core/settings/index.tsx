@@ -27,6 +27,11 @@ const settings = definePluginSettings({
         description: "Hide your user ID from the account settings page.",
         default: true,
     },
+    fixDialogFlash: {
+        type: OptionType.BOOLEAN,
+        description: "Fix the white border flash when clicking inside dialogs.",
+        default: true,
+    },
 });
 
 interface SettingsTab {
@@ -130,6 +135,10 @@ export default definePlugin({
         return settings.store.hideUserId;
     },
 
+    _fixDialogFlash() {
+        return settings.store.fixDialogFlash;
+    },
+
     renderTabs(jsx: typeof createElement, TabButton: ComponentType<TabButtonProps>) {
         return [<VoidTabs key="void-tabs" jsx={jsx} TabButton={TabButton} />, <VersionInfo key="void-version" />];
     },
@@ -146,6 +155,14 @@ export default definePlugin({
     },
 
     patches: [
+        {
+            find: 'DialogOverlay",()=>',
+            all: true,
+            replacement: {
+                match: /dark:border-border-l1 duration-200/,
+                replace: 'dark:border-border-l1 "+($self._fixDialogFlash()?"outline-none ":"")+"duration-200',
+            },
+        },
         {
             find: "pressed_cmd_settings",
             replacement: [
