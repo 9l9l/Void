@@ -95,6 +95,8 @@ function connect() {
 
     ws.onopen = () => {
         reconnectDelay = INITIAL_RECONNECT_DELAY;
+        const toolCount = Object.keys(toolHandlers).length;
+        logger.info(`Connected to MCP session with ${toolCount} tools ready`);
     };
 
     ws.onmessage = (event: MessageEvent) => {
