@@ -25,7 +25,7 @@ export async function checkForUpdates() {
         logger.info(`Update available: ${VERSION} → ${latest}`);
 
         showNotice({
-            message: `Void ${VERSION} is outdated, ${latest} is available. Visit ${REPO_URL} to update.`,
+            message: "Void is outdated, please update to the latest version to avoid potential bugs.",
             type: NoticeType.WARNING,
         });
     } catch (e) {
