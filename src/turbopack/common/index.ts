@@ -12,6 +12,7 @@ export {
     Fragment,
     LazyComponent,
     React,
+    ReactDOM,
     useCallback,
     useEffect,
     useLayoutEffect,

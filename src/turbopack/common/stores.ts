@@ -70,5 +70,5 @@ export const ReportStore: ReportStoreModule = findByPropsLazy("useReportStore");
 export const TextToSpeechStore: TextToSpeechStoreModule = findByPropsLazy("useTextToSpeechStore");
 export const TasksStore: TasksStoreModule = findByPropsLazy("useTasksStore");
 export const ArtifactStore: ArtifactStoreModule = findByPropsLazy("useArtifactStore", "useArtifactEdits");
-export const WorkspaceCollectionsStore: WorkspaceCollectionsStoreModule = findByPropsLazy("useWorkspaceCollectionsStore");
-export const WorkspaceConnectorsStore: WorkspaceConnectorsStoreModule = findByPropsLazy("useWorkspaceConnectorsStore");
+export const WorkspaceCollectionsStore: WorkspaceCollectionsStoreModule = findByPropsLazy("useWorkspaceCollectionsStore", "useWorkspaceActiveCollectionIds");
+export const WorkspaceConnectorsStore: WorkspaceConnectorsStoreModule = findByPropsLazy("useWorkspaceConnectorsStore", "useWorkspaceActiveConnectorIds");
