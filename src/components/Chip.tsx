@@ -15,7 +15,7 @@ export interface ChipProps extends HTMLAttributes<HTMLDivElement> {
     children?: ReactNode;
 }
 
-const BASE = "inline-flex items-center rounded-full border border-input-border px-2 py-0.5 text-[10px] font-semibold transition-colors";
+const BASE = "inline-flex items-center rounded-full border border-input-border px-2 py-0.5 text-[10px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2";
 
 const variantClasses = {
     default: "border-transparent bg-primary text-primary-foreground shadow hover:bg-primary/80",
