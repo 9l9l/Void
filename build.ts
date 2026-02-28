@@ -25,8 +25,8 @@ const USERSCRIPT_HEADER = `// ==UserScript==
 // @grant        GM_setValue
 // @grant        GM_deleteValue
 // @grant        GM_listValues
-// @downloadURL  ${repoRawUrl}/main/dist/Void.user.js
-// @updateURL    ${repoRawUrl}/main/dist/Void.user.js
+// @downloadURL  ${repoRawUrl}/main/userscript/Void.user.js
+// @updateURL    ${repoRawUrl}/main/userscript/Void.user.js
 // ==/UserScript==
 `;
 
@@ -159,8 +159,11 @@ async function buildCore(outfile: string, isExt: boolean) {
 async function buildUserscript() {
     const output = await buildCore("Void.user.js", false);
     const code = await output.text();
-    await Bun.write("dist/Void.user.js", USERSCRIPT_HEADER + "\n" + code);
-    logger.info(`Built dist/Void.user.js (${((USERSCRIPT_HEADER.length + code.length) / 1024).toFixed(1)} KB)`);
+    const content = USERSCRIPT_HEADER + "\n" + code;
+    await Bun.write("dist/Void.user.js", content);
+    mkdirSync("userscript", { recursive: true });
+    await Bun.write("userscript/Void.user.js", content);
+    logger.info(`Built Void.user.js (${(content.length / 1024).toFixed(1)} KB)`);
 }
 
 async function buildExtensions() {
