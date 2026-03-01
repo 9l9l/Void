@@ -8,7 +8,7 @@ import "./ThemeCard.css";
 
 import { disableTheme, enableTheme, type ThemeData } from "@api/Themes";
 import { ButtonWithTooltip, Flex, Switch, Text } from "@components";
-import { CopyIcon, TrashIcon } from "@components/icons";
+import { CopyIcon, Trash2Icon } from "@components/icons";
 import { React } from "@turbopack/common/react";
 import { classNameFactory } from "@utils/css";
 import { copyToClipboard } from "@utils/misc";
@@ -39,7 +39,7 @@ export default function ThemeCard({ theme, globalEnabled, onRemove, onToggle }: 
                             <CopyIcon size={16} />
                         </ButtonWithTooltip>
                         <ButtonWithTooltip variant="tertiary" size="xs" shape="square" tooltipContent="Remove" onClick={() => onRemove(theme.url)}>
-                            <TrashIcon size={16} />
+                            <Trash2Icon size={16} />
                         </ButtonWithTooltip>
                         <Switch checked={theme.enabled} disabled={!globalEnabled} onCheckedChange={handleToggle} />
                     </Flex>

@@ -5,6 +5,7 @@ export * from "./CommandMenuStore";
 export * from "./ConversationStore";
 export * from "./DevModelsStore";
 export * from "./FeatureStore";
+export * from "./FilesPageStore";
 export * from "./FileStore";
 export * from "./MediaStore";
 export * from "./MentionMenuStore";

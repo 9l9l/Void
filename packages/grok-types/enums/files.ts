@@ -103,3 +103,30 @@ export type FileCategory =
 	| "code"
 	| "unknown"
 	| (string & {});
+
+/** File type filter categories for the files page search/filter UI. */
+export type FilesPageFileType =
+	| "image"
+	| "document"
+	| "pdf"
+	| "code"
+	| "spreadsheet";
+
+/** Sort option keys passed to FilesPageStore.loadFirstPage. */
+export type FilesPageSortOption =
+	| "name"
+	| "size"
+	| "used"
+	| "created";
+
+/** Created-by filter keys passed to FilesPageStore.loadFirstPage. */
+export type FilesPageCreatedByFilter =
+	| "grok"
+	| "user";
+
+/** Async loading status for the files page asset list. */
+export type FilesPageListStatus =
+	| "initial"
+	| "loading"
+	| "ready"
+	| "error";
