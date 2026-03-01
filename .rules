@@ -67,6 +67,7 @@ rules:
     downloads: manual blob/anchor downloads ⟹ downloadFile from @utils/misc, manual filename cleaning ⟹ sanitizeFilename from @utils/misc
     repeatedDelays: repeated setTimeout for the same event ⟹ debounce from @utils/misc. One-shot setTimeout is fine
     regexEscape: manual regex escaping ⟹ escapeRegExp from @utils/text
+    confirmDialogs: raw Dialog+DialogHeader+DialogFooter for confirm/cancel patterns ⟹ ConfirmDialog from @components
   antiPatterns:
     "value !== null && value !== undefined" ⟹ "value != null"
     "array && array.length > 0" ⟹ "array.length"

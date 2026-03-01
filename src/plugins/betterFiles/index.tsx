@@ -5,19 +5,10 @@
  */
 
 import { definePluginSettings } from "@api/Settings";
+import { Button, ConfirmDialog } from "@components";
 import { ErrorBoundary } from "@components/ErrorBoundary";
 import { TrashIcon } from "@components/icons";
-import {
-    Button,
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@turbopack/common/components";
-import { React, useState } from "@turbopack/common/react";
+import { Fragment, React, useState } from "@turbopack/common/react";
 import { FilesPageStore } from "@turbopack/common/stores";
 import { Devs } from "@utils/constants";
 import definePlugin, { OptionType } from "@utils/types";
@@ -38,7 +29,6 @@ function DeleteAllButton() {
     if (!list.length) return null;
 
     const handleConfirm = async () => {
-        setOpen(false);
         const ids = [...list];
         for (const id of ids) {
             try { await deleteAsset(id); } catch {}
@@ -46,7 +36,7 @@ function DeleteAllButton() {
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Fragment>
             <Button
                 variant="tertiary"
                 shape="square"
@@ -55,21 +45,16 @@ function DeleteAllButton() {
             >
                 <TrashIcon size={18} className="text-fg-secondary" />
             </Button>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Delete all files</DialogTitle>
-                    <DialogDescription>
-                        Are you sure you want to delete all {list.length} files? This cannot be undone.
-                    </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button variant="secondary">Cancel</Button>
-                    </DialogClose>
-                    <Button variant="danger" onClick={handleConfirm}>Delete all</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+            <ConfirmDialog
+                open={open}
+                onOpenChange={setOpen}
+                title="Delete all files"
+                description={`Are you sure you want to delete all ${list.length} files? This cannot be undone.`}
+                confirmText="Delete all"
+                danger
+                onConfirm={handleConfirm}
+            />
+        </Fragment>
     );
 }
 
@@ -88,6 +73,7 @@ export default definePlugin({
     patches: [
         {
             find: "title-and-button",
+            noWarn: true,
             replacement: [
                 {
                     match: /"files-search-open-button.label".{0,25}\)\}\)\]\}\)/,
