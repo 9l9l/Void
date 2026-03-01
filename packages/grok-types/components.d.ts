@@ -448,6 +448,18 @@ export type Slider = ComponentType<SliderProps>;
 
 // #endregion
 
+// #region Skeleton
+
+export interface SkeletonProps {
+    className?: string;
+    pulse?: boolean;
+    [key: string]: any;
+}
+
+export type Skeleton = ComponentType<SkeletonProps>;
+
+// #endregion
+
 // #region AnimatePresence (framer-motion)
 
 export interface AnimatePresenceProps {

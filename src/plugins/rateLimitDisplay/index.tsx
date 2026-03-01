@@ -6,7 +6,7 @@
 
 import type { ChatBarButtonRenderProps } from "@api/ChatBarButtons";
 import { definePluginSettings } from "@api/Settings";
-import { ChatBarButton, Separator } from "@components";
+import { ChatBarButton, Separator, Skeleton } from "@components";
 import { GaugeIcon } from "@components/icons";
 import type { EffortRateLimits, RateLimitResponse } from "@grok-types";
 import type { ModelId, ModelMode, RequestKind } from "@grok-types/enums";
@@ -93,7 +93,7 @@ function SingleDisplay({ usage, iconOnly }: { usage: Usage; iconOnly: boolean })
 
     return (
         <ChatBarButton icon={limited ? <ClockIcon size={18} /> : <GaugeIcon size={18} />} tooltip={tooltip} className={limited ? "text-fg-danger" : undefined} iconOnly={iconOnly}>
-            {formatLabel(u)}
+            {u.total < 0 ? <Skeleton className="h-4 w-3 rounded" /> : formatLabel(u)}
         </ChatBarButton>
     );
 }
@@ -116,9 +116,9 @@ function AutoDisplay({ fast, expert, iconOnly }: { fast: Usage; expert: Usage; i
             className={limited ? "text-fg-danger" : undefined}
             iconOnly={iconOnly}
         >
-            {formatLabel(f, true)}
+            {f.total < 0 ? <Skeleton className="h-4 w-3 rounded" /> : formatLabel(f, true)}
             <Separator orientation="vertical" className="mx-1 h-3 w-0.5" />
-            {formatLabel(e, true)}
+            {e.total < 0 ? <Skeleton className="h-4 w-3 rounded" /> : formatLabel(e, true)}
         </ChatBarButton>
     );
 }

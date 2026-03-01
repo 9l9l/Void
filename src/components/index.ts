@@ -51,6 +51,8 @@ export {
     Separator,
     type SeparatorOrientation,
     type SeparatorProps,
+    Skeleton,
+    type SkeletonProps,
     SettingsDescription,
     type SettingsDescriptionProps,
     SettingsRow,

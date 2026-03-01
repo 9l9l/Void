@@ -24,6 +24,7 @@ import type {
     SettingsDescriptionProps,
     SettingsRowProps,
     SettingsTitleProps,
+    SkeletonProps,
     SliderProps,
     SwitchProps,
     TooltipContentProps,
@@ -65,6 +66,7 @@ export type {
     SettingsDescriptionProps,
     SettingsRowProps,
     SettingsTitleProps,
+    SkeletonProps,
     SliderProps,
     SwitchProps,
     SwitchSize,
@@ -119,6 +121,8 @@ export const SelectItem: ComponentType<SelectItemProps> = LazyComponent("SelectI
 export const SelectValue: ComponentType<SelectValueProps> = LazyComponent("SelectValue", () => findExportedComponent("SelectValue"));
 
 export const Separator: ComponentType<SeparatorProps> = LazyComponent("Separator", () => findExportedComponent("Separator"));
+
+export const Skeleton: ComponentType<SkeletonProps> = LazyComponent("Skeleton", () => findExportedComponent("Skeleton"));
 
 export const Slider: ComponentType<SliderProps> = LazyComponent("Slider", () => findExportedComponent("Slider"));
 
