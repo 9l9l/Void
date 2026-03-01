@@ -4,72 +4,100 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import { definePluginSettings } from "@api/Settings";
 import { ErrorBoundary } from "@components/ErrorBoundary";
 import { TrashIcon } from "@components/icons";
-import { ButtonWithTooltip } from "@turbopack/common/components";
-import { React, useCallback, useState } from "@turbopack/common/react";
+import {
+    Button,
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@turbopack/common/components";
+import { React, useState } from "@turbopack/common/react";
 import { FilesPageStore } from "@turbopack/common/stores";
 import { Devs } from "@utils/constants";
-import { Logger } from "@utils/Logger";
-import definePlugin from "@utils/types";
+import definePlugin, { OptionType } from "@utils/types";
 
-const logger = new Logger("BetterFiles", "#e06c75");
+const settings = definePluginSettings({
+    skipDeleteConfirm: {
+        type: OptionType.BOOLEAN,
+        description: "Skip the delete confirmation when deleting files from the list.",
+        default: false,
+    },
+});
 
 function DeleteAllButton() {
-    const [confirming, setConfirming] = useState(false);
+    const [open, setOpen] = useState(false);
     const list = FilesPageStore.useFilesPageStore(s => s.list);
     const deleteAsset = FilesPageStore.useFilesPageStore(s => s.deleteAsset);
 
-    const handleClick = useCallback(async () => {
-        if (!confirming) {
-            setConfirming(true);
-            return;
-        }
-
-        setConfirming(false);
-        const ids = [...list];
-        logger.info(`Deleting ${ids.length} files`);
-
-        for (const id of ids) {
-            try {
-                await deleteAsset(id);
-            } catch (e) {
-                logger.error(`Failed to delete asset ${id}`, e);
-            }
-        }
-    }, [confirming, list, deleteAsset]);
-
     if (!list.length) return null;
 
+    const handleConfirm = async () => {
+        setOpen(false);
+        const ids = [...list];
+        for (const id of ids) {
+            try { await deleteAsset(id); } catch {}
+        }
+    };
+
     return (
-        <ButtonWithTooltip
-            variant={confirming ? "danger" : "tertiary"}
-            shape="square"
-            size="sm"
-            className="flex-shrink-0"
-            tooltipContent={confirming ? "Are you sure? Click again to delete all files." : "Delete all files"}
-            onClick={handleClick}
-            onBlur={() => setConfirming(false)}
-        >
-            <TrashIcon size={18} />
-        </ButtonWithTooltip>
+        <Dialog open={open} onOpenChange={setOpen}>
+            <Button
+                variant="tertiary"
+                shape="square"
+                size="sm"
+                onClick={() => setOpen(true)}
+            >
+                <TrashIcon size={18} className="text-fg-secondary" />
+            </Button>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Delete all files</DialogTitle>
+                    <DialogDescription>
+                        Are you sure you want to delete all {list.length} files? This cannot be undone.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button variant="secondary">Cancel</Button>
+                    </DialogClose>
+                    <Button variant="danger" onClick={handleConfirm}>Delete all</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }
 
 export default definePlugin({
     name: "BetterFiles",
-    description: "Adds a button to delete all files on the files page.",
+    description: "Adds bulk delete and optional skip of delete confirmation on the files page.",
     authors: [Devs.Prism],
+    settings,
 
     renderDeleteAllButton: ErrorBoundary.wrap(DeleteAllButton),
+
+    _deleteFile(assetId: string) {
+        FilesPageStore.useFilesPageStore.getState().deleteAsset(assetId);
+    },
 
     patches: [
         {
             find: "title-and-button",
-            replacement: {
-                match: /"files-search-open-button.label".{0,25}\)\}\)\]\}\)/,
-                replace: "$&,$self.renderDeleteAllButton()",
-            },
+            replacement: [
+                {
+                    match: /"files-search-open-button.label".{0,25}\)\}\)\]\}\)/,
+                    replace: "$&,$self.renderDeleteAllButton()",
+                },
+                {
+                    match: /(\i)\(\{type:"delete",assetId:(\i)\.assetId\}\)/,
+                    replace: "$self.settings.store.skipDeleteConfirm?$self._deleteFile($2.assetId):$1({type:\"delete\",assetId:$2.assetId})",
+                },
+            ],
         },
     ],
 });
