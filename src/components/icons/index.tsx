@@ -110,6 +110,12 @@ export const TelescopeIcon = (props: IconProps = {}) =>
         <circle cx="12" cy="13" r="2" />,
     );
 
+export const ClockIcon = (props: IconProps = {}) =>
+    svg(props,
+        <circle cx="12" cy="12" r="10" />,
+        <path d="M12 6v6l4 2" />,
+    );
+
 export const DownloadIcon = (props: IconProps = {}) =>
     svg(props,
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />,

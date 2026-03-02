@@ -7,13 +7,12 @@
 import type { ChatBarButtonRenderProps } from "@api/ChatBarButtons";
 import { definePluginSettings } from "@api/Settings";
 import { ChatBarButton, Separator, Skeleton } from "@components";
-import { GaugeIcon } from "@components/icons";
+import { ClockIcon, GaugeIcon } from "@components/icons";
 import type { EffortRateLimits, RateLimitResponse } from "@grok-types";
 import type { ModelId, ModelMode, RequestKind } from "@grok-types/enums";
 import { React, useEffect, useState } from "@turbopack/common/react";
 import { ChatPageStore, ModelsStore } from "@turbopack/common/stores";
 import { ApiClients, ReasoningModeUtils } from "@turbopack/common/utils";
-import { findExportedComponentLazy } from "@turbopack/turbopack";
 import { Devs } from "@utils/constants";
 import { Logger } from "@utils/Logger";
 import { formatCountdown, formatDuration } from "@utils/misc";
@@ -29,8 +28,6 @@ const settings = definePluginSettings({
         default: true,
     },
 });
-
-const ClockIcon = findExportedComponentLazy("ClockIcon");
 
 interface Usage {
     remaining: number;
@@ -73,8 +70,21 @@ function parse(data: RateLimitResponse, mode?: ModelMode): Usage {
     return { ...EMPTY, windowSeconds };
 }
 
-function fetchForModel(modelId: ModelId, requestKind: RequestKind): Promise<RateLimitResponse> {
-    return ApiClients.rateLimitsApi.rateLimitsGetRateLimits({ body: { modelName: modelId, requestKind } });
+const responseCache = new Map<string, RateLimitResponse>();
+
+function cacheKey(modelId: ModelId, requestKind: RequestKind) {
+    return `${modelId}:${requestKind}`;
+}
+
+async function fetchForModel(modelId: ModelId, requestKind: RequestKind) {
+    const data: RateLimitResponse = await ApiClients.rateLimitsApi.rateLimitsGetRateLimits({ body: { modelName: modelId, requestKind } });
+    responseCache.set(cacheKey(modelId, requestKind), data);
+    return data;
+}
+
+function getCached(modelId: ModelId, requestKind: RequestKind, mode?: ModelMode): Usage {
+    const data = responseCache.get(cacheKey(modelId, requestKind));
+    return data ? parse(data, mode) : EMPTY;
 }
 
 function formatLabel(u: Usage, short?: boolean) {
@@ -131,21 +141,25 @@ function RateLimitIndicator({ iconOnly }: ChatBarButtonRenderProps) {
     const streaming = ChatPageStore.useChatPageStore(s => !!s.streamedMessageId);
     const modelByMode = ModelsStore.useModelsStore(s => s.modelByMode);
 
-    const [fast, setFast] = useState(EMPTY);
-    const [expert, setExpert] = useState(EMPTY);
-    const [single, setSingle] = useState(EMPTY);
+    const requestKind = ReasoningModeUtils.reasoningModeToRequestKind?.(reasoningMode) ?? "DEFAULT" as RequestKind;
+    const fastId = modelByMode?.fast?.modelId;
+    const expertId = modelByMode?.expert?.modelId;
+    const singleId = modelMode !== "auto" ? modelByMode?.[modelMode]?.modelId : undefined;
+
+    const [fast, setFast] = useState(() => fastId ? getCached(fastId, requestKind, "fast") : EMPTY);
+    const [expert, setExpert] = useState(() => expertId ? getCached(expertId, requestKind, "expert") : EMPTY);
+    const [single, setSingle] = useState(() => singleId ? getCached(singleId, requestKind, modelMode) : EMPTY);
 
     useEffect(() => {
         if (modelMode === "auto" && streaming) return;
 
-        const requestKind = ReasoningModeUtils.reasoningModeToRequestKind?.(reasoningMode) ?? "DEFAULT";
-        const logError = (err: any) => logger.error("Failed to fetch rate limits", err);
         let cancelled = false;
 
         if (modelMode === "auto") {
-            const fastId = modelByMode?.fast?.modelId;
-            const expertId = modelByMode?.expert?.modelId;
             if (!fastId && !expertId) return;
+
+            if (fastId) setFast(getCached(fastId, requestKind, "fast"));
+            if (expertId) setExpert(getCached(expertId, requestKind, "expert"));
 
             const sharedModel = fastId === expertId;
             const targetId = fastId ?? expertId;
@@ -156,37 +170,32 @@ function RateLimitIndicator({ iconOnly }: ChatBarButtonRenderProps) {
                         if (cancelled) return;
                         setFast(parse(data, "fast"));
                         setExpert(parse(data, "expert"));
-                        setSingle(EMPTY);
                     })
-                    .catch(logError);
+                    .catch(e => logger.error("Failed to fetch rate limits", e));
             } else {
                 Promise.all([fastId ? fetchForModel(fastId, requestKind) : null, expertId ? fetchForModel(expertId, requestKind) : null])
                     .then(([f, e]) => {
                         if (cancelled) return;
-                        setFast(f ? parse(f, "fast") : EMPTY);
-                        setExpert(e ? parse(e, "expert") : EMPTY);
-                        setSingle(EMPTY);
+                        if (f) setFast(parse(f, "fast"));
+                        if (e) setExpert(parse(e, "expert"));
                     })
-                    .catch(logError);
+                    .catch(e => logger.error("Failed to fetch rate limits", e));
             }
         } else {
-            const modelId = modelByMode?.[modelMode]?.modelId;
-            if (!modelId) return;
+            if (!singleId) return;
 
-            fetchForModel(modelId, requestKind)
+            setSingle(getCached(singleId, requestKind, modelMode));
+
+            fetchForModel(singleId, requestKind)
                 .then(result => {
                     if (cancelled) return;
-                    setFast(EMPTY);
-                    setExpert(EMPTY);
                     setSingle(parse(result, modelMode));
                 })
-                .catch(logError);
+                .catch(e => logger.error("Failed to fetch rate limits", e));
         }
 
-        return () => {
-            cancelled = true;
-        };
-    }, [modelMode, reasoningMode, conversationId, lastMessageId, streaming, modelByMode]);
+        return () => { cancelled = true; };
+    }, [modelMode, reasoningMode, conversationId, lastMessageId, streaming, fastId, expertId, singleId, requestKind]);
 
     if (modelMode === "auto") return <AutoDisplay fast={fast} expert={expert} iconOnly={iconOnly} />;
     return <SingleDisplay usage={single} iconOnly={iconOnly} />;
