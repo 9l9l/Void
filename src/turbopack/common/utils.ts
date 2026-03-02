@@ -47,6 +47,18 @@ export const FileUtils: {
     downloadUri: (url: string, filename: string) => Promise<void>;
 } = findByPropsLazy("downloadBlob", "downloadUri");
 
+export const RateLimitUtils: {
+    useRateLimits: () => {
+        remainingQueries: number;
+        totalQueries: number;
+        waitTimeSeconds: number;
+        windowSizeSeconds: number;
+        prettyWaitTime: string;
+        prettyWindowSize: string;
+        isPending: boolean;
+    };
+} = findByPropsLazy("useRateLimits");
+
 export const NextRouter: {
     useRouter: () => { push: (url: string, options?: any) => void; replace: (url: string, options?: any) => void; back: () => void; forward: () => void; refresh: () => void; prefetch: (url: string) => void };
     usePathname: () => string;
