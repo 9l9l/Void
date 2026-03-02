@@ -27,7 +27,7 @@ export { classes, classNameFactory, disableStyle, enableStyle, registerStyle } f
 export { isNonNullish, isObject, isTruthy } from "@utils/guards";
 export { makeLazy, proxyLazy } from "@utils/lazy";
 export { Logger } from "@utils/Logger";
-export { clamp, copyToClipboard, debounce, downloadFile, errorMessage, fetchExternal, formatCountdown, formatDuration, mergeDefaults, onlyOnce, sanitizeFilename, sleep } from "@utils/misc";
+export { clamp, copyToClipboard, debounce, errorMessage, fetchExternal, formatCountdown, formatDuration, mergeDefaults, onlyOnce, sanitizeFilename, sleep } from "@utils/misc";
 export { default as definePlugin, OptionType, StartAt } from "@utils/types";
 
 const logger = new Logger("TurbopackPatcher", "#e78284");

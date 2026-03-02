@@ -3,6 +3,7 @@ import type {
 	ImagineActionMode,
 	ImagineMode,
 	MediaPlayerTab,
+	MediaPostActionType,
 	MediaPostSource,
 	MediaPostType,
 	OriginalRefType,
@@ -21,10 +22,14 @@ export interface MediaItem {
 	optimisticId?: string;
 	/** Server item ID (may differ from `id` for generated items). */
 	itemId?: string;
+	/** User ID of the creator. */
+	userId?: string;
 	/** URL to the media asset. */
 	mediaUrl: string;
 	/** Base64 blob source for in-progress previews. */
 	blobSrc?: string;
+	/** MIME type of the media (e.g. `"video/mp4"`, `"image/png"`). */
+	mimeType?: string;
 	/** The user's original prompt. */
 	prompt: string;
 	/** The original prompt before any upsampling. */
@@ -45,16 +50,28 @@ export interface MediaItem {
 	createTime: string;
 	/** Source of the media item. */
 	fromSource?: MediaPostSource;
+	/** Generation mode (e.g. `"text"`, `"normal"`). */
+	mode?: string;
 	/** Width in pixels. */
 	width?: number;
 	/** Height in pixels. */
 	height?: number;
 	/** Resolution info. */
 	resolution?: { width: number; height: number };
-	/** Child image items (for composite results). */
+	/** Named resolution tier (e.g. `"480p"`, `"720p"`). */
+	resolutionName?: string;
+	/** Title for the media post. */
+	title?: string;
+	/** Image variants of this item. */
 	images?: MediaItem[];
+	/** Video variants of this item. */
+	videos?: MediaItem[];
+	/** Child posts (re-generations, animated versions, HD upscales). */
+	childPosts?: MediaItem[];
 	/** Original post ID for edits/remixes. */
 	originalPostId?: string;
+	/** The original parent post. */
+	originalPost?: MediaItem;
 	/** Original reference type for edits. */
 	originalRefType?: OriginalRefType;
 	/** Input media items for edits. */
@@ -65,6 +82,24 @@ export interface MediaItem {
 	videoId?: string;
 	/** HD/upscaled media URL. */
 	hdMediaUrl?: string;
+	/** Thumbnail image URL. */
+	thumbnailImageUrl?: string;
+	/** Last frame thumbnail URL (for videos). */
+	lastFrameThumbnailImageUrl?: string;
+	/** Watermarked media URL. */
+	watermarkedMediaUrl?: string;
+	/** Audio track URLs for video items. */
+	audioUrls?: string[];
+	/** Conversation ID this media was generated in. */
+	conversationId?: string;
+	/** Video duration in seconds. */
+	videoDuration?: number;
+	/** Start time offset for video extensions. */
+	videoExtensionStartTime?: number;
+	/** Available actions for this post. */
+	availableActions?: MediaPostActionType[];
+	/** User interaction status (like/dislike). */
+	userInteractionStatus?: { likeStatus?: boolean };
 	/** Inflight generation request ID. */
 	inflightId?: string;
 	/** Whether upscaling is in progress. */
@@ -73,6 +108,14 @@ export interface MediaItem {
 	isFavorite?: boolean;
 	/** Whether this item is moderated (alias used by some components). */
 	isModerated?: boolean;
+	/** Whether this item is R-rated. */
+	rRated?: boolean;
+	/** Whether this item is hidden from the client. */
+	isHiddenForClient?: boolean;
+	/** Platform origin. */
+	platform?: string;
+	/** Media processing status. */
+	mediaStatus?: string;
 }
 
 /**
@@ -535,6 +578,8 @@ export interface MediaStoreModule {
 	RESOLUTION_OPTIONS: VideoResolution[];
 	/** Maximum duration for video edits in seconds (`8`). */
 	VIDEO_EDIT_MAX_DURATION: number;
+	/** Maximum duration for video upscaling in seconds (`12`). */
+	VIDEO_UPSCALE_MAX_DURATION: number;
 	/** Normalize aspect ratio to max-1 scale. */
 	getNormalizedPercentages: (aspectRatio: [number, number]) => [number, number];
 	/** Noise image generator singleton. */

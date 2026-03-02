@@ -25,7 +25,7 @@ rules:
     logger: use Logger from @utils/Logger, NEVER raw console.log/warn/error
     classNames: import classNameFactory from @utils/css, prefix MUST end with `-` (e.g. `classNameFactory("void-foo-")`), use `cl("bar")` not `cl("-bar")` or `cl("")`, use `cl("root")` for root element. ONLY use cl() for our own custom CSS class names — never for Grok's Tailwind/design-token classes (e.g. use `"text-fg-danger"` directly, not `cl("danger")`)
     classJoin: use `classes()` from @utils/css to combine cl() with Tailwind or other classes, not template strings like `${a} ${b}`
-    useExisting: use utilities from @utils/, @api/, @components/, @turbopack/common/. Check barrel exports before creating new finders. Key modules: @utils/guards (isTruthy, isNonNullish, isObject), @utils/text (humanizeKey, pluralize, escapeRegExp), @utils/react (useForceUpdater, useFiltered, useAwaiter, useCountdown, useIntersection, useEventSubscription, useExternalStore), @utils/misc (copyToClipboard, debounce, errorMessage, downloadFile, sanitizeFilename, createExternalStore)
+    useExisting: use utilities from @utils/, @api/, @components/, @turbopack/common/. Check barrel exports before creating new finders. Key modules: @utils/guards (isTruthy, isNonNullish, isObject), @utils/text (humanizeKey, pluralize, escapeRegExp), @utils/react (useForceUpdater, useFiltered, useAwaiter, useCountdown, useIntersection, useEventSubscription, useExternalStore), @utils/misc (copyToClipboard, debounce, errorMessage, sanitizeFilename, createExternalStore)
   typescript:
     prefer: optional chaining (?.), nullish coalescing (??), const, arrow functions, satisfies over as
     use: destructuring, template literals, object shorthand, array methods, readonly where immutable
@@ -64,7 +64,7 @@ rules:
     clipboard: navigator.clipboard ⟹ copyToClipboard from @utils/misc
     textFormatting: manual key formatting ⟹ humanizeKey from @utils/text, manual pluralization ⟹ pluralize from @utils/text
     errorStrings: manual error-to-string ⟹ errorMessage from @utils/misc
-    downloads: manual blob/anchor downloads ⟹ downloadFile from @utils/misc, manual filename cleaning ⟹ sanitizeFilename from @utils/misc
+    downloads: manual blob/anchor downloads ⟹ FileUtils.downloadBlob from @turbopack/common, manual filename cleaning ⟹ sanitizeFilename from @utils/misc
     repeatedDelays: repeated setTimeout for the same event ⟹ debounce from @utils/misc. One-shot setTimeout is fine
     regexEscape: manual regex escaping ⟹ escapeRegExp from @utils/text
     confirmDialogs: raw Dialog+DialogHeader+DialogFooter for confirm/cancel patterns ⟹ ConfirmDialog from @components

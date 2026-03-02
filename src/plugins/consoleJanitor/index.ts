@@ -28,5 +28,12 @@ export default definePlugin({
                 replace: "void 0",
             },
         },
+        {
+            find: "pressure_observer",
+            replacement: {
+                match: /"PressureObserver"in window/,
+                replace: "false",
+            },
+        },
     ],
 });

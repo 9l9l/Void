@@ -1,0 +1,4 @@
+[data-void-selected] {
+    outline: 3px solid rgb(29 155 240);
+    border-radius: 1rem;
+}

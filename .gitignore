@@ -4,5 +4,4 @@ bun.lock
 *.log
 *.tsbuildinfo
 .DS_Store
-tsconfig.server.json
 .claude

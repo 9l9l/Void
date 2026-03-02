@@ -37,6 +37,15 @@ export type MediaPlayerTab = "video" | (string & {});
 /** Video resolution option. */
 export type VideoResolution = "480p" | "720p" | (string & {});
 
+/** Available actions for a media post. */
+export type MediaPostActionType =
+	| "MEDIA_POST_ACTION_TYPE_LIKE"
+	| "MEDIA_POST_ACTION_TYPE_SHARE"
+	| "MEDIA_POST_ACTION_TYPE_DOWNLOAD"
+	| "MEDIA_POST_ACTION_TYPE_DELETE"
+	| "MEDIA_POST_ACTION_TYPE_UPSCALE_VIDEO"
+	| (string & {});
+
 /**
  * Grid permit state for controlling concurrent media rendering.
  * - `0` = waiting for permit

@@ -117,28 +117,14 @@ export function formatDuration(totalSeconds: number): string {
     return h > 0 ? `${h}h` : `${m}m`;
 }
 
-/** Math.min(Math.max(value, min), max) */
 export function clamp(value: number, min: number, max: number): number {
     return Math.min(Math.max(value, min), max);
 }
 
-/** Safe error-to-string extraction. */
 export function errorMessage(err: any): string {
     return err instanceof Error ? err.message : String(err);
 }
 
-/** Trigger a browser file download. */
-export function downloadFile(filename: string, content: BlobPart, mimeType = "application/octet-stream") {
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-}
-
-/** Create a filesystem-safe filename from a string. */
 export function sanitizeFilename(title: string, fallback = "file"): string {
     return title.replace(/[^a-zA-Z0-9 ]/g, "").trim().replace(/\s+/g, "-") || fallback;
 }

@@ -7,11 +7,12 @@
 import type { ContextMenuLocationMap } from "@api/ContextMenus";
 import { DropdownMenuItem } from "@components";
 import type { GrokConversation, GrokResponse } from "@grok-types";
+import { FileUtils } from "@turbopack/common";
 import { React } from "@turbopack/common/react";
 import { ConversationStore, ResponseStore } from "@turbopack/common/stores";
 import { findExportedComponentLazy } from "@turbopack/turbopack";
 import { Devs } from "@utils/constants";
-import { downloadFile, sanitizeFilename } from "@utils/misc";
+import { sanitizeFilename } from "@utils/misc";
 import definePlugin from "@utils/types";
 
 const DownloadIcon = findExportedComponentLazy("DownloadIcon");
@@ -39,10 +40,9 @@ async function exportChat(conversationId: string) {
     const conversation: GrokConversation | undefined = ConversationStore.useConversationStore.getState().byId[conversationId];
     const title = conversation?.title ?? "Untitled Chat";
 
-    downloadFile(
+    await FileUtils.downloadBlob(
+        new Blob([JSON.stringify({ conversationId, title, exportedAt: new Date().toISOString(), messages: responses.map(buildExportMessage) }, null, 2)], { type: "application/json" }),
         `${sanitizeFilename(title, "chat")}.json`,
-        JSON.stringify({ conversationId, title, exportedAt: new Date().toISOString(), messages: responses.map(buildExportMessage) }, null, 2),
-        "application/json",
     );
 }
 
