@@ -47,22 +47,11 @@ export default definePlugin({
             ],
         },
         {
-            find: "feature-store-set-override",
-            all: true,
-            replacement: [
-                {
-                    match: /\(0,\i\.\i\)\("feature-store-set-override".{0,65}\)/,
-                    replace: "void 0",
-                },
-                {
-                    match: /\(0,\i\.\i\)\("feature-store-clear-override".{0,45}\)/,
-                    replace: "void 0",
-                },
-                {
-                    match: /\(0,\i\.\i\)\("feature-store-clear-all-overrides".{0,40}\)/,
-                    replace: "void 0",
-                },
-            ],
+            find: "isEnvVarsSet(){return void 0!=",
+            replacement: {
+                match: /isEnvVarsSet\(\)\{return void 0!=\i&&""!=\i\|\|!!this\.customEndpoint\}/,
+                replace: "isEnvVarsSet(){return false}",
+            },
         },
     ],
 });
