@@ -2,16 +2,16 @@
     "name": "void",
     "version": "0.2.3",
     "description": "A modification for grok.com",
-    "homepage": "https://github.com/imjustprism/Void#readme",
+    "homepage": "https://github.com/9l9l/Void#readme",
     "bugs": {
-        "url": "https://github.com/imjustprism/Void/issues"
+        "url": "https://github.com/9l9l/Void/issues"
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/imjustprism/Void.git"
+        "url": "git+https://github.com/9l9l/Void.git"
     },
     "license": "GPL-3.0-or-later",
-    "author": "Prism",
+    "author": "o9",
     "type": "module",
     "scripts": {
         "build": "bun run build.ts",

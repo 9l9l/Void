@@ -187,7 +187,7 @@ function disconnect() {
 export default definePlugin({
     name: "MCP",
     description: "Connects AI coding agents to Grok via WebSocket for live inspection.",
-    authors: [Devs.Prism],
+    authors: [Devs.Prism, Devs.o9],
     dev: true,
     settings,
     start() {

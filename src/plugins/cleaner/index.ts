@@ -10,7 +10,7 @@ import definePlugin from "@utils/types";
 export default definePlugin({
     name: "Cleaner",
     description: "Hides upgrade nags and upsell banners.",
-    authors: [Devs.Prism],
+    authors: [Devs.Prism, Devs.o9],
 
     patches: [
         {

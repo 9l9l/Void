@@ -12,7 +12,7 @@ import definePlugin from "@utils/types";
 export default definePlugin({
     name: "ChatBarButtonAPI",
     description: "Adds buttons to the chat input bar.",
-    authors: ["Prism"],
+    authors: ["o9"],
     required: true,
     hidden: true,
 

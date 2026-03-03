@@ -127,7 +127,7 @@ function VoidPanels({ jsx, activeTab, Wrapper }: { jsx: typeof createElement; ac
 export default definePlugin({
     name: "Settings",
     description: "Adds Void settings UI.",
-    authors: ["Prism"],
+    authors: ["o9"],
     required: true,
     settings,
 

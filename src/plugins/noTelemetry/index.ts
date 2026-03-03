@@ -10,7 +10,7 @@ import definePlugin from "@utils/types";
 export default definePlugin({
     name: "NoTelemetry",
     description: "Disables all tracking, telemetry, and event logging.",
-    authors: [Devs.Prism],
+    authors: [Devs.Prism, Devs.o9],
     required: true,
 
     patches: [

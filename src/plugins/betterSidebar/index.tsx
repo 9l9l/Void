@@ -56,7 +56,7 @@ function UserInfo() {
 export default definePlugin({
     name: "BetterSidebar",
     description: "Shows your name and plan in the sidebar footer.",
-    authors: [Devs.Prism],
+    authors: [Devs.Prism, Devs.o9],
 
     renderUserInfo: ErrorBoundary.wrap(UserInfo),
 

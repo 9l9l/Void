@@ -61,7 +61,7 @@ function DeleteAllButton() {
 export default definePlugin({
     name: "BetterFiles",
     description: "Adds bulk delete and optional skip of delete confirmation on the files page.",
-    authors: [Devs.Prism],
+    authors: [Devs.Prism, Devs.o9],
     settings,
 
     renderDeleteAllButton: ErrorBoundary.wrap(DeleteAllButton),

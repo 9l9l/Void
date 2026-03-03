@@ -10,7 +10,7 @@ import definePlugin from "@utils/types";
 export default definePlugin({
     name: "Starry",
     description: "Enables Grok's native starry idle background with shooting stars.",
-    authors: [Devs.Prism],
+    authors: [Devs.Prism, Devs.o9],
 
     patches: [
         {

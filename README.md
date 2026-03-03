@@ -1,8 +1,8 @@
 # Void
 
-[![License](https://img.shields.io/github/license/imjustprism/Void?style=flat-square)](LICENSE)
+[![License](https://img.shields.io/github/license/9l9l/Void?style=flat-square)](LICENSE)
 [![Contributing](https://img.shields.io/badge/contributing-guide-blue?style=flat-square)](CONTRIBUTING.md)
-[![GitHub Stars](https://img.shields.io/github/stars/imjustprism/Void?style=flat-square)](https://github.com/imjustprism/Void/stargazers)
+[![GitHub Stars](https://img.shields.io/github/stars/9l9l/Void?style=flat-square)](https://github.com/9l9l/Void/stargazers)
 
 A client-side modification for [Grok](https://grok.com), inspired by [Vencord](https://github.com/Vendicated/Vencord). Patches Grok's bundled code at runtime with a plugin system, custom CSS editor, and theme support. No server-side changes, no telemetry. Works as a userscript or browser extension.
 
@@ -23,7 +23,7 @@ Install [Violentmonkey](https://violentmonkey.github.io/) or [Tampermonkey](http
 Requires [Bun](https://bun.sh/) >= 1.0.
 
 ```sh
-git clone https://github.com/imjustprism/Void.git
+git clone https://github.com/9l9l/Void.git
 cd Void
 bun install
 bun run build

@@ -211,7 +211,7 @@ export const Tab = ErrorBoundary.wrap(ExperimentsTab);
 export default definePlugin({
     name: "Experiments",
     description: "Unlock and toggle unreleased Grok features.",
-    authors: [Devs.Prism],
+    authors: [Devs.Prism, Devs.o9],
     settings,
     startAt: StartAt.TurbopackReady,
 

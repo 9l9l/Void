@@ -49,7 +49,7 @@ const onMouseLeave = (e: { currentTarget: HTMLElement }) => {
 export default definePlugin({
     name: "NoAutoplay",
     description: "Stops video thumbnails from autoplaying on the Imagine page.",
-    authors: [Devs.Prism],
+    authors: [Devs.Prism, Devs.o9],
     settings,
 
     _hoverProps() {

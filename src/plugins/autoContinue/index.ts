@@ -56,7 +56,7 @@ function scheduleRetry(fn: () => void) {
 export default definePlugin({
     name: "AutoContinue",
     description: "Automatically retries when Grok fails to respond.",
-    authors: [Devs.Prism],
+    authors: [Devs.Prism, Devs.o9],
     settings,
 
     stop() {

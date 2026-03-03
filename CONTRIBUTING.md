@@ -8,8 +8,8 @@ The main way to contribute is by writing plugins.
 
 Before starting, please:
 
-- Check existing [pull requests](https://github.com/imjustprism/Void/pulls) to make sure someone isn't already working on the same thing
-- Check [issues](https://github.com/imjustprism/Void/issues) for existing requests or rejected ideas
+- Check existing [pull requests](https://github.com/9l9l/Void/pulls) to make sure someone isn't already working on the same thing
+- Check [issues](https://github.com/9l9l/Void/issues) for existing requests or rejected ideas
 
 ### Plugin Rules
 
@@ -27,7 +27,7 @@ Before starting, please:
 Prerequisites: [Bun](https://bun.sh/) >= 1.0
 
 ```sh
-git clone https://github.com/imjustprism/Void.git
+git clone https://github.com/9l9l/Void.git
 cd Void
 bun install
 bun run build

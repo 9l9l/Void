@@ -4,7 +4,7 @@
     "name": "Void",
     "description": "A modification for grok.com",
     "author": "Void Contributors",
-    "homepage_url": "https://github.com/imjustprism/Void",
+    "homepage_url": "https://github.com/9l9l/Void",
     "permissions": [
         "webRequest",
         "webRequestBlocking",
@@ -44,7 +44,7 @@
     ],
     "browser_specific_settings": {
         "gecko": {
-            "id": "firefox@void.prism",
+            "id": "firefox@void.o9",
             "strict_min_version": "128.0"
         }
     }

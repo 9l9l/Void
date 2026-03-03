@@ -11,7 +11,7 @@ import definePlugin from "@utils/types";
 export default definePlugin({
     name: "ContextMenuAPI",
     description: "Adds items to context menus.",
-    authors: ["Prism"],
+    authors: ["o9"],
     required: true,
     hidden: true,
 

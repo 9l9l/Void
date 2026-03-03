@@ -4,7 +4,7 @@
     "name": "Void",
     "description": "A modification for grok.com",
     "author": "Void Contributors",
-    "homepage_url": "https://github.com/imjustprism/Void",
+    "homepage_url": "https://github.com/9l9l/Void",
     "host_permissions": [
         "*://grok.com/*"
     ],

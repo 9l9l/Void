@@ -195,7 +195,7 @@ function RateLimitIndicator({ iconOnly }: ChatBarButtonRenderProps) {
 export default definePlugin({
     name: "RateLimitDisplay",
     description: "Shows rate limit usage next to the chat input.",
-    authors: [Devs.Prism],
+    authors: [Devs.Prism, Devs.o9],
     settings,
     chatBarButton: { render: RateLimitIndicator },
 });

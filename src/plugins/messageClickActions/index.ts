@@ -19,7 +19,7 @@ function onDblClick(e: MouseEvent) {
 export default definePlugin({
     name: "MessageClickActions",
     description: "Double-click your own messages to edit them.",
-    authors: [Devs.Prism],
+    authors: [Devs.Prism, Devs.o9],
 
     eventListeners: [
         { event: "dblclick", handler: onDblClick as EventListener },
